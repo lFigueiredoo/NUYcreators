@@ -14,8 +14,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "functions:build": "npm --prefix functions/complete-onboarding run build",
-    "infra:plan": "node --env-file-if-exists=.env.local --import tsx infra/appwrite/provision.ts",
-    "infra:apply": "node --env-file-if-exists=.env.local --import tsx infra/appwrite/provision.ts --apply"
+    "infra:plan": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/provision.ts",
+    "infra:preflight": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/preflight.ts",
+    "infra:apply": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/provision.ts --apply",
+    "test:integration": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx tests/integration/run.ts"
   },
   "keywords": [],
   "author": "",

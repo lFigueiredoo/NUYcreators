@@ -22,15 +22,20 @@ Sem `.env.local`, a aplicação inicia com cadastro/login indisponíveis e estad
 
 ## Projeto Cloud dedicado
 
-O script NÃO cria projeto nem acessa outros projetos. Criar manualmente no Appwrite Cloud um projeto chamado **NUY Creators**, dedicado exclusivamente à plataforma. Copiar endpoint regional (terminado em `/v1`) e project ID do Console.
+O script NÃO cria projeto nem seleciona outros projetos. NUY Creators possui Project ID dedicado na infraestrutura Appwrite compartilhada. Endpoint autorizado: `https://api.edocs.phiq.com.br/v1`; o hostname não identifica o projeto. Usar somente o ID e as chaves próprios de NUY Creators, sem fallback. Os guards agora validam identidade operacional por IDs, credenciais, ambiente e marker privado; o antigo bloqueio por hostname foi corrigido.
 
 Configurar no ambiente seguro do servidor ou `.env.local` ignorado pelo Git:
 
 - `APPWRITE_ENDPOINT`: endpoint do novo projeto.
 - `APPWRITE_PROJECT_ID`: ID do novo projeto.
+- `APPWRITE_EXPECTED_PROJECT_ID`: ID aprovado independentemente; deve ser exatamente igual a `APPWRITE_PROJECT_ID` antes de qualquer requisição.
+- `APPWRITE_DEDICATED_PROJECT_CONFIRMED=true`: confirmação explícita.
+- `APPWRITE_TEST_ENVIRONMENT`: development ou staging nesta rodada de validação/provisionamento.
 - `APPWRITE_DATABASE_ID`: `nuy-creators`.
 - `APPWRITE_ADMIN_TEAM_ID`: `nuy-admins` (ID reservado pelo manifest desta versão).
 - `APP_URL`: origem exata da aplicação; HTTPS para ambiente conectado em produção.
+
+`npm run infra:preflight` realiza apenas GETs autenticados quando os guards locais passam. Nome/hostname não substitui vínculo chave/projeto. Marker `platform_settings/application-identity` é criado ao final de um primeiro bootstrap autorizado e precisa permanecer privado e compatível nas execuções seguintes. Receipt local não secreto em `.appwrite/` permite retomada de bootstrap parcial; não é commitado. Banco existente sem marker/receipt legítimo não será adotado automaticamente.
 
 Adicionar plataforma Web no Console com localhost para desenvolvimento e hostname de produção. Habilitar email/senha, ajustar políticas de senha/sessão, templates e entrega de emails de verificação/recuperação. Configurar URLs de retorno `/verificar-email` e `/redefinir-senha` na origem autorizada.
 

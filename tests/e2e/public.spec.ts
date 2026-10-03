@@ -7,6 +7,12 @@ test('public identity and navigation', async ({ page }) => {
     page.getByRole('heading', { name: 'Seu próximo capítulo começa aqui.' }),
   ).toBeVisible();
 });
+test('protected route shells require a real server session', async ({ page }) => {
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto('/admin');
+  await expect(page).toHaveURL(/\/login$/);
+});
 test('honest empty states and reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');

@@ -2,6 +2,7 @@ import { z } from 'zod';
 export const environmentSchema = z.object({
   APPWRITE_ENDPOINT: z.union([z.url(), z.literal('')]).optional(),
   APPWRITE_PROJECT_ID: z.string().optional(),
+  APPWRITE_EXPECTED_PROJECT_ID: z.string().optional(),
   APPWRITE_DATABASE_ID: z.string().default('nuy-creators'),
   APPWRITE_ADMIN_TEAM_ID: z.string().default('nuy-admins'),
   APP_URL: z.url().default('http://localhost:3000'),
@@ -17,9 +18,32 @@ export const environmentSchema = z.object({
 });
 export function parseEnvironment(input: Record<string, string | undefined>) {
   const env = environmentSchema.parse(input);
+  if (env.APPWRITE_ENDPOINT) {
+    const url = new URL(env.APPWRITE_ENDPOINT);
+    if (
+      url.protocol !== 'https:' ||
+      url.pathname !== '/v1' ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error(
+        'Endpoint Appwrite inválido: requer HTTPS, /v1 e ausência de credenciais/query/fragmento na URL.',
+      );
+    }
+  }
   if (Boolean(env.APPWRITE_ENDPOINT) !== Boolean(env.APPWRITE_PROJECT_ID)) {
     throw new Error('Configure endpoint e projeto Appwrite juntos.');
   }
+  if (
+    env.APPWRITE_PROJECT_ID &&
+    (!env.APPWRITE_EXPECTED_PROJECT_ID ||
+      env.APPWRITE_PROJECT_ID !== env.APPWRITE_EXPECTED_PROJECT_ID)
+  )
+    throw new Error(
+      'Project ID não corresponde ao APPWRITE_EXPECTED_PROJECT_ID aprovado. Sem fallback de projeto.',
+    );
   if (
     env.APPWRITE_REGISTRATION_ENABLED === 'true' &&
     (!env.NUY_TERMS_VERSION || !env.NUY_MINIMUM_AGE)

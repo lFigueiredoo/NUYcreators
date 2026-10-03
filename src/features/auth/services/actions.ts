@@ -169,7 +169,10 @@ export async function onboardingAction(_previous: FormState, form: FormData): Pr
     if (result.responseStatusCode !== 200)
       return { message: 'Não foi possível salvar. Tente novamente mais tarde.' };
   } catch {
-    return { message: 'O serviço de perfis está indisponível. Seus dados não foram salvos.' };
+    return {
+      message:
+        'O serviço de perfis está indisponível. Não foi possível confirmar o salvamento; você pode tentar novamente.',
+    };
   }
   return {
     success: true,
