@@ -3,35 +3,61 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-const links = [
-  ['Comunidade', '/#comunidade'],
-  ['Desafios', '/desafios'],
-  ['Recompensas', '/recompensas'],
-  ['Ranking', '/ranking'],
-];
-export function Header() {
+import Image from 'next/image';
+import styles from './public-header.module.css';
+import { publicNavigation, publicAccountLinks } from './public-navigation';
+export function Header({
+  editorial = false,
+  authenticated = false,
+}: {
+  editorial?: boolean;
+  authenticated?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  const navigation = publicNavigation;
+  const accountLinks = publicAccountLinks(authenticated);
   return (
-    <header className="site-header">
-      <Link href="/" aria-label="NUY Creators início" className="wordmark">
-        nuy<span>CREATORS</span>
+    <header className={`site-header ${styles.publicHeader} ${editorial ? styles.editorial : ''}`}>
+      <Link href="/" aria-label="NUY Creators início" className="wordmark brand-lockup">
+        {editorial ? (
+          <>
+            <Image
+              src="/brand/reference/nuy-wordmark-hi.png"
+              alt=""
+              width={384}
+              height={240}
+              className="editorial-wordmark-image"
+            />
+            <span>CREATORS</span>
+          </>
+        ) : (
+          <>
+            nuy<span>CREATORS</span>
+          </>
+        )}
       </Link>
       <nav aria-label="Principal" className="desktop-nav">
-        {links.map(([name, href]) => (
+        {navigation.map(([name, href]) => (
           <Link key={name} href={href}>
             {name}
           </Link>
         ))}
       </nav>
       <div className="header-actions">
-        <Link href="/login" className="login-link">
-          Entrar
-        </Link>
-        <Button asChild className="header-cta">
-          <Link href="/cadastro">
-            Fazer parte <ArrowUpRight size={15} />
-          </Link>
-        </Button>
+        {accountLinks.map((link) =>
+          link.primary ? (
+            <Button key={link.href} asChild className="header-cta">
+              <Link href={link.href}>
+                {link.label}
+                <ArrowUpRight size={15} />
+              </Link>
+            </Button>
+          ) : (
+            <Link key={link.href} href={link.href} className="login-link">
+              {link.label}
+            </Link>
+          ),
+        )}
         <button
           className="menu-button"
           aria-label={open ? 'Fechar menu' : 'Abrir menu'}
@@ -44,13 +70,16 @@ export function Header() {
       </div>
       {open && (
         <nav id="mobile-nav" aria-label="Principal móvel" className="mobile-nav">
-          {links.map(([name, href]) => (
+          {navigation.map(([name, href]) => (
             <Link key={name} href={href} onClick={() => setOpen(false)}>
               {name}
             </Link>
           ))}
-          <Link href="/login">Entrar</Link>
-          <Link href="/cadastro">Fazer parte</Link>
+          {accountLinks.map((link) => (
+            <Link key={link.href} href={link.href} onClick={() => setOpen(false)}>
+              {link.label}
+            </Link>
+          ))}
         </nav>
       )}
     </header>

@@ -1,0 +1,1282 @@
+/* Acquisition sections only: approved Hero art CSS is intentionally unchanged.
+   Ritmo editorial: tokens de escala, tipografia 16/14px, transições entre seções. */
+.flow {
+  --section-space: clamp(56px, 6vw, 96px);
+  --section-space-tight: clamp(40px, 4vw, 64px);
+  --container: max(6%, calc((100% - 1440px) / 2));
+  font-family: var(--font-nuy-interface), Arial, sans-serif;
+}
+.flow > section {
+  margin: 0;
+  padding: var(--section-space-tight) var(--container) var(--section-space);
+}
+/* Altura da seção como na referência (proporção do painel): Como funciona
+   ~21,4vw (410px @1920) — o conteúdo de 2 colunas centra verticalmente. */
+.flow > .how {
+  min-height: max(300px, 21.4vw);
+}
+/* Ritmo de margem da referência: o herói e o 01 (creme) entram a ~10,5%w,
+   mas as seções navy full-bleed (02/03/04) abrem a ~5,5%w — os textos correm
+   até ~94-99%w. Medido no painel desktop completo (×2,217 @1920). O token
+   re-declarado por seção vence o cap de 1440px sem tocar a regra geral. */
+.flow > .how,
+.flow > .audience,
+.flow > .benefits {
+  --container: 5.5%;
+}
+.flow h2 {
+  font-family: var(--font-nuy-editorial), Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(34px, 3.4vw, 58px);
+  /* 1.12: Bodoni tem ascendentes/descendentes longos (ç, p, q, g) — 1.06
+     deixava ~4px entre a cedilha e a linha seguinte. 1.12 respira em qualquer
+     tamanho sem alterar o caráter do layout. */
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.flow h2 em {
+  color: #cbb2e8;
+  font-weight: 400;
+}
+.flow h2,
+.flow h3 {
+  overflow-wrap: break-word;
+}
+.flow p {
+  /* Fidelidade pass R7: o corpo satélite da ref roda ~17-18px @1920 (impl
+     herdava 16px — ~10% menor). H1s do hero/intro permanecem intactos. */
+  font-size: 17.5px;
+  line-height: 1.72;
+  max-width: 56ch;
+}
+.flow .eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  /* Dourado da ref é QUENTE (#cf9e63 medido no "03 / PARA QUEM É") — o
+     #d8c098 pálido liava o acento térmico. */
+  color: #cf9e63;
+}
+.flow .small {
+  font-size: 15px;
+  opacity: 0.78;
+}
+
+/* ── 01 · O projeto ─────────────────────────────────────────────── */
+/* Respiro da ref RE-MEDIDO (R7, probe x=520): card creme y396–565 = 375css —
+   topo ~88px e a base termina QUANDO o conteúdo termina (~50px), não os
+   ~186px de vazio creme que a impl carregava. */
+.project {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 9%;
+  background: var(--nuy-cream);
+  color: var(--nuy-ink);
+  isolation: isolate;
+  /* As lílios da borda direita nascem acima do topo da seção e são fatiadas
+     pela fronteira (na ref as pétalas são cortadas exatamente nela). */
+  overflow: clip;
+}
+/* ".flow > section" vence ".project" (0,1,1 > 0,1,0) — o respiro da ref
+   precisa do mesmo prefixo. */
+.flow > .project {
+  /* R7: o h2 do projeto é maior na ref (linha 1 com 671css: "Mais que uma
+     comunidade." — vs 583 nos h2 padrão); sobe o glifo e paga a diferença
+     nas bordas para a seção continuar fechando em ~375css. */
+  padding-block: clamp(44px, 3.4vw, 68px) clamp(30px, 2.2vw, 44px);
+}
+.project h2 {
+  /* Ref: cap ~51css e pitch ~76css (lh ~1.11); o compartilhado (58px) fica
+     13% menor que a leitura da ref nesta seção. */
+  font-size: clamp(38px, 3.49vw, 67px);
+  line-height: 1.11;
+}
+/* Curva do fold da ref: os dourados medidos ficam ~#e4c8a4 sobre o creme
+   (stroke #d3b482) — mais presente e menos cinza que o a98d55 a 32%. */
+.project::before {
+  content: '';
+  position: absolute;
+  top: -26px;
+  left: 0;
+  width: 100%;
+  height: 52px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.42;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='52' viewBox='0 0 1440 52' fill='none'%3E%3Cpath d='M-8 28C200 24 390 34 570 29C745 25 905 33 1060 28C1210 24 1335 30 1448 27' stroke='%23d3b482' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M-8 22C160 18 300 26 440 21C610 15 730 24 900 19C1120 13 1290 23 1448 18' stroke='%23e9d5ae' stroke-width='0.8' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+}
+.project h2 em {
+  /* Ref: o em lilás VIVO (~#9678b8 nas duas linhas de destaque). */
+  color: #9479b6;
+}
+.projectText {
+  align-self: center;
+  position: relative;
+  z-index: 1;
+}
+/* Hierarquia: parágrafo principal respira e a frase menor fecha baixando o
+   tom — documento vira prose. */
+.projectText p {
+  line-height: 1.85;
+  max-width: 48ch;
+}
+.projectText .small {
+  margin-top: 14px;
+  line-height: 1.7;
+  max-width: 44ch;
+}
+.projectMark {
+  display: block;
+  /* R7 board 02: a tinta do ✧ da ref mede ~32css (glow incluso) — o 38px atual
+     lia menor que a referência. Sobe p/ ~54px (tinta ~30css) e o halo aquece. */
+  font-size: clamp(40px, 2.8vw, 54px);
+  opacity: 0.94;
+  /* Estrela da ref é LILÁS (~#9b7fc4, crop 2× cand-projeto-centro) com halo
+     suave — não dourada. */
+  color: #9b7fc4;
+  text-shadow: 0 0 22px rgba(163, 128, 200, 0.55);
+  margin-bottom: 20px;
+}
+/* Flor que invade pela borda direita: a parte direita está fora da viewport
+   (clipada no wrapper) e o corpo entra emplumado por máscara linear — sem
+   oval, sem sombra de "imagem colada". O canto escuro do asset nasce fora da
+   tela ou sob máscara transparente. */
+.projectBloom {
+  position: absolute;
+  right: -4%;
+  /* Levantada até fatiar no topo da seção: na ref a massa toca a fronteira
+     com pétalas NÍTIDAS ali (crop 3×) — a zona emplumada da máscara fica
+     acima da borda e é cortada por overflow: clip. */
+  top: -110px;
+  /* Massa da ref: o buquê direito ocupa ~330×430css @1920 (R7 measure).
+     Cap 383 = largura nativa do arquivo (zero upscale real). */
+  width: clamp(240px, 19.9vw, 383px);
+  z-index: 0;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0.94;
+}
+.projectBloom img {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+  /* Massa floral natural: nuvem radial emplumada — o recorte é o próprio
+     buquê (crop apertado do asset), as bordas derretem por elipse. */
+  mask-image: radial-gradient(ellipse 64% 56% at 52% 52%, #000 40%, transparent 78%);
+  filter: saturate(0.96) brightness(1.02);
+}
+/* Flor clara do canto inferior-esquerdo do cartão (ref img 0–62×498–566,
+   asset com feather + fundo creme assado): cresce para dentro da cauda do
+   espaço do texto. mix-blend multiply casa o creme assado do crop com o creme
+   da impl sem lavar as pétalas (bg quase idêntico: #fdf2e3 vs #f4eddf). */
+.projectFloralL {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: clamp(100px, 6.95vw, 136px);
+  margin: 0;
+  z-index: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.96;
+}
+.projectFloralL img {
+  width: 100%;
+  height: auto;
+}
+
+/* ── 02 · Como funciona ─────────────────────────────────────────── */
+/* Referência: coluna de título ~5,8–28,4%w, passos de 32,7%w em diante; seção
+   ~21,4vw de altura (410px @1920), conteúdo centrado verticalmente. */
+.how {
+  display: grid;
+  grid-template-columns: 30.3% 1fr;
+  align-items: center;
+  gap: 0;
+  background: var(--nuy-navy-base);
+  background-image: var(--nuy-noise);
+}
+/* R7: a ref carrega uma ÚNICA flor atravessando a fronteira Projeto→Como —
+   a metade creme vive no .project (project-floral-l, multiply) e esta é a
+   metade navy (miolo âmbar em img 5–15×572–585): sem ela o canto fica vazio
+   na costura (board 03). Âncora no canto superior-esquerdo, tocando a
+   fronteira; left/top cortam na viewport/fronteira (alpha 1), direita/base
+   derretem (feather no asset). */
+.comoFloralL {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(64px, 6.93vw, 133px);
+  height: auto;
+  pointer-events: none;
+}
+.how ol {
+  padding: 0;
+  gap: 0;
+  position: relative;
+  /* A lista desce até a base do conteúdo (microcopy termina ~77% da seção,
+     como na ref) em vez de flutuar no meio contra os nós da fita. */
+  align-self: end;
+}
+.how ol li {
+  min-height: 0;
+}
+.how ol li p {
+  font-size: 15px;
+}
+/* Blossom que entra pela borda direita da seção (ref img 790–866×576–662):
+   o crop traz um fragmento do fio dourado da ref na metade inferior — emplumado
+   pela máscara linear (derrete antes do fio) para não dobrar a fita da impl. */
+.comoFloralR {
+  position: absolute;
+  right: 0;
+  top: clamp(8px, 1.5vw, 30px);
+  width: clamp(90px, 8.75vw, 168px);
+  height: auto;
+  margin: 0;
+  z-index: 0;
+  pointer-events: none;
+  mask-image: linear-gradient(180deg, #000 34%, transparent 58%);
+}
+.comoFloralR img {
+  width: 100%;
+  height: auto;
+}
+
+/* ── 03 · Para quem é ───────────────────────────────────────────── */
+/* Referência: coluna de título à esquerda (~0–38%w) e quatro colunas de
+   entradas à direita (ícone em círculo hairline + título serif + microcopy
+   sempre visível). Colunas começam ~41,5/54,8/68,7/83,4%w (pitch ~13-14%). */
+.audience {
+  display: grid;
+  /* R7: .pqFloral é absolute (left 0, top -10) — sem position aqui ela
+     escapava para o containing block do main e pintava no hero. */
+  position: relative;
+  grid-template-columns: 35.3% 1fr;
+  gap: 5%;
+  background: var(--nuy-navy-raised);
+  background-image: var(--nuy-noise);
+}
+/* Respiro vertical da ref @1920: ~44/45px nas bordas da faixa (~306px no
+   painel). O prefixo .flow > vence o padding do genérico (0,2,0 > 0,1,1). */
+.flow > .audience {
+  padding-block: 44px 46px;
+}
+/* Sub da ref é uma frase-statement (~19-20px @1920, maior que o body) e
+   quebra após "compartilhar" — 2 linhas desiguais (~438px). Não alcança os
+   hints (path DOM é ul > li > p). */
+.audience > div > p {
+  font-size: clamp(15px, 0.98vw, 19px);
+  max-width: 445px;
+}
+.audienceList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  align-self: center;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0 14px;
+}
+.audienceList li {
+  position: relative;
+}
+.audienceList li > svg {
+  display: block;
+  /* R7 board 04 (crop 6×): o glifo da ref é OURO (#caa25e) e o anel mede
+     ~72–75css — o 63px lia pequeno; borda ganha presença (não glow extra). */
+  color: #d9ab63;
+  box-sizing: content-box;
+  padding: 26px;
+  /* Anéis vivos da ref (+15%): dourado quente e contraste maiores. */
+  border: 1.5px solid #d8ac5c99;
+  border-radius: 50%;
+  box-shadow:
+    0 0 18px rgba(216, 172, 102, 0.2),
+    inset 0 0 10px rgba(216, 172, 102, 0.12);
+  width: 25px;
+  height: 25px;
+}
+.audienceLabel {
+  display: block;
+  font-family: var(--font-nuy-editorial), Georgia, serif;
+  /* O 1-linha do 4º rótulo ("Apaixonados pela marca" = 22ch) crava o teto:
+     na coluna de 244px só ~24px mantém os 4 rótulos em 1 linha como na ref
+     (os 1ºs-3ºs da ref leem ~26-30px — aceito 2-4px a menos pela 1-linha). */
+  font-size: clamp(18px, 1.25vw, 24px);
+  line-height: 1.2;
+  color: #f4eede;
+  margin: 18px 0 7px;
+  letter-spacing: -0.01em;
+}
+.audienceHint {
+  color: #bcb4cd;
+}
+/* (0,2,0): .flow p (0,1,1) vencia este bloco com classe nua — os hints
+   renderizavam 16px/56ch em vez de 14px/184px em todas as rodadas. */
+.flow .audienceHint {
+  font-size: clamp(13.5px, 0.78vw, 15px);
+  line-height: 1.55;
+  /* ~184px: a 3ª hint fica exata como na ref ("Quem transforma pequenos");
+     as demais desalinham 1 palavra, todas em 2 linhas limpas (sem viúva). */
+  max-width: 12.1rem;
+}
+/* Jasmão junto à base do heading (§ ref): spray de pétalas da borda esquerda
+   (img 0–52×734–786, feather no asset) — discreto, jamais sticker. */
+.pqFloral {
+  position: absolute;
+  left: 0;
+  /* Ref: o jasmão senta contra a BASE da seção (img 806–884 de 742–882) —
+     a borda inferior corta 4px antes da hairline de fechamento. */
+  bottom: 4px;
+  width: clamp(64px, 6vw, 116px);
+  height: auto;
+  margin: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.92;
+}
+.pqFloral img {
+  width: 100%;
+  height: auto;
+}
+@media (hover: hover) {
+  .audienceList li:hover > svg {
+    color: #fff2d8;
+    border-color: #d8ac5c99;
+    box-shadow: 0 0 24px rgba(216, 172, 102, 0.28);
+  }
+  .audienceList li:hover .audienceLabel {
+    transform: translateX(3px);
+    transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+}
+
+/* ── 04 · Benefícios ────────────────────────────────────────────── */
+.flow > .benefits {
+  background: var(--nuy-navy-raised);
+  /* R7: .benefitsFloral é absolute (left 0, bottom 0) — sem position aqui ela
+     ancorava no main e pintava o crop c/ texto "nova" no topo do projeto. */
+  position: relative;
+  border-top: 1px solid #cbb4e21c;
+  display: grid;
+  /* Ref: "novas possibilidades." = 1 linha na col de título (~448px de
+     1708 = 26%); itens começam ~35%w. fr com gap 8% dava col1 406px e
+     descia o headline para 3 linhas. */
+  grid-template-columns: 27.2% 1fr;
+  gap: 5%;
+  /* Referência: listas de benefícios compactas (~16vw de altura) com as
+     colunas MAJOR (Desafios/Produtos/Conteúdos | Pontos/Experiências/
+     Comunidade). O prefixo .flow > vence a specificity do wrapper. */
+  padding-top: 40px;
+  padding-bottom: 52px;
+  min-height: max(240px, 16.05vw);
+  background-image: var(--nuy-noise);
+}
+.benefitList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* R7: o corpo +8% cresceu ~2 linhas na grade; a ref (319css @1920) pede a
+     lista mais fechada — pitch horizontal apertado volta a ~319. */
+  gap: 22px 40px;
+  align-content: center;
+}
+.benefitList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 17px;
+}
+/* Ícone em círculo hairline com luz quase imperceptível no aro (a ref
+   usa aros ~50px com glifos de linha); mesma linguagem dos halos da jornada.
+   Pass R7: dourado quente, aro mais presente, glifo ~+7%. */
+.benefitList svg {
+  color: #deb988;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  padding: 13px;
+  border: 1px solid #d8ac5c47;
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(216, 172, 102, 0.15);
+  width: 22.5px;
+  height: 22.5px;
+  transition:
+    color 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+.benefitList li h3 {
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.benefitList li p {
+  transition: color 0.4s ease;
+}
+@media (hover: hover) {
+  /* Hover: o ícone recebe luz, o título desliza 2px e a descrição ganha
+     contraste — feedback por luz, sem caixas. */
+  .benefitList li:hover svg {
+    color: #f6e6c8;
+    border-color: #d8ac5c7d;
+    box-shadow: 0 0 24px rgba(216, 172, 102, 0.3);
+  }
+  .benefitList li:hover h3 {
+    transform: translateX(2px);
+  }
+  .benefitList li:hover p {
+    color: #eae6f1;
+  }
+}
+.benefitList h3 {
+  font-size: 18px;
+  letter-spacing: 0.01em;
+  margin-bottom: 6px;
+  font-weight: 500;
+  line-height: 1.3;
+  /* Prancha 05 / mobile 390 (crop): os títulos da ref são SANS (a impl roda
+     a cadeia h3 global em 'editorial' serif). Explicita a interface. */
+  font-family: var(--font-nuy-interface), Arial, sans-serif;
+}
+.benefitList p {
+  margin: 0;
+  color: #cbc8d6;
+  font-size: 15px;
+  line-height: 1.62;
+}
+/* Cluster do canto inferior-esquerdo (ref img 0–96×944–1022, cut na base do
+   mockup): fecha o painel do 05 na borda, sem sticker central. */
+.benefitsFloral {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  /* Ref: a massa floral lê ~48img = 106css de largura (o resto fica atrás
+     do h2, desfocado); o arquivo 192px serveria >100px sem upscale. */
+  width: clamp(56px, 5.5vw, 106px);
+  height: auto;
+  margin: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.94;
+}
+.benefitsFloral img {
+  width: 100%;
+  height: auto;
+}
+/* Referência: seção diagonal alta (~51,3vw @1920 = 984px); o eyebrow senta
+   ~57css do topo (3vw) — o restante é espaço para a escada de halos. */
+.flow > section:global([id='niveis']) {
+  /* Ref: a jornada é a seção mais aberta do painel médio — entra a ~3,7%w
+     (71px @1920), e não ao cap de 1440px do container geral. */
+  --container: 3.7%;
+  min-height: max(560px, 51.3vw);
+  padding-top: 2.95vw;
+  padding-bottom: var(--section-space);
+  /* Fundo por probe RGB (patch 44×30, scripts/probe-bg-rgb.mjs): ref topo
+     (5,19,40) / centro (19,25,54) / direita (48,48,78 — luz dos halos) — bem
+     mais escuro e desaturado que a mistura violeta 62% do .levelSection
+     (impl 33–55 / 76–103). A luz local vem dos halos, da orquídea e da fita. */
+  background:
+    var(--nuy-noise),
+    radial-gradient(ellipse 46% 48% at 57% 52%, rgba(80, 80, 116, 0.3), transparent 78%),
+    linear-gradient(168deg, #04101f 0%, #091226 30%, #121832 60%, #0b1226 100%);
+}
+@media (max-width: 1000px) {
+  .flow > section:global([id='niveis']) {
+    min-height: 0;
+  }
+}
+/* Tipografia da jornada vive aqui (o módulo landing compila ANTES: a cascata
+   de acquisition vence o h2 genérico). Painel médio ×3,8: eyebrow ~26px,
+   h2 ~112px em duas linhas (pitch ~134css), parágrafo ~32px. */
+.flow > section:global([id='niveis']) > div:first-child {
+  /* % do grid (largura interna 1440 @1920): a ref pede o h2 ~40% da PÁGINA,
+     o que dá ~53% da coluna. */
+  max-width: 53%;
+}
+.flow > section:global([id='niveis']) > div:first-child > p:first-child {
+  font-size: clamp(12px, 1.35vw, 26px);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0 0 2.2vw;
+  color: #d8c098;
+}
+.flow > section:global([id='niveis']) h2 {
+  font-size: clamp(64px, 5.85vw, 112px);
+  line-height: 1.2;
+}
+/* Na ref o destaque do h2 da jornada NÃO é violeta — fica quase branco. */
+.flow > section:global([id='niveis']) h2 em {
+  color: #eae4f2;
+}
+/* Rótulos dos nós: ref "Exploradora" ~230css de largura (4× crop em
+   artifacts/round6/ref-niveis-label-4x.png) → ~47px @1920 (impl 51.84).
+   Cap do rótulo 1 ~780css da seção (impl ~813) — margem negativa sobre o
+   respiro do halo, sem tocar o posicionamento do nó. */
+.flow > section:global([id='niveis']) ol li h3 {
+  font-size: clamp(18px, 2.45vw, 48px);
+  margin-top: -33px;
+}
+.flow > section:global([id='niveis']) > div:first-child > p:last-child {
+  font-size: clamp(14px, 1.65vw, 32px);
+  line-height: 1.5;
+  margin-top: 4px;
+  color: #b9b4c6;
+}
+.flow :global([id='niveis']) > div:first-child {
+  margin-bottom: 30px;
+}
+
+/* Ornamentos da jornada recortados da ref (painel médio img 874–1390 → fator
+   3,72): buquê borboletado lilás do topo-direita (massa 1246–1366img =
+   70,2–94,05% do painel; o miolo da flor em ~1500css, como na ref ~1493 —
+   crop antigo 1270+96img deixava 2/3 da massa e descava o miolo); orquídea
+   cós sangrando a borda esquerda (y 551–823css, 56–86% da seção); fita-onda
+   dourada da base (861–973css, curva-S com bloom âmbar perto da direita). */
+.journeyBouquet {
+  position: absolute;
+  top: 0;
+  left: 70.2%;
+  width: clamp(220px, 23.2vw, 446px);
+  height: auto;
+  pointer-events: none;
+}
+.journeyOrchid {
+  position: absolute;
+  left: 0;
+  top: 56%;
+  width: 12.1vw;
+  height: auto;
+  pointer-events: none;
+}
+.journeyRibbon {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 95.4vw;
+  height: auto;
+  pointer-events: none;
+  /* Fita de luz da ref: mais espessa e brilhante — glow dourado por trás do
+     stroke e leve aquecimento (a imagem já tem alpha do feather original). */
+  filter: drop-shadow(0 0 16px rgba(216, 176, 102, 0.4)) saturate(1.08) brightness(1.05);
+}
+/* O buquê/orquídea agora carregam feather no PRÓPRIO asset (alpha ramp
+   smoothstep por borda, scripts/feather-assets.mjs) — a costura retangular de
+   fundo não existe mais; nenhuma máscara CSS de remendo. */
+
+/* ── 06 · Experiências ──────────────────────────────────────────── */
+/* Referência (painel médio ×3,7209): seção ~803css @1920; texto entra a
+   ~3,85%w (74px — o "0,6%" antigo vinia de crop sem a margem do artboard) e
+   a cena — crop oficial da ref (asset 771×683 = 770×683 @1920, ×3,7209) —
+   termina 93,5%w com margem creme (não corre até a borda da tela). */
+.flow > .experiences {
+  /* Ref: a 2ª linha do corpo ("…de um jeito mais próximo.") mede ~875px @1920 —
+     a coluna do texto é ~895px (52% do útil); a cena @46vw (=884px, ref-true
+     849 +15%) transborda 60px SOB a margem da col e sangra à direita até
+     ~1749css (91%w) — as flores do painel fecham, como na ref. */
+  grid-template-columns: 52% 1fr;
+  gap: 0;
+  align-items: start;
+  /* Na ref a cena nasce no topo (2px de costura com a jornada e ZERO de
+     creme acima) e as bordas: texto ~3,85%w à esquerda, creme ~6,5% à direita. */
+  padding: 2px 6.5% 0 3.85%;
+  /* Cena à altura INTEIRA como na ref: 46vw × (808/912) = 41.3vw + o padding
+     (803css @1920). */
+  min-height: max(560px, 41.4vw);
+}
+.flow > .experiences > div:first-child {
+  /* Ref: o texto senta ~93px abaixo do topo da seção (eyebrow a ~25img ×3,7209). */
+  padding-top: 4.85vw;
+  /* Ar abaixo da pill (~76px na ref) — no bloco de texto, não na seção:
+     a cena (align-self:end) mantém a base rente ao fold. */
+  padding-bottom: 3.95vw;
+  /* A cena +15% invade 100px sob a track do texto (flores emplumadas esq.) —
+     o texto pinta por cima como na ref. */
+  position: relative;
+  z-index: 1;
+}
+.experiences {
+  position: relative;
+  display: grid;
+  /* Warm bloom da ref sobre o creme: luz dourada-quente no quadrante da cena
+     (R7: 0,34 lia como mancha — "haze quase imperceptível", desce p/ 0,26) + um
+     halo violeta-quase-imperceptível na frente do texto (haze, não
+     superfície colorida). */
+  background:
+    radial-gradient(ellipse 38% 30% at 76% 26%, rgba(238, 205, 160, 0.26), transparent 74%),
+    radial-gradient(ellipse 26% 22% at 16% 62%, rgba(198, 168, 222, 0.15), transparent 78%),
+    var(--nuy-cream);
+  color: var(--nuy-ink);
+}
+.experiences .eyebrow {
+  font-size: clamp(12px, 1.35vw, 26px);
+  color: #a9885a;
+  margin-bottom: 0;
+}
+.experiences h2 {
+  font-size: clamp(36px, 4.1vw, 79px);
+  line-height: 1.16;
+  /* Ritmo vertical da ref (803px de seção): o headline sobe a ~30px do eyebrow. */
+  /* Ritmo vertical da ref: h2 quase escora no eyebrow (cap-gap ~47px). */
+  margin-top: 8px;
+  /* A ref pede as duas linhas desiguais do <br> como estão. */
+  text-wrap: initial;
+}
+.experiences h2 em {
+  /* Ref (cand-exp-h2-mag): o acento do 06 é LILÁS (~#7a5ea6 sobre creme) —
+     a leitura dourada das rodadas anteriores era amostragem do glow da cena. */
+  color: #7a5ea6;
+}
+.experiences [data-reveal] > p {
+  font-size: clamp(18px, 1.8vw, 35px);
+  line-height: 1.5;
+  /* Ref: o corpo encosta no headline com menos da metade do respiro anterior. */
+  margin-top: 1vw;
+  max-width: none;
+}
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 1.9vw;
+  list-style: none;
+  padding: 0;
+  margin: 3.15vw 0 2.9vw;
+  /* R7 board 07 (crops 6×): o tamanho dos chips JÁ casa com a ref (187css vs
+     198css no chip 1 — dentro do satélite +8–12%); a divergência real era a
+     COR. Amostragem estratificada da tinta (darkest-N% da janela 908,380,240,40
+     na ref): 0,3% #88788b · 1% #928396 · 2% #9a8c9b vs impl #9d89bb — a ref é
+     um mauve ACINZENTADO/muted (menos azul e menos saturado que o lilác da
+     impl). #6a559a (primeira tentativa) ficou escuro demais. */
+  font-size: clamp(14px, 1.55vw, 30px);
+  /* Ref: os "chips" são TEXTO lilás sem pill nenhuma (cand-exp-chips-mag) —
+     trilho leve. */
+  color: #928396;
+}
+/* Pill da ref: grande (~4,9vw de altura), creme claro sobre o creme, com
+   contorno dourado e sombra macia. Classe própria (.primaryButton vive no
+   módulo landing — referenciar a classe de outro módulo num seletor
+   composto nunca matcha: CSS Modules escopa cada nome pelo arquivo dele). */
+.expButton {
+  min-height: clamp(64px, 5.85vw, 112px);
+  font-size: clamp(14px, 1.7vw, 33px);
+  gap: 16px;
+  padding: 0 3.4vw;
+  border: 1px solid rgba(205, 172, 115, 0.55);
+  box-shadow: 0 22px 44px rgba(120, 88, 46, 0.16);
+}
+/* Cena reconstruída do crop da referência (scripts/build-scene-asset.mjs):
+   o asset medido (771×683 nativos) = a cena @×3,7209 → 770×683px @1920;
+   ancorada na BASE (align-self: end) e à direita do grid (sem margem
+   negativa — a -114px empurrava 114px do script fora da tela). */
+.experienceArt {
+  margin: 0;
+  align-self: end;
+  justify-self: end;
+  position: relative;
+  /* Massa da ref +15% (770 → ~884px = 46vw; ref-true 849 +4%). A margem
+     direita POSITIVA ~2.4vw encosta a cena em ~1749css (91%w) como na ref. */
+  width: min(46vw, 884px);
+  margin-right: clamp(24px, 2.4vw, 46px);
+  height: auto;
+  max-width: none;
+}
+/* Luz quente atrás da massa (a ref tem halo dourado-creme, não violeta). */
+.experienceArt::before {
+  content: '';
+  position: absolute;
+  inset: -10% -16% -6% -16%;
+  background: radial-gradient(
+    ellipse 58% 52% at 52% 48%,
+    rgba(226, 196, 150, 0.38),
+    transparent 70%
+  );
+  filter: blur(8px);
+  z-index: 0;
+  pointer-events: none;
+}
+.experienceArt .sceneBase {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 56%;
+}
+
+/* ── 07 · FAQ ───────────────────────────────────────────────────── */
+/* Referência (painel médio ×3,8): seção ~878css @1920. Título gigante à
+   esquerda (~36% da largura, h2 ~110px) e 8 perguntas à direita (38%→85%da
+   largura, pitch ~82px, divisórias hairline). A base da seção encontra a CTA
+   sem padding fantasma — o conteúdo encosta na fronteira. */
+.flow > :global(.faq-section) {
+  display: grid;
+  grid-template-columns: 37% 1fr;
+  gap: 1.5%;
+  background: var(--nuy-navy-deep);
+  background-image: var(--nuy-noise);
+  /* Recuo da coluna esquerda medido na ref: eyebrow ~19.5img, "C" do h2
+     ~23.7img → ~73–75css @1920 (3.85vw). Colunas: lista começa ~789css. */
+  padding: 28px 0 0 3.85vw;
+  min-height: max(600px, 45.7vw);
+  /* A FAQ fica ACIMA da CTA na empilha (irmãos no .flow em ordem de DOM):
+     necessário para a flor do canto inferior-esquerdo ATRAVESSAR a fronteira —
+     a imagem transborda ~46css e pinta sobre o topo da CTA, como na ref. */
+  z-index: 1;
+}
+/* Crop da ref (img 874–952 × 600–714 → fator 3,72): cabeça do cós creme
+   embaixo-esquerda + fita de luz correndo a borda. A base da imagem fica
+   ABAIXO da fronteira da seção (o fio e as pontas cruzam para a CTA). */
+.faqBloomL {
+  position: absolute;
+  left: 0;
+  top: 57%;
+  width: 15.1vw;
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+}
+.flow > :global(.faq-section) > div:first-child {
+  /* Eyebrow ~79css do topo da seção na ref (impl estava 14css tarde). */
+  padding-top: 44px;
+}
+.flow > :global(.faq-section) :global(.eyebrow) {
+  /* O FAQ usa a classe GLOBAL "eyebrow" (string no JSX), não a do módulo —
+     sem :global o seletor não casa (estava herdando 16px do .flow p).
+     Largura medida: "07 / FAQ" ~143css na ref → ~24px + tracking 0.3em. */
+  font-size: clamp(12px, 1.25vw, 24px);
+  letter-spacing: 0.3em;
+  color: #a9885a;
+  margin-bottom: 0;
+}
+.flow > :global(.faq-section) h2 {
+  /* Ref: "Conversas" ~414css de largura (→ ~114px @1920, pitch ~149css) —
+     +discreto na pass R7 (impl lia ~4% menor que a ref). */
+  font-size: clamp(58px, 6.15vw, 118px);
+  /* O balance global empataria as linhas e jogaria "esclarecem." numa terceira:
+     a ref pede as duas linhas desiguais do <br> como estão. */
+  text-wrap: initial;
+  line-height: 1.3;
+  /* Cap L1 ~158css da seção: o box de 42px do eyebrow empurra — margem menor. */
+  margin-top: 0.6vw;
+}
+/* Título inteiramente branco na referência (sem a ênfase violeta). */
+.flow > :global(.faq-section) h2 em {
+  color: inherit;
+}
+/* Coluna de perguntas: na ref a 1ª divisória fica em ~66css do topo (o bloco
+   de título começa ABAIXO dela) e o "+" encosta ~1712css @1920. */
+.flow :global(.faq-list) {
+  max-width: 49vw;
+  margin-top: 38px;
+}
+.flow :global(.faq-list details:hover) {
+  border-bottom-color: #cbb4e238;
+}
+/* Item ativo: summary em luz plena, plus girado a 45° e o fio violeta→dourado
+   substituindo a linha neutra (sem fundo de caixa). */
+.flow :global(.faq-list details[open]) {
+  border-bottom-color: transparent;
+}
+.flow :global(.faq-list details[open]::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, #cbb4e2, #d8c098);
+  opacity: 0.75;
+}
+.flow :global(.faq-section .faq-list details[open] summary) {
+  color: #f6eedd;
+}
+.flow :global(.faq-section .faq-list details[open] summary span) {
+  transform: rotate(45deg);
+}
+/* Pitch da referência: ~95px por item (largura "O que é NUY Creators?" ~344css
+   confere a fonte; respiro vem do padding, ~28px acima/abaixo). */
+.flow :global(.faq-list summary) {
+  font-size: clamp(15px, 1.8vw, 35px);
+  line-height: 1.2;
+  padding: 28px 0;
+}
+.flow :global(.faq-list details) {
+  padding: 0;
+  position: relative;
+  border-bottom: 1px solid #cbb4e22e;
+}
+.flow :global(.faq-list details p) {
+  font-size: 16px;
+  margin-top: 14px;
+  padding-bottom: 30px;
+}
+.flow :global(.faq-list details:hover summary),
+.flow :global(.faq-list details[open] summary) {
+  color: #ece4f5;
+}
+.flow :global(.faq-list summary span) {
+  /* O "+" da ref é bem visível (~30css @1920): o 1.2rem herdado do globals
+     ficava 1/3 do summary — o símbolo praticamente sumia na prancha. */
+  font-size: clamp(21px, 1.55vw, 30px);
+  color: #d3b581;
+  line-height: 1;
+  transition: transform 0.35s ease;
+}
+.flow :global(.faq-list details) {
+  transition: background-color 0.3s ease;
+}
+.flow :global(.faq-list details::details-content) {
+  height: 0;
+  overflow: clip;
+  transition:
+    height 0.35s ease,
+    content-visibility 0.35s allow-discrete;
+}
+.flow :global(.faq-list details[open]::details-content) {
+  height: auto;
+}
+
+/* ── 09 · Transições entre superfícies ──────────────────────────── */
+/* Costuras creme↔navy: o fio de ouro das margens do hero atravessa cada
+   fronteira (sangrando 26px sobre a superfície anterior) e um halo quase
+   imperceptível da cor que chega evita o corte seco — sem ondas grandes. */
+.how,
+.experiences,
+.flow > :global(.faq-section) {
+  position: relative;
+}
+.how::before,
+.experiences::before,
+.flow > :global(.faq-section)::before {
+  content: '';
+  position: absolute;
+  top: -26px;
+  left: 0;
+  width: 100%;
+  height: 52px;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0.28;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1440' height='52' viewBox='0 0 1440 52' fill='none'%3E%3Cpath d='M-8 28C200 24 390 34 570 29C745 25 905 33 1060 28C1210 24 1335 30 1448 27' stroke='%23a98d55' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+}
+.how::after,
+.flow > :global(.faq-section)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 46px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #f4eddf2b, transparent);
+}
+.experiences::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 46px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, #101d322b, transparent);
+}
+
+/* ── 08 · CTA final ─────────────────────────────────────────────── */
+/* Referência: copy na metade esquerda (a 4,2%w) e a FOTO ocupa a metade
+   direita — nasce ~40css abaixo do topo da seção (na fronteira com o FAQ),
+   corre até FORA da página pela direita (−13vw) e encosta no footer.
+   object-position 28% mantém o rosto ao centro da página; a borda esquerda
+   derrete no navy por máscara linear. A seção corta o excesso. */
+.flow > .final {
+  position: relative;
+  display: block;
+  min-height: max(560px, 45.7vw);
+  overflow: clip;
+  /* O container genérico (6%w) não vale aqui: a copy senta a 4,2%w e a foto
+     corre até fora da página. O mobile restaura o padding no media block. */
+  padding: 0;
+}
+/* Névoa ambiente da CTA por probe RGB: ref topo-esq (45,41,53) e esq-texto
+   (43,52,69) — a luz do retrato alcança a copy; impl estava (7,18,40) e
+   (25,35,55). Três radiais: lavanda acima do ombro, violeta do topo-direita
+   e a lavada larga azul-acinzentada que banha a copy. */
+.finalHaze {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 42% 40% at 66% 28%, rgba(148, 126, 190, 0.34), transparent 72%),
+    radial-gradient(ellipse 30% 36% at 88% 14%, rgba(170, 142, 226, 0.3), transparent 70%),
+    radial-gradient(ellipse 78% 80% at 70% 42%, rgba(92, 88, 134, 0.28), transparent 76%),
+    radial-gradient(ellipse 26% 30% at 8% 6%, rgba(122, 96, 130, 0.3), transparent 70%);
+}
+.flow > .final .finalPortrait {
+  position: absolute;
+  top: 40px;
+  bottom: 0;
+  right: -13.5vw;
+  /* Crop aberto (+4% de largura): mais retrato dentro da moldura e o rosto
+     respira mais centrado na página. */
+  width: 91vw;
+  max-width: none;
+  height: calc(100% - 40px);
+  object-fit: cover;
+  object-position: 48.5% 29%;
+  margin: 0;
+  border-radius: 0;
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%);
+  filter: saturate(0.9) brightness(1.02);
+}
+/* Órbitas de luz (finalOrbit) e a orquídea rosada da borda esquerda — a
+   borda esquerda do retrato derrete por máscara e a flor cobre esse trecho,
+   como na ref. DOM depois do retrato → pinta por cima dele. */
+.finalOrbit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+/* Bloom da esquerda da CTA — ref: core rosa sangrando a borda esquerda
+   (0–112css, core ~y254–368, centro ~(283css) = 32% da seção) + mancha
+   dourada abaixo (~y406–464). CSS puro: o patch webp tinha fundo próprio do
+   mockup e lia como retângulo em qualquer largura. A esquerda fica meio
+   fora da página (o core sangra, como na ref) — nunca bolas inteiras. */
+.ctaBloomL {
+  position: absolute;
+  left: -5.2vw;
+  top: 21%;
+  width: 13.5vw;
+  height: 19vw;
+  pointer-events: none;
+  /* Pass R7: o glow dourado inferior da ref é mais presente (+30%) e um halo
+     amplo de calor acompanha. */
+  background:
+    radial-gradient(
+      ellipse 52% 22% at 26% 34%,
+      rgba(233, 201, 212, 0.7),
+      rgba(233, 201, 212, 0.2) 46%,
+      transparent 74%
+    ),
+    radial-gradient(ellipse 40% 8% at 30% 70%, rgba(212, 170, 92, 0.46), transparent 78%),
+    radial-gradient(ellipse 60% 30% at 34% 30%, rgba(180, 152, 200, 0.3), transparent 80%),
+    radial-gradient(ellipse 80% 46% at 18% 66%, rgba(216, 176, 102, 0.14), transparent 80%);
+}
+.flow > .final .finalCopy {
+  position: relative;
+  z-index: 2;
+  /* A ref senta a copy a ~7vw (borda esquerda do "S" ~134css @1920), não a
+     4,2vw estimada antes — medida no crop chk-cta-esq-4x.png. */
+  padding-left: 7vw;
+  /* Topo do h2 na ref: cap do "S" em ~187css da seção. Max-width inclui o
+     padding-left (134css): conteúdo = 50%−7vw = 830css ≥ linha 1 do p
+     (~822css) — sem requebra; right-edge do parágrafo ~962css na ref. */
+  padding-top: 170px;
+  max-width: 50%;
+}
+/* Overrides explícitos (0,2,2) do h2 do CTA: ref font ~85css e pitch ~105css
+   (@1920). O \* quebrado do landing (linha ~996) engole o font-size lá. */
+.flow > .final .finalCopy h2 {
+  font-size: clamp(44px, 4.45vw, 91px);
+  line-height: 1.24;
+}
+.flow > .final .finalCopy h2 em {
+  color: #e4d5f2;
+}
+.flow > .final .finalCopy p {
+  /* Ref: 15.9css/char (→ ~31px @1920), pitch ~55css; quebra em 2 linhas
+     explícita no JSX após "experiências" (a 30ch quebrava em 3). */
+  font-size: clamp(15px, 1.6vw, 31px);
+  line-height: 1.75;
+  margin-top: 2.4vw;
+  color: #d9d3e0;
+}
+.finalActions {
+  display: flex;
+  flex-wrap: wrap;
+  /* Ref: gap de ~32css entre os botões. */
+  gap: 32px;
+  margin-top: 2.5vw;
+}
+.finalActions a {
+  /* Ref: ~409×110css (btn1) e ~353×110 (btn2) @1920; fonte do rótulo ~28css
+     (largura do texto 242/17car). Padding-inline 2.5vw fecha os dois alvos. */
+  min-height: clamp(48px, 5.7vw, 110px);
+  font-size: clamp(12px, 1.45vw, 28px);
+  padding: 0 2.5vw;
+}
+/* Seta da ref: ~20–24px com gap de ~45css do rótulo (impl colada). */
+.finalActions a > svg {
+  margin-left: 44px;
+}
+
+@media (max-width: 760px) {
+  .flow > section {
+    padding: 44px 24px;
+  }
+  .flow h2 {
+    font-size: 35px;
+  }
+  .flow p {
+    font-size: 15px;
+  }
+  /* .flow > .experiences: o desktop rule ganhou (0,2,0) com o grid da ref —
+     sem o mesmo prefixo, o media block perde a cascata (como já mordeu o
+     .flow > .benefits). */
+  .project,
+  .how,
+  .audience,
+  .flow > .benefits,
+  .flow > .experiences,
+  .flow > :global(.faq-section) {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    /* Mesmo prefixo (0,2,0) + ordem posterior: vence o padding-left 3.85vw
+       do desktop (o .flow > section genérico (0,1,1) perderia). */
+    padding: 44px 24px;
+  }
+  .flow > .how {
+    min-height: 0;
+  }
+  .projectBloom {
+    top: -40px;
+    width: clamp(120px, 30vw, 180px);
+  }
+  /* Ornamentos de borda no mobile: seguem presentes, mais pequenos e
+     posicionados no próprio canto (nenhum vira sticker central). */
+  .projectFloralL,
+  .benefitsFloral {
+    opacity: 0.9;
+  }
+  .comoFloralR {
+    width: 21vw;
+    top: 10px;
+  }
+  .pqFloral {
+    width: 13vw;
+    bottom: 3px;
+  }
+  .benefitsFloral {
+    width: 12vw;
+  }
+  .projectMark {
+    display: none;
+  }
+  .how ol {
+    gap: 18px;
+    grid-template-columns: 1fr 1fr;
+  }
+  .how ol li {
+    display: block;
+    margin-top: 0;
+    padding-top: 14px;
+  }
+  .how ol li > span {
+    display: block;
+    font-size: 34px;
+    margin-bottom: 12px;
+  }
+  .how ol h3 {
+    font-size: 22px;
+  }
+  .how ol li p {
+    font-size: 13px;
+  }
+  .audienceList li {
+    font-size: 24px;
+  }
+  .benefitList {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 20px;
+  }
+  .benefitList li {
+    display: block;
+  }
+  .benefitList svg {
+    margin-bottom: 12px;
+  }
+  .benefitList h3 {
+    font-size: 15px;
+  }
+  .benefitList p {
+    font-size: 13px;
+  }
+  .flow > section:global([id='niveis']) {
+    padding: 44px 24px;
+  }
+  .flow > section:global([id='niveis']) ol li h3 {
+    margin-top: 0;
+  }
+  .flow > section:global([id='niveis']) > div:first-child > p:first-child {
+    font-size: 11px;
+    margin: 0 0 16px;
+  }
+  .flow > section:global([id='niveis']) h2 {
+    font-size: 34px;
+  }
+  .flow > section:global([id='niveis']) > div:first-child > p:last-child {
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  /* Ornamentos no mobile: MESMO nome simples do desktop (uma classe só —
+     o media block vence por vir depois no mesmo módulo). A órbita SVG e a
+     névoa da CTA se desligam: esticam sem sentido na coluna única. */
+  .journeyBouquet {
+    left: auto;
+    right: -5vw;
+    top: -3vw;
+    width: 56vw;
+  }
+  .comoFloralL {
+    width: 18vw;
+  }
+  .journeyOrchid {
+    top: auto;
+    bottom: 9%;
+    width: 36vw;
+  }
+  .journeyRibbon {
+    width: 100vw;
+  }
+  .faqBloomL {
+    width: 44vw;
+    top: auto;
+    bottom: -7vw;
+    /* Mesma máscara do tablet: derrete as 4 bordas do patch (o mobile
+       pinta-o a 44vw — a borda dura leria ainda mais). */
+    mask-image: radial-gradient(
+      ellipse 64% 62% at 42% 44%,
+      #000 10%,
+      rgba(0, 0, 0, 0.5) 42%,
+      transparent 68%
+    );
+  }
+  .finalOrbit,
+  .finalHaze,
+  .ctaBloomL {
+    display: none;
+  }
+  .experienceArt {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    align-self: auto;
+    justify-self: center;
+  }
+  .experienceArt .sceneBase {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 912 / 808;
+  }
+  .flow > :global(.faq-section) > div:first-child {
+    padding-top: 0;
+  }
+  .flow :global(.faq-list) {
+    margin-top: 0;
+    max-width: none;
+  }
+  .flow > .final {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 44px 24px 56px;
+  }
+  .flow > .final .finalCopy {
+    grid-row: 1;
+    padding: 0;
+    max-width: none;
+  }
+  /* Mesmo prefixo (0,3,1) + ordem posterior: vence o clamp do desktop (o min
+     de 44px aplicaria; a composição mobile pede 36px como antes). */
+  .flow > .final .finalCopy h2 {
+    font-size: 36px;
+    line-height: 1.2;
+  }
+  .flow > .final .finalPortrait {
+    grid-row: 2;
+    position: static;
+    width: 100%;
+    height: 300px;
+    max-height: 320px;
+    margin-top: 10px;
+  }
+  .finalActions {
+    gap: 10px;
+  }
+  .finalActions a {
+    font-size: 13px;
+  }
+  /* As quebras <br/> calibradas para o desktop viram órfãs ("e" sozinho) nas
+     colunas estreitas — volta a quebra natural de texto. */
+  .experiences p br,
+  .flow > .final .finalCopy p br {
+    display: none;
+  }
+}
+/* A linha 1 do CTA fica justa abaixo de ~1400 (folga de 4px na calibração
+   @1920) — o br vira órfã ("experiências" sozinho) em 1366; volta a quebra
+   natural na faixa. A partir de 1440 as capturas comprovam as 2 linhas. */
+@media (min-width: 761px) and (max-width: 1380px) {
+  .flow > .final .finalCopy p br {
+    display: none;
+  }
+}
+
+/* ── Faixas intermediárias (761–1279: sem painel de referência — composição
+   própria). ESTE bloco precisa ficar DEPOIS das regras desktop: mesma
+   specificity ⇒ cascata decide por posição no arquivo (não pela faixa). ── */
+/* O clamp min de 56px do FAQ empilha o h2 em 3 linhas na coluna de 37% em
+   768; o bloom da CTA recortado do desktop tem fundo próprio que destoa do
+   tablet (quadrado de borda dura em 1024/1280). */
+@media (min-width: 761px) and (max-width: 1279px) {
+  .flow > :global(.faq-section) h2 {
+    font-size: clamp(34px, 5.6vw, 56px);
+  }
+  .ctaBloomL {
+    display: none;
+  }
+  /* O min de 520px do desktop deixa ~108–158px de creme morto acima da cena
+     (40.2vw < 520 abaixo de 1293) — a seção volta a seguir o conteúdo. */
+  .flow > .experiences {
+    min-height: 0;
+  }
+  /* O patch do FAQ funde no 1920 aprovado, mas em tablet o bg local diverge
+     do fundo assado no crop — máscara radial só na faixa (o 1920 fica intato). */
+  .flow > :global(.faq-section) .faqBloomL,
+  .faqBloomL {
+    mask-image: radial-gradient(
+      ellipse 64% 62% at 42% 44%,
+      #000 10%,
+      rgba(0, 0, 0, 0.5) 42%,
+      transparent 68%
+    );
+  }
+}
+/* Faixa empilhada da jornada (o arco do desktop escala e preenche a largura
+   até 1000; abaixo disso vira coluna estática — as regras do empilhado
+   vivem no landing.module.css). A margem negativa do rótulo era calibração
+   do ARCO — nas colunas estáticas puxa o texto para cima do item anterior;
+   o min de 64px empilha o h2 em 4 linhas na coluna de 52% em 768. */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .flow > section:global([id='niveis']) ol li h3 {
+    margin-top: 0;
+  }
+  .flow > section:global([id='niveis']) h2 {
+    font-size: clamp(40px, 5.85vw, 112px);
+  }
+  .experiences p br,
+  .flow > .final .finalCopy p br {
+    display: none;
+  }
+}

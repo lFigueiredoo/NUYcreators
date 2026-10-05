@@ -1,10 +1,19 @@
+import Image from 'next/image';
 import Link from 'next/link';
+
 export function Footer() {
   return (
     <footer className="site-footer">
       <div className="footer-top">
         <Link className="wordmark" href="/">
-          nuy<span>CREATORS</span>
+          <Image
+            src="/brand/reference/nuy-wordmark-hi.png"
+            alt="NUY"
+            width={384}
+            height={240}
+            className="editorial-wordmark-image"
+          />
+          <span>CREATORS</span>
         </Link>
         <p>
           Pequenos momentos.
@@ -12,9 +21,10 @@ export function Footer() {
           Novas possibilidades.
         </p>
         <nav aria-label="Rodapé">
-          <Link href="/desafios">Desafios</Link>
-          <Link href="/recompensas">Recompensas</Link>
-          <Link href="/login">Minha conta</Link>
+          <Link href="/#projeto">O projeto</Link>
+          <Link href="/#beneficios">Benefícios</Link>
+          <Link href="/#faq">FAQ</Link>
+          <Link href="/login">Entrar</Link>
         </nav>
       </div>
       <div className="footer-bottom">
@@ -23,7 +33,7 @@ export function Footer() {
           <Link href="/privacidade">Privacidade</Link>
           <Link href="/termos">Termos de uso</Link>
         </div>
-        <span>Crie com presença.</span>
+        <p className="footer-signature">Crie com presença.</p>
       </div>
     </footer>
   );

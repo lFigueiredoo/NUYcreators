@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 test('public identity and navigation', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Crie. Compartilhe. Conquiste.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bem-vinda ao NUY CREATORS' })).toBeVisible();
   await page.getByRole('link', { name: 'Fazer parte' }).first().click();
   await expect(
-    page.getByRole('heading', { name: 'Seu próximo capítulo começa aqui.' }),
+    page.getByRole('heading', { name: 'Seu lugar no NUY Creators começa aqui.' }),
   ).toBeVisible();
 });
 test('protected route shells require a real server session', async ({ page }) => {
@@ -16,10 +16,10 @@ test('protected route shells require a real server session', async ({ page }) =>
 test('honest empty states and reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
-  await expect(page.getByText('A comunidade está começando a florescer.')).toBeVisible();
   await expect(
-    page.getByText('Nenhum desafio foi publicado nesta versão.', { exact: false }),
+    page.getByRole('heading', { name: 'Uma jornada que evolui com você.' }),
   ).toBeVisible();
+  await expect(page.locator('#ranking, #desafio')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );

@@ -10,6 +10,23 @@
 :root {
   --background: #07182c;
   --foreground: #f7efdf;
+  /* Paleta NUY — aliases semânticos da rodada de direção de arte (item 29):
+     um único lugar para os tons das superfícies; os valores são os mesmos
+     já publicados (a paleta não muda). O escopo local do .experience segue
+     definindo os próprios, com os mesmos valores de origem. */
+  --nuy-navy-base: #07162b;
+  --nuy-navy-raised: #101d32;
+  --nuy-navy-deep: #0a172c;
+  --nuy-violet: #6046a8;
+  --nuy-lavender: #cbb4e2;
+  --nuy-cream: #f4eddf;
+  --nuy-ink: #15233b;
+  /* Acento térmico R7: ligeiro aquecimento/luz (metais da ref) — navy/cream
+     base intocados. */
+  --nuy-gold: #d6b183;
+  --nuy-warm-white: #f6eedd;
+  /* Grão de filme para os blocos navy (item 28): tile de ~2%, repetido. */
+  --nuy-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.024'/%3E%3C/svg%3E");
 }
 * {
   box-sizing: border-box;
@@ -61,10 +78,15 @@ p {
 section[id] {
   scroll-margin-top: 30px;
 }
+/* Lockup vertical da submarca: a marca em cima, o rótulo embaixo — nunca na
+   mesma baseline. O rótulo acompanha o tracking da grafia e começa onde a tinta
+   da marca começa. */
 .wordmark {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Encostado de proposito: a submarca nasce imediatamente sob a tinta. */
+  gap: 4px;
   color: inherit;
   font-family: Georgia, serif;
   font-size: 3rem;
@@ -75,9 +97,10 @@ section[id] {
   font-family: Arial, sans-serif;
   font-size: 0.65rem;
   font-weight: 500;
-  letter-spacing: 0.22em;
-  border-left: 1px solid #b7ad9855;
-  padding-left: 16px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding-left: 2px;
 }
 .site-header {
   max-width: 1440px;
@@ -85,15 +108,17 @@ section[id] {
   padding: 27px 5%;
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 34px;
   border-bottom: 1px solid #e2d7c41c;
   position: relative;
   z-index: 20;
 }
+/* O menu pertence à marca (renta a ela, mesmo tracking da submarca);
+   o espaço morto fica entre menu e ações. */
 .desktop-nav {
   display: flex;
-  gap: 28px;
-  margin-left: auto;
+  gap: 22px;
+  letter-spacing: 0.02em;
 }
 .desktop-nav a,
 .login-link {
@@ -109,6 +134,7 @@ section[id] {
   display: flex;
   align-items: center;
   gap: 24px;
+  margin-left: auto;
 }
 .header-cta {
   padding: 11px 19px;
@@ -614,6 +640,17 @@ section[id] {
   color: #aeb9c7;
   font-size: 0.85rem;
 }
+/* Resposta entra com micro-fade quando <details> abre (complementa a animação
+   de height em ::details-content). */
+.faq-list details[open] p {
+  animation: faq-reveal 0.4s ease both;
+}
+@keyframes faq-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
 .final-cta {
   position: relative;
   overflow: hidden;
@@ -641,40 +678,70 @@ section[id] {
   color: #c0a5d70e;
   pointer-events: none;
 }
+/* Footer da referência: wordmark imagem + CREATORS à esquerda (2%w), tagline
+   de duas linhas a ~36,7%w, nav terminando a ~89%w (margem direita 11%).
+   O hairline senta ~266css do topo — o bloco superior tem min-height para
+   fecha-lo onde a ref fecha o dele. */
 .site-footer {
-  max-width: 1440px;
-  margin: auto;
-  padding: 50px 5% 25px;
+  /* Full-bleed como na referência (wordmark ~109css, nav a 89%). Fundo por
+     probe: ref (9,22,42) vs impl (4,15,38) — impl mais escuro e mais azul. */
+  max-width: none;
+  margin: 0;
+  padding: 30px 11% 44px 5.5vw;
+  background: #09162a;
 }
 .footer-top {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 37.5% 1fr auto;
+  /* Ref: a linha superior senta no PAD (logo ao topo ~30css) e o hairline
+     fecha ~223css — é start, não center (o center empurrava o logo ~94css). */
+  align-items: start;
   gap: 40px;
-  padding-bottom: 45px;
+  /* Hairline da ref em ~223css do topo da footer (30 + 194). */
+  min-height: 194px;
 }
-.footer-top > p {
+.footer-top .wordmark img {
+  /* R7: o wordmark da ref lê ~148css @1920 (impl lia 132). */
+  width: 148px;
+  height: auto;
+}
+/* A tagline abre a coluna central (não fica no meio da página). A
+   especificidade extra vence o p genérico de .experience (chunk posterior). */
+.site-footer .footer-top > p {
+  justify-self: start;
   font-family: Georgia, serif;
-  font-size: 1.25rem;
-  color: #b9b9c3;
-  line-height: 1.4;
+  /* Ref: 19 caracteres em ~275css → ~31px @1920 (impl 25). */
+  font-size: clamp(16px, 1.6vw, 31px);
+  color: #cfd6e4;
+  line-height: 1.45;
+  text-align: left;
+  margin: 0;
 }
 .footer-top nav {
+  justify-self: end;
   display: flex;
-  gap: 30px;
-  font-size: 0.75rem;
+  gap: 2.6vw;
+  /* R7: satélite +8% (nav da ref lê ~24px @1920). */
+  font-size: clamp(13.5px, 1.22vw, 23.5px);
+  letter-spacing: 0.02em;
 }
 .footer-bottom {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 20px;
   border-top: 1px solid #f0e2cd22;
-  padding-top: 22px;
-  font-size: 0.62rem;
+  /* Ref: divisória ~223css, © cap ~288css, base ~357css → respiro de 56. */
+  padding-top: 56px;
+  font-size: clamp(12px, 1.33vw, 26px);
   color: #9aa7b7;
 }
 .footer-bottom > div {
   display: flex;
-  gap: 25px;
+  gap: 2.5vw;
+}
+.footer-bottom .footer-signature {
+  margin: 0;
 }
 .public-inner {
   max-width: 1200px;
@@ -1070,20 +1137,28 @@ section[id] {
   .final-cta h2 {
     font-size: 2.8rem;
   }
+  .site-footer {
+    /* Mesmo nome simples + ordem posterior: vence o desktop novo. */
+    padding: 40px 24px 30px;
+  }
   .footer-top {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    justify-items: center;
     gap: 25px;
     padding-bottom: 30px;
+    min-height: 0;
   }
   .footer-top > p {
-    margin: 0;
+    text-align: center;
   }
   .footer-top nav {
+    justify-self: center;
     gap: 24px;
   }
   .footer-bottom {
     flex-wrap: wrap;
     line-height: 1.6;
+    padding-top: 25px;
   }
   .footer-bottom > span:last-child {
     display: none;

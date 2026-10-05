@@ -2,6 +2,22 @@
 
 Status: **BLOQUEADO ANTES DE PROVISIONAR. Fundação de produção NÃO encerrada.**
 
+## Última execução — Fase A
+
+Commit aprovado executado: `9c2e7cb` — `fix: validate shared Appwrite project identity and enforce private application marker`.
+
+O template versionado mantém IDs em branco e flags sensíveis desabilitadas. Edições locais do usuário em `.env.example` foram preservadas no working tree, sem copiar IDs para outros arquivos. O `.env.local` permaneceu ignorado; a checagem do conteúdo staged encontrou zero correspondências das chaves locais.
+
+Auditoria somente de presença/formato, sem revelar valores: `APPWRITE_EXPECTED_PROJECT_ID` foi encontrado no `.env.example`, mas não no `.env.local` efetivamente carregado. O ambiente development/staging também não está definido no ambiente efetivo. `.env.example` é template e não é carregado pelos scripts.
+
+`npm run infra:preflight` foi executado após o commit e retornou exit 1 por expected ID ausente. O endpoint carregado é `https://api.edocs.phiq.com.br/v1`, autorizado como infraestrutura compartilhada. A confirmação dedicada está true. Igualdade dos IDs, autenticação da chave de provisionamento, chave SSR e marker remoto ainda NÃO foram validados, pois nenhuma requisição pôde iniciar.
+
+**Zero chamadas remotas e zero criações nesta retomada.** Fases B, C e D não foram iniciadas. Duas execuções do provisionador, marker, Auth, email, isolamento, roles, transações, rollback, concorrência e idempotência real permanecem pendentes. Os gates de teste continuam exigindo chave independente e opt-in; nenhuma chave foi reutilizada.
+
+Correção necessária no arquivo seguro `.env.local`: informar o ID aprovado em `APPWRITE_EXPECTED_PROJECT_ID` e `APPWRITE_TEST_ENVIRONMENT=development`, sem alterar automaticamente `APPWRITE_PROJECT_ID`. Uma eventual diferença de IDs continuará interrompendo antes da rede. Não colocar secrets no template.
+
+Os resultados locais históricos abaixo não foram reexecutados nesta retomada: a Fase A falhou em um requisito crítico e o fluxo foi interrompido como solicitado. Nenhuma feature adicional foi construída. Rate limiting compartilhado permanece bloqueio de produção, não impedimento adicional de testes dev isolados após identidade aprovada.
+
 ## Commit da entrega aprovada
 
 `ca5ce15` — `feat: bootstrap NUY Creators infrastructure, Appwrite foundation, auth and public experience`.
