@@ -8,6 +8,7 @@ import {
   createAccount,
   createSessionAccount,
   currentUser,
+  readOwnProfile,
   SESSION_COOKIE,
   sessionClient,
 } from '@/lib/appwrite/server';
@@ -20,6 +21,7 @@ import {
   verificationSchema,
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
+import { postLoginRoute } from './onboarding-gate';
 
 export type FormState = { message: string; success?: boolean };
 async function allowedRequest() {
@@ -36,7 +38,7 @@ async function saveSession(email: string, password: string) {
     path: '/',
     expires: new Date(session.expire),
   });
-  return session.secret;
+  return session;
 }
 export async function loginAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !authConfigured())
@@ -44,14 +46,24 @@ export async function loginAction(_previous: FormState, form: FormData): Promise
   const parsed = loginSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success)
     return { message: 'Confira seu email e sua senha (mínimo de 8 caracteres).' };
+  let session;
   try {
-    await saveSession(parsed.data.email, parsed.data.password);
+    session = await saveSession(parsed.data.email, parsed.data.password);
   } catch {
     return {
       message: 'Não foi possível entrar. Confira seus dados ou tente novamente mais tarde.',
     };
   }
-  redirect('/onboarding');
+  // O destino sai da fonte de verdade do onboarding (o perfil privado que a
+  // função `complete-onboarding` grava). Se a leitura falhar, o login já feito
+  // não cai: o onboarding é resumível e o destino conservador.
+  let profile: { onboardingCompletedAt?: unknown } | null = null;
+  try {
+    profile = await readOwnProfile(session.secret, session.userId);
+  } catch {
+    /* indiferente: `null` manda para o onboarding */
+  }
+  redirect(postLoginRoute(profile));
 }
 export async function signupAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !registrationConfigured())
@@ -67,8 +79,8 @@ export async function signupAction(_previous: FormState, form: FormData): Promis
       password: parsed.data.password,
       name: parsed.data.name,
     });
-    const secret = await saveSession(parsed.data.email, parsed.data.password);
-    await createAccount(secret).createVerification({
+    const session = await saveSession(parsed.data.email, parsed.data.password);
+    await createAccount(session.secret).createVerification({
       url: `${getEnvironment().APP_URL}/verificar-email`,
     });
   } catch {

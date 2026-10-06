@@ -10,3 +10,7 @@ test-results/
 next-env.d.ts
 functions/complete-onboarding/src/
 .appwrite/
+
+.pw-browsers/
+artifacts/
+debug.log

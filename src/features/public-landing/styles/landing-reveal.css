@@ -1,0 +1,38 @@
+/*
+ * Reveal da landing — folha GLOBAL de propósito, fora do CSS Modules.
+ *
+ * O estado escondido é dirigido por ATRIBUTO (`[data-pl-reveal]`, e
+ * `[data-pl-visible]` que o IntersectionObserver põe). O CSS Modules do
+ * Turbopack recusa seletor de atributo puro — "Pure selectors must contain at
+ * least one local class or id" — e a forma equivalente dentro de um module
+ * (`:global([data-pl-reveal])`) é exatamente o que ele reprova no dev: a
+ * landing responde 500 antes de compilar. Num arquivo global não existe
+ * checagem de pureza, e o escopo continua o mesmo: `.pl-landing`, a classe
+ * estável da raiz (classe + atributo = especificidade 0,2,0, idêntica à do
+ * module) — sem dependência da ordem das folhas.
+ *
+ * Sem JavaScript nada disso esconde conteúdo: o `<noscript>` de
+ * public-landing.tsx devolve opacidade e transform com `!important`.
+ */
+
+.pl-landing [data-pl-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 0.72s ease,
+    transform 0.72s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition-delay: var(--pl-stagger, 0ms);
+}
+
+.pl-landing [data-pl-visible] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Sob redução de movimento o reveal não anima: o elemento aparece de uma vez.
+   As transições de hover continuam desligadas no módulo. */
+@media (prefers-reduced-motion: reduce) {
+  .pl-landing [data-pl-reveal] {
+    transition: none;
+  }
+}

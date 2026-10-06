@@ -1,5 +1,5 @@
 import 'server-only';
-import { Account, Client } from 'node-appwrite';
+import { Account, Client, Databases } from 'node-appwrite';
 import { cookies } from 'next/headers';
 import { getEnvironment } from '@/lib/env/server';
 export const SESSION_COOKIE = 'nuy-session';
@@ -51,4 +51,31 @@ export function sessionClient(secret: string) {
     .setEndpoint(env.APPWRITE_ENDPOINT!)
     .setProject(env.APPWRITE_PROJECT_ID!)
     .setSession(secret);
+}
+/**
+ * Perfil privado do próprio usuário (`profiles/{userId}`), lido com a sessão
+ * dele — o documento é criado com `read(user:userId)`, então nenhuma key de
+ * admin é necessária. Documento ausente é estado normal (perfil ainda não
+ * criado) e devolve `null`; falha real sobe para quem chamou decidir.
+ */
+export async function readOwnProfile(
+  secret: string,
+  userId: string,
+): Promise<{ onboardingCompletedAt?: unknown } | null> {
+  try {
+    const document = await new Databases(sessionClient(secret)).getDocument({
+      databaseId: getEnvironment().APPWRITE_DATABASE_ID,
+      collectionId: 'profiles',
+      documentId: userId,
+    });
+    // A coleção não tem schema no SDK: o único campo lido é o marcador de
+    // conclusão que a função `complete-onboarding` grava por último.
+    return {
+      onboardingCompletedAt: (document as { onboardingCompletedAt?: unknown })
+        .onboardingCompletedAt,
+    };
+  } catch (error) {
+    if ((error as { code?: number }).code === 404) return null;
+    throw error;
+  }
 }

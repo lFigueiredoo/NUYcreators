@@ -1,25 +1,14 @@
-import { Footer } from '@/components/layout/footer';
-import { PublicMotion } from '@/features/community/components/public-motion';
-import { Landing } from '@/features/community/components/landing';
+import { PublicLanding } from '@/features/public-landing/public-landing';
 import { currentUser } from '@/lib/appwrite/server';
-import {
-  editorial,
-  interfaceFont,
-  handwriting,
-} from '@/features/community/components/landing-fonts';
-import styles from '@/features/community/components/landing.module.css';
+
 export const dynamic = 'force-dynamic';
+
+/**
+ * Home pública — PROPOSTA C "Entre Casa & Creators".
+ * A camada visual anterior (navy/violeta) foi removida; a sessão continua
+ * vindo do Appwrite para o header alternar Entrar / Ir para meu painel.
+ */
 export default async function Home() {
   const user = await currentUser();
-  return (
-    <div
-      className={`${styles.experience} ${editorial.variable} ${interfaceFont.variable} ${handwriting.variable}`}
-    >
-      <PublicMotion />
-      <main id="main">
-        <Landing authenticated={Boolean(user)} />
-      </main>
-      <Footer />
-    </div>
-  );
+  return <PublicLanding authenticated={Boolean(user)} />;
 }

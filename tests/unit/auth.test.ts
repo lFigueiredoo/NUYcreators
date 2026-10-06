@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { signupSchema, loginSchema } from '../../src/features/auth/schemas/auth';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
+import { postLoginRoute } from '../../src/features/auth/services/onboarding-gate';
 const profile = {
   name: 'Pessoa',
   phone: '11999999999',
@@ -43,5 +44,16 @@ describe('auth contracts', () => {
     const result = onboardingSchema.parse({ ...profile, role: 'admin', points: 10000 });
     expect(result).not.toHaveProperty('role');
     expect(result).not.toHaveProperty('points');
+  });
+});
+describe('post-login destination', () => {
+  it('sends a completed profile to the workspace', () => {
+    expect(postLoginRoute({ onboardingCompletedAt: '2026-01-01T00:00:00.000Z' })).toBe('/app');
+  });
+  it('sends an incomplete, missing or unreadable profile to onboarding', () => {
+    // O marcador só existe em perfil completo; qualquer outra forma — inclusive
+    // a leitura indisponível (`null`) — cai no onboarding, que é resumível.
+    for (const value of [null, {}, { onboardingCompletedAt: '' }, { onboardingCompletedAt: 0 }])
+      expect(postLoginRoute(value)).toBe('/onboarding');
   });
 });

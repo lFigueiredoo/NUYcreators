@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Global visual QA for the public landing (fold, typography, imagery, rhythm).
- * Every rule here mirrors an acceptance item from the design brief; a failure
- * means the published experience regressed, so assertions stay conservative.
+ * QA global da landing pública (Proposta C): dobra, tipografia, imagem, ritmo
+ * e honestidade do conteúdo. Cada regra espelha um item de aceite do brief —
+ * falha aqui significa que a experiência publicada regrediu.
  */
 
-// Public prose must never leak development commentary about the concept art.
+// Comentário de desenvolvimento nunca pode chegar à página pública.
 const devPhrases = [
   'Composição conceitual',
   'Arte conceitual',
@@ -16,19 +16,22 @@ const devPhrases = [
   'não fotografia oficial',
 ];
 
-const viewportWidths: Array<[number, 1920 | 1440 | 1366 | 1280 | 1024 | 430 | 390 | 375]> = [
+const viewportWidths: Array<[number, 1920 | 1440 | 1366 | 1280 | 1024 | 768 | 430 | 390 | 375]> = [
   [1920, 1920],
   [1440, 1440],
   [1366, 1366],
   [1280, 1280],
   [1024, 1024],
+  [768, 768],
   [430, 430],
   [390, 390],
   [375, 375],
 ];
 
 for (const [width, widthName] of viewportWidths) {
-  test(`landing holds the fold, the grid and no overflow at ${widthName}px`, async ({ page }) => {
+  test(`landing mantém a régua, a densidade e nenhum overflow em ${widthName}px`, async ({
+    page,
+  }) => {
     test.skip(
       test.info().project.name === 'mobile' && widthName > 760,
       'Desktop sizes are covered by the chromium project.',
@@ -38,69 +41,32 @@ for (const [width, widthName] of viewportWidths) {
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
 
-    // 1) The headline asset renders at true 100svh and the next section starts
-    //    immediately after it — no cream band, no seam.
-    const fold = await page.evaluate(() => {
-      const hero = document.querySelector('[data-visual-hero]')!;
-      const next = document.getElementById('projeto')!;
-      const heroBox = hero.getBoundingClientRect();
-      return {
-        inner: innerHeight,
-        heroTop: heroBox.top + scrollY,
-        heroHeight: heroBox.height,
-        nextTop: next.getBoundingClientRect().top + scrollY,
-      };
-    });
-    // On mobile the hero may hold more than one viewport (820px floor), but it
-    // always fills the fold; on desktop the reference artboard governs: hero =
-    // 100vw × 73/160 (873px @1920, painel desktop ×2,217) — não é 100svh.
-    if (widthName < 1024) {
-      expect(fold.heroHeight).toBeGreaterThanOrEqual(fold.inner - 2);
-    } else {
-      expect(Math.abs(fold.heroHeight - (widthName * 73) / 160)).toBeLessThanOrEqual(6);
-    }
-    expect(Math.abs(fold.nextTop - (fold.heroTop + fold.heroHeight))).toBeLessThan(1);
+    // 1) Sem overflow horizontal em nenhum break point publicado.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
 
-    // 2) No horizontal overflow at the published break points.
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-      ),
-    ).toBe(true);
-
-    // 3) No content-scale image is upscaled beyond the pixels its own file
-    //    actually contains (DPR 1). naturalWidth is unreliable under srcset —
-    //    Chromium reports it density-normalised to the sizes slot, not as the
-    //    served file's width — so the honest measure decodes currentSrc with
-    //    createImageBitmap and compares bitmap pixels against displayed CSS × DPR.
-    //    Layout width (img.width) ignores transform inflation from rotated decor;
-    //    garnishes under 200px are whisper layers styled with blur/opacity by design;
-    //    the mobile project runs at DPR 3, where the wire already serves adequate
-    //    density, so the strict rule applies to DPR 1 contexts only.
+    // 2) Nenhuma imagem de conteúdo acima dos pixels que o próprio arquivo tem
+    //    (DPR 1). naturalWidth mente sob srcset — o Chromium o normaliza para o
+    //    slot de `sizes`, não para o arquivo servido —, então a medida honesta
+    //    decodifica o currentSrc com createImageBitmap e compara com CSS × DPR.
+    //    A largura de layout (img.width) ignora inflação por transform; a regra
+    //    estrita vale para DPR 1 (no projeto mobile a fiação já serve densidade
+    //    suficiente a DPR 3).
     const upscaled = await page.evaluate(async () => {
       if (devicePixelRatio !== 1) return [];
-      // Walk the page once so every lazy srcset selection has committed and
-      // reports a currentSrc worth auditing.
+      // Varre a página uma vez para toda seleção de srcset preguiçoso já ter
+      // acontecido e reportar um currentSrc que valha auditar.
       for (const section of Array.from(document.querySelectorAll('main section'))) {
         section.scrollIntoView({ block: 'center' });
         await new Promise((resolve) => setTimeout(resolve, 40));
       }
       scrollTo(0, 0);
-      const images = Array.from(
-        document.querySelectorAll<HTMLImageElement>('[data-visual-hero] img, main section img'),
-      );
+      const images = Array.from(document.querySelectorAll<HTMLImageElement>('main img'));
       const samples: Array<{ src: string; bitmap: number; shown: number; sizes: string }> = [];
-      // The approved CTA composition shows the portrait at 88vw (1690px @1920),
-      // but its only available source file caps at 1155px — the mockup itself
-      // caps the portrait at ~284px, so 1690/1155 = 1.47× remains far sharper
-      // than the reference's own ~6× rendering of the same art. Documented
-      // source cap, not a wire miss: exempting it from the strict scan.
-      const SOURCE_CAPS = /final-portrait/;
       for (const img of images) {
-        // img.width is the layout width (unaffected by rotation transforms).
         const shown = img.width || img.getBoundingClientRect().width;
         if (!img.currentSrc || shown < 200) continue;
-        if (SOURCE_CAPS.test(img.currentSrc)) continue;
         try {
           const response = await fetch(img.currentSrc);
           const bitmap = await createImageBitmap(await response.blob());
@@ -112,18 +78,15 @@ for (const [width, widthName] of viewportWidths) {
           });
           bitmap.close();
         } catch {
-          // A lazy image whose bytes are still on the wire resolves its fetch
-          // anyway; failures here are network-level, not a fidelity claim.
+          // Uma imagem preguiçosa cujos bytes ainda estão na rede resolve o
+          // fetch de qualquer forma; falha aqui é de rede, não de fidelidade.
         }
       }
-      return samples.filter((s) => s.bitmap + 2 < s.shown);
+      return samples.filter((sample) => sample.bitmap + 2 < sample.shown);
     });
     expect(upscaled).toEqual([]);
 
-    // 4) No visible text block is vertically clipped by its own box. Clipping
-    //    means scroll overflow underneath a hiding overflow — visible overflow
-    //    on the tight editorial leading (the h1's script word sits on a larger
-    //    line box by design) is composition, not clipping.
+    // 3) Nenhum bloco de texto é cortado pela própria caixa.
     const clipped = await page.evaluate(() => {
       const hides = (el: HTMLElement) => {
         const { overflow, overflowY } = getComputedStyle(el);
@@ -133,7 +96,7 @@ for (const [width, widthName] of viewportWidths) {
         );
       };
       const nodes = Array.from(
-        document.querySelectorAll<HTMLElement>('main h1, main h2, main p, main li, main summary'),
+        document.querySelectorAll<HTMLElement>('main h1, main h2, main p, main li'),
       );
       return nodes
         .filter((el) => el.offsetHeight > 0 && el.scrollHeight > el.clientHeight + 2 && hides(el))
@@ -144,7 +107,7 @@ for (const [width, widthName] of viewportWidths) {
     });
     expect(clipped).toEqual([]);
 
-    // 5) Development commentary never ships to production.
+    // 4) Comentário de desenvolvimento nunca vai para produção.
     const visible = await page.evaluate((phrases) => {
       const text = (document.querySelector('main') ?? document.body).innerText;
       return phrases.filter((phrase) => text.toLowerCase().includes(phrase.toLowerCase()));
@@ -153,7 +116,9 @@ for (const [width, widthName] of viewportWidths) {
   });
 }
 
-test('editorial fonts resolve to loaded web fonts, not fallbacks', async ({ page }) => {
+test('tipografia editorial resolve para as fontes web carregadas, não fallbacks', async ({
+  page,
+}) => {
   test.skip(test.info().project.name === 'mobile', 'Budgets below are desktop measurements.');
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -161,246 +126,198 @@ test('editorial fonts resolve to loaded web fonts, not fallbacks', async ({ page
   await page.evaluate(() => document.fonts.ready);
 
   const [headlineFont, bodyFont, headlineLoaded, bodyLoaded] = await page.evaluate(() => {
-    const headline = getComputedStyle(document.querySelector('[data-hero-headline]')!);
-    const body = getComputedStyle(document.querySelector('[data-visual-hero] p')!);
-    const headlineFamily = headline.fontFamily
-      .split(',')[0]
-      .trim()
-      .replace(/^["']|["']$/g, '');
-    const fontFamily = body.fontFamily
-      .split(',')[0]
-      .trim()
-      .replace(/^["']|["']$/g, '');
+    const first = (el: Element) =>
+      getComputedStyle(el)
+        .fontFamily.split(',')[0]
+        .trim()
+        .replace(/^["']|["']$/g, '');
+    const headline = first(document.getElementById('pl-hero-title')!);
+    // O corpo do hero é o parágrafo longo da coluna — o eyebrow e a régua
+    // decorativa são <p> curtos.
+    const bodyNode = Array.from(document.querySelectorAll<HTMLElement>('[class*=heroCopy] p')).find(
+      (node) => (node.textContent ?? '').trim().length > 40,
+    )!;
+    const body = first(bodyNode);
     return [
-      headlineFamily,
-      fontFamily,
-      document.fonts.check(`400 40px ${JSON.stringify(headlineFamily)}`),
-      document.fonts.check(`400 16px ${JSON.stringify(fontFamily)}`),
+      headline,
+      body,
+      document.fonts.check(`400 40px ${JSON.stringify(headline)}`),
+      document.fonts.check(`400 16px ${JSON.stringify(body)}`),
     ];
   });
 
-  // next/font mints hashed families for both declared faces; a plain system
-  // name here means the @font-face never took over the hero.
+  // O next/font cunha famílias com hash para as duas faces declaradas; um nome
+  // de sistema aqui significa que o @font-face nunca assumiu o hero.
   expect(headlineFont.toLowerCase()).not.toMatch(/^georgia$|^serif$|^times/);
-  expect(bodyFont.toLowerCase()).not.toMatch(/^arial$|^helvetica$|^sans-serif$/);
-  expect(headlineLoaded, `serif display font "${headlineFont}" is not loaded`).toBe(true);
-  expect(bodyLoaded, `interface font "${bodyFont}" is not loaded`).toBe(true);
+  expect(bodyFont.toLowerCase()).not.toMatch(/^arial$|^helvetica$|^sans-serif$|^system-ui$/);
+  expect(headlineLoaded, `serif display "${headlineFont}" não carregou`).toBe(true);
+  expect(bodyLoaded, `fonte de interface "${bodyFont}" não carregou`).toBe(true);
 });
 
-test('sections keep the compact editorial rhythm', async ({ page }) => {
+test('as seções mantêm o ritmo editorial compacto', async ({ page }) => {
   test.skip(test.info().project.name === 'mobile', 'Budgets below are desktop measurements.');
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.evaluate(() => document.fonts.ready);
 
-  const heights = await page.evaluate(() =>
-    Object.fromEntries(
-      [
-        'projeto',
-        'como-funciona',
-        'para-quem',
-        'beneficios',
-        'niveis',
-        'experiencias',
-        'faq',
-        'cta-final',
-      ].map((id) => [id, document.getElementById(id)!.getBoundingClientRect().height]),
-    ),
-  );
-  // The reference governs (R7): diagonal sections run tall — 05 ~984px,
-  // 06 ~803, 07 ~856, CTA ~886 @1920 (painel médio ×3,7209). Projeto agora
-  // respeita a ref (375css, R7 probe x=520). Ceilings = ref height + ~6% of
-  // slack, so edits track the reference instead of ballooning.
-  const ceilings: Record<string, number> = {
-    projeto: 460,
-    'como-funciona': 435,
-    'para-quem': 360,
-    beneficios: 345,
-    niveis: 1040,
-    experiencias: 875,
-    faq: 910,
-    'cta-final': 935,
-  };
-  for (const [id, ceiling] of Object.entries(ceilings)) {
-    expect(
-      heights[id as keyof typeof heights],
-      `${id} is ${Math.round(heights[id as keyof typeof heights])}px tall (ceiling ${ceiling}px)`,
-    ).toBeLessThanOrEqual(ceiling);
-  }
-});
-
-test('gold connector threads stitch seams without crossing any text', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.evaluate(() => document.fonts.ready);
-
-  const crossings = await page.evaluate(() => {
-    // Sample both decorative connectors densely and test each screen point
-    // against the boxes of every text node they must not cross.
-    const threads = Array.from(document.querySelectorAll('svg')).filter((svg) =>
-      /howLine|journeyLine/.test(svg.getAttribute('class') ?? ''),
-    );
-    const textBoxes = Array.from(
-      document.querySelectorAll<HTMLElement>(
-        '#como-funciona h2, #como-funciona h3, #como-funciona p, #como-funciona li > span, #niveis h2, #niveis h3, #niveis p, #niveis small, #para-quem h2',
+  const heights = await page.evaluate(() => {
+    const box = (selector: string) =>
+      document.querySelector<HTMLElement>(selector)!.getBoundingClientRect().height;
+    return {
+      hero: box('[aria-labelledby="pl-hero-title"]'),
+      creators: box('[class*=creators]'),
+      challenge: box('[class*=challenge]'),
+      community: box('[class*=community]'),
+      rewards: box('[class*=rewards]'),
+      contents: box('#conteudos'),
+      faq: box('#faq'),
+      ctaFinal: box('#cta-final'),
+      footer: box('footer'),
+      page: document.documentElement.scrollHeight,
+      criadoresTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-creators-title')!).fontSize,
       ),
-    ).map((el) => {
-      const b = el.getBoundingClientRect();
-      return { t: el.textContent?.slice(0, 24) ?? el.tagName, b };
-    });
-    const strokes: Array<string> = [];
-    for (const svg of threads) {
-      const ctm = svg.getScreenCTM();
-      if (!ctm) continue;
-      for (const path of svg.querySelectorAll('path')) {
-        const len = path.getTotalLength();
-        if (!path.ownerSVGElement) continue;
-        if (getComputedStyle(path.ownerSVGElement).display === 'none') continue;
-        for (let i = 0; i <= 140; i++) {
-          const pt = path.getPointAtLength((len * i) / 140);
-          const sp = pt.matrixTransform(ctm);
-          for (const { t, b } of textBoxes) {
-            if (
-              sp.x + 1 > b.left &&
-              sp.x - 1 < b.right &&
-              sp.y + 1 > b.top &&
-              sp.y - 1 < b.bottom
-            ) {
-              strokes.push(`${t} @ ${Math.round(sp.x)},${Math.round(sp.y)}`);
-            }
-          }
-        }
-      }
-    }
-    return [...new Set(strokes)];
-  });
-  expect(crossings).toEqual([]);
-});
-
-test('the header lockup reads as the NUY / CREATORS submark', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.evaluate(() => document.fonts.ready);
-
-  const lockup = await page.evaluate(() => {
-    const brand = document.querySelector<HTMLElement>('[class*="wordmark"]');
-    if (!brand) return null;
-    const logo = brand.querySelector('img');
-    const label = brand.querySelector('span');
-    const box = label?.getBoundingClientRect();
-    const logoBox = logo?.getBoundingClientRect();
-    return {
-      hasLogo: !!logo,
-      label: label?.textContent?.trim() ?? '',
-      labelPx: label ? parseFloat(getComputedStyle(label).fontSize) : 0,
-      stacked: box && logoBox ? box.top >= logoBox.bottom - 2 : false,
+      desafioTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-challenge-title')!).fontSize,
+      ),
+      comunidadeTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-community-title')!).fontSize,
+      ),
+      recompensasTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-rewards-title')!).fontSize,
+      ),
+      conteudosTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-contents-title')!).fontSize,
+      ),
+      faqTitleSize: parseFloat(getComputedStyle(document.getElementById('pl-faq-title')!).fontSize),
+      ctaFinalTitleSize: parseFloat(
+        getComputedStyle(document.getElementById('pl-cta-final-title')!).fontSize,
+      ),
     };
   });
-  expect(lockup).not.toBeNull();
-  expect(lockup!.hasLogo).toBe(true);
-  expect(lockup!.label.toUpperCase()).toBe('CREATORS');
-  // 8–10px at desktop (the visual brand book's submark scale).
-  expect(lockup!.labelPx).toBeGreaterThanOrEqual(7);
-  expect(lockup!.labelPx).toBeLessThanOrEqual(12);
-  expect(lockup!.stacked).toBe(true);
+
+  // Tetos = altura aferida na captura do checkpoint + folga, para o rodapé do
+  // hero e o banner navy não inflarem a cada edição. O hero é medido na
+  // própria seção: a coluna de copy é esticada pela grade e mediria a foto.
+  expect(heights.hero).toBeLessThanOrEqual(1000);
+  expect(heights.creators).toBeLessThanOrEqual(1150);
+  expect(heights.challenge).toBeLessThanOrEqual(700);
+  expect(heights.community).toBeLessThanOrEqual(800);
+  expect(heights.rewards).toBeLessThanOrEqual(840);
+  // As seções do fechamento público (08 a 11), medidas na captura do Sprint 4B
+  // (artifacts/proposta-c/sprint-4b/medidas.json) com a mesma folga das outras.
+  expect(heights.contents).toBeLessThanOrEqual(900);
+  expect(heights.faq).toBeLessThanOrEqual(850);
+  expect(heights.ctaFinal).toBeLessThanOrEqual(900);
+  expect(heights.footer).toBeLessThanOrEqual(300);
+  // A página inteira fechada: 6914px medidos em 1920 na captura do Sprint 4B.
+  // O teto existe para nenhuma seção inflar de novo sem que alguém veja.
+  expect(heights.page).toBeLessThan(7200);
+  // A hierarquia dos títulos é editorial: o h2 das seções não disputa com o h1.
+  for (const size of [
+    heights.criadoresTitleSize,
+    heights.desafioTitleSize,
+    heights.comunidadeTitleSize,
+    heights.recompensasTitleSize,
+    heights.conteudosTitleSize,
+    heights.faqTitleSize,
+    heights.ctaFinalTitleSize,
+  ]) {
+    expect(size).toBeGreaterThan(28);
+    expect(size).toBeLessThan(60);
+  }
 });
 
-test('experiences renders the native-resolution editorial crop, not upscaled art', async ({
-  page,
-}) => {
-  // Same convention as the generic upsampling scan: the strict density rule
-  // applies to DPR 1 contexts (the mobile wire already compensates at DPR 3).
-  test.skip(test.info().project.name === 'mobile', 'DPR 3 contexts follow the wire-density rule.');
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.locator('#experiencias').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(400);
-
-  const art = await page.evaluate(() => {
-    const img = document.querySelector<HTMLImageElement>('[id="experiencias"] img');
-    if (!img) return null;
-    const box = img.getBoundingClientRect();
-    return { src: img.currentSrc, shown: Math.round(box.width * devicePixelRatio) };
-  });
-  expect(art).not.toBeNull();
-  expect(art!.src).toContain('experience-scene-ref');
-  // The frame never shows more pixels than the served file contains (DPR 1).
-  const bitmapW = await page.evaluate(async () => {
-    const img = document.querySelector<HTMLImageElement>('[id="experiencias"] img')!;
-    const response = await fetch(img.currentSrc);
-    const bitmap = await createImageBitmap(await response.blob());
-    return bitmap.width;
-  });
-  expect(bitmapW + 2).toBeGreaterThanOrEqual(art!.shown);
-});
-
-test('faq opens with an animated disclosure that ends fully readable', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.evaluate(() => document.fonts.ready);
-  await page.locator('#faq').scrollIntoViewIfNeeded();
-
-  const details = page.locator('#faq details').first();
-  const closedHeight = (await details.boundingBox())!.height;
-  await details.locator('summary').click();
-  await page.waitForTimeout(800);
-  const opened = await page.evaluate(() => {
-    const details = document.querySelector<HTMLDetailsElement>('#faq details')!;
-    const answer = details.querySelector('p')!;
-    const answerBox = answer.getBoundingClientRect();
-    const detailsBox = details.getBoundingClientRect();
-    return {
-      open: details.open,
-      detailsHeight: detailsBox.height,
-      answerInside: answerBox.top >= detailsBox.top && answerBox.bottom <= detailsBox.bottom + 1,
-      answerText: answer.textContent?.trim().length ?? 0,
-    };
-  });
-  expect(opened.open).toBe(true);
-  expect(opened.detailsHeight).toBeGreaterThan(closedHeight + 20);
-  // The answer must end painted inside the expanded clip box, i.e. fully readable.
-  expect(opened.answerInside).toBe(true);
-  await page.locator('#faq').screenshot({
-    path: 'playwright-report/visual/after-chromium-faq-open.png',
-  });
-  await expect(details.locator('p')).toContainText(/.+/);
-});
-
-test('hero art layers resolve to the regenerated high-resolution assets', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  const sources = await page.evaluate(() =>
-    Array.from(document.querySelectorAll<HTMLImageElement>('[data-visual-hero] img')).map(
-      (img) => img.currentSrc,
-    ),
+test('a página pública não inventa números, datas nem perfis', async ({ page }) => {
+  test.skip(
+    test.info().project.name === 'mobile',
+    'Auditoria de conteúdo é a mesma em qualquer DPR.',
   );
-  for (const asset of [
-    'hero-composition-hi',
-    'hero-bouquet-hi',
-    'hero-environment-hi',
-    'hero-white-bloom-hi',
-  ]) {
-    expect(
-      sources.some((src) => src.includes(asset)),
-      `${asset} missing from the hero`,
-    ).toBe(true);
-  }
-  // The retired low-fidelity tiles must stay retired.
-  for (const legacy of [
-    'edge-petals-hi',
-    'hero-left-foliage-hi',
-    'hero-ground-foliage-hi',
-    'hero-violet-flower-hi',
-  ]) {
-    expect(
-      sources.some((src) => src.includes(legacy)),
-      `${legacy} returned to the hero`,
-    ).toBe(false);
-  }
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.evaluate(() => document.fonts.ready);
+
+  // Os blocos 04 e 05 são de pré-lançamento: não existe creator público no
+  // backend nem desafio publicado, então a página não pode afirmar contagem,
+  // prazo, pontos ou participantes — nem batizar pessoas geradas.
+  const audit = await page.evaluate(() => {
+    const text = (selector: string) =>
+      document.querySelector<HTMLElement>(selector)?.innerText ?? '';
+    const creators = text('[class*=creators]');
+    const challenge = text('[class*=challenge]');
+    const community = text('[class*=community]');
+    const rewards = text('[class*=rewards]');
+    const contents = text('#conteudos');
+    const faq = text('#faq');
+    const ctaFinal = text('#cta-final');
+    const footer = text('footer');
+    return {
+      creatorsCountClaim: /\+?\s?\d[\d.,]*\s*(mil\s+)?(creators|pessoas|membros|seguidoras)/i.test(
+        creators,
+      ),
+      creatorsHandles: /@[a-z0-9._-]{2,}/i.test(creators),
+      challengeDates:
+        /\b\d{1,2}\/\d{1,2}(\/\d{2,4})?\b|\b\d{1,2} de (jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/i.test(
+          challenge,
+        ),
+      challengeMetrics: /\b(pontos|participantes|prazo|encerra|ranking)\b/i.test(challenge),
+      noteInView: /em preparação/i.test(challenge),
+      creatorsNote: /imagens de campanha/i.test(creators),
+      // 06 e 07 são institucionais: nenhum número (contagem de creators, de
+      // desafios ou de recompensas) e nenhum dado que só existe para quem entrou.
+      communityDigits: /\d/.test(community),
+      rewardsDigits: /\d/.test(rewards),
+      rewardsOperational: /\b(saldo|estoque|resgat\w*|pontos|histórico|catálogo)\b/i.test(rewards),
+      // 08 a 11 fecham a página pública sob a mesma regra: nenhuma contagem de
+      // conteúdo que ainda não existe e nenhum dado de conta.
+      contentsDigits: /\d/.test(contents),
+      contentsOperational: /\b(saldo|estoque|resgat\w*|pontos|histórico|catálogo|painel)\b/i.test(
+        contents,
+      ),
+      faqDigits: /\d/.test(faq),
+      ctaFinalDigits: /\d/.test(ctaFinal),
+      ctaFinalAccountData: /\b(saldo|estoque|resgat\w*|pontos|histórico|catálogo)\b/i.test(
+        ctaFinal,
+      ),
+      // O rodapé só pode ter dígito no ano do copyright.
+      footerDigits: /\d/.test(footer.replace(/©\s*2026 NUY Creators/, '')),
+    };
+  });
+
+  expect(audit.creatorsCountClaim, 'a página afirma uma contagem que não existe').toBe(false);
+  expect(audit.creatorsHandles, 'a página exibe @ de perfil inexistente').toBe(false);
+  expect(audit.challengeDates, 'o banner anuncia data de desafio').toBe(false);
+  expect(audit.challengeMetrics, 'o banner anuncia pontos/prazo/participantes').toBe(false);
+  expect(audit.noteInView, 'o estado de pré-lançamento precisa estar declarado').toBe(true);
+  expect(audit.creatorsNote, 'a origem das imagens precisa estar declarada').toBe(true);
+  expect(audit.communityDigits, 'a seção 06 anuncia número que ninguém pode provar').toBe(false);
+  expect(audit.rewardsDigits, 'a seção 07 anuncia número que ninguém pode provar').toBe(false);
+  expect(audit.rewardsOperational, 'a seção 07 expõe dado operacional de conta').toBe(false);
+  expect(audit.contentsDigits, 'a seção 08 anuncia número que ninguém pode provar').toBe(false);
+  expect(audit.contentsOperational, 'a seção 08 expõe dado operacional de conta').toBe(false);
+  expect(audit.faqDigits, 'a FAQ anuncia número que ninguém pode provar').toBe(false);
+  expect(audit.ctaFinalDigits, 'o CTA final anuncia número que ninguém pode provar').toBe(false);
+  expect(audit.ctaFinalAccountData, 'o CTA final expõe dado operacional de conta').toBe(false);
+  expect(audit.footerDigits, 'o rodapé só pode ter dígito no ano do copyright').toBe(false);
+  expect(
+    await page.locator('[class*=footerNav] a[href="/app"]').count(),
+    'deslogado, o rodapé não oferece o painel',
+  ).toBe(0);
+
+  // Todo texto do site é HTML real: os títulos existem como nós de texto.
+  await expect(page.locator('#pl-creators-title')).toHaveText(/Pessoas reais, casas reais/);
+  await expect(page.locator('#pl-challenge-title')).toHaveText(
+    /Casa perfumada,\s*rotina mais feliz\./,
+  );
+  await expect(page.locator('#pl-community-title')).toHaveText(
+    /Mais que limpeza,\s*uma casa que acolhe\./,
+  );
+  await expect(page.locator('#pl-rewards-title')).toHaveText('Recompensas que fazem sentido.');
+  await expect(page.locator('#pl-contents-title')).toHaveText(
+    /Conteúdos que nascem\s*da rotina real\./,
+  );
+  await expect(page.locator('#pl-faq-title')).toHaveText(/Conversas\s*que esclarecem\./);
+  await expect(page.locator('#pl-cta-final-title')).toHaveText('Faça parte da NUY CREATORS.');
 });

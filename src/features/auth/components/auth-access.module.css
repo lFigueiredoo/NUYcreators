@@ -1,0 +1,731 @@
+/*
+ * Autenticação pública — identidade da PROPOSTA C "Entre Casa & Creators".
+ *
+ * Escopo: tudo vive sob `.shell`. O `globals.css` continua servindo a área
+ * autenticada e as rotas legadas; aqui não se reusa nenhuma classe global —
+ * nem `form-stack`, nem `eyebrow` — porque o visual antigo do auth não pode
+ * vazar para estas telas (o layout legado segue montado para
+ * recuperar/redefinir/verificar/onboarding até a aprovação do CP4).
+ *
+ * Paleta e régua: mesmos valores da landing pública
+ * (`public-landing/styles/landing.module.css` é a fonte da verdade) — creme
+ * #F9F5EF, bege #EADCC8, areia #D8C1AD, navy #0E2A44, mauve #C7A1B3, dourado
+ * #D4B98A, 70/20/10. As fontes são as da landing (Playfair Display + Inter),
+ * declaradas em `public-landing/landing-fonts.ts` — o acento manuscrito
+ * (Caveat) não entra aqui.
+ *
+ * Regra da casa (Turbopack/dev): nenhum seletor composto só de atributo —
+ * estado por atributo vive em folha global. Aqui tudo é classe.
+ */
+
+.shell {
+  --au-cream: #f9f5ef;
+  --au-cream-soft: #fdfaf5;
+  --au-beige: #eadcc8;
+  --au-sand: #d8c1ad;
+  --au-navy: #0e2a44;
+  --au-navy-soft: #4a6076;
+  --au-mauve: #c7a1b3;
+  --au-gold: #d4b98a;
+  /* Mensagens: fundo muito suave, tinta legível (medido — ver relatório). */
+  --au-danger-ink: #7d332d;
+  --au-danger-bg: #fbeeec;
+  --au-ok-ink: #2f5b46;
+  --au-ok-bg: #eef5f0;
+  /* Régua editorial: a mesma da landing, para a transição não ter salto. */
+  --au-gutter: clamp(20px, 5.4vw, 104px);
+  --au-header-h: 74px;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--au-cream);
+  color: var(--au-navy);
+  font-family: var(--pl-font-body), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color-scheme: light;
+}
+
+/* O `em` do global nasce lavanda (#c8b3de): aqui ele é itálico da casa. */
+.shell em {
+  color: inherit;
+  font-style: italic;
+  font-weight: inherit;
+}
+
+.shell ::selection {
+  background: var(--au-beige);
+  color: var(--au-navy);
+}
+
+/* ------------------------------------------------------------- cabeçalho -- */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: var(--au-header-h);
+  padding: 14px var(--au-gutter);
+  border-bottom: 1px solid rgb(216 193 173 / 55%);
+}
+
+/* Mesmo lockup vertical da landing: marca em cima, rótulo embaixo. */
+.lockup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  color: var(--au-navy);
+  text-decoration: none;
+}
+
+.lockupMark,
+.lockupLabel {
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: 0.12em;
+  font-size: 15px;
+}
+
+.lockupLabel {
+  font-size: 12.5px;
+  letter-spacing: 0.2em;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  padding: 8px 2px;
+  color: var(--au-navy-soft);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.back:hover,
+.back:focus-visible {
+  color: var(--au-navy);
+}
+
+.backArrow {
+  transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.back:hover .backArrow,
+.back:focus-visible .backArrow {
+  transform: translateX(-3px);
+}
+
+/* ---------------------------------------------------------------- corpo -- */
+
+.split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+@media (min-width: 1280px) {
+  .split {
+    /* 55/45: a fotografia domina, o formulário respira. */
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+  }
+}
+
+/* ------------------------------------------------------------- painel -- */
+
+.visual {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  min-height: 460px;
+}
+
+.visualImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Enquadramento próprio desta tela: coluna alta ancorada na creator e no
+     produto (o hero da landing usa 46% 42% num slot largo — não se repete). */
+  object-position: 36% 50%;
+}
+
+/* Véu de leitura do texto: navy da casa descendo do rodapé da foto. Não é
+   glow nem blur — é o mínimo para o creme se ler sobre a imagem (contraste
+   medido no bitmap servido; ver relatório). */
+.visual::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 46%;
+  background: linear-gradient(to top, rgb(14 42 68 / 72%), rgb(14 42 68 / 0%));
+  pointer-events: none;
+}
+
+.visualPhrase {
+  position: absolute;
+  left: clamp(24px, 3.4vw, 64px);
+  bottom: clamp(26px, 3.4vw, 62px);
+  z-index: 1;
+  margin: 0;
+  max-width: 18ch;
+  color: var(--au-cream-soft);
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.55rem, 2.2vw, 2.4rem);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 18px rgb(14 42 68 / 45%);
+}
+
+/* --------------------------------------------------------- coluna form -- */
+
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(28px, 4vw, 56px) clamp(24px, 4.6vw, 72px) 26px;
+}
+
+.formShell {
+  width: 100%;
+  max-width: 432px;
+  margin: auto;
+  padding: 26px 0 34px;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: clamp(2.05rem, 3vw, 3rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -0.022em;
+}
+
+.lead {
+  margin: 0 0 30px;
+  max-width: 42ch;
+  color: var(--au-navy-soft);
+  font-size: 15.5px;
+  line-height: 1.65;
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: auto;
+  padding-top: 22px;
+  color: var(--au-navy-soft);
+  font-size: 12px;
+}
+
+.legal a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgb(74 96 118 / 35%);
+  padding-bottom: 1px;
+}
+
+.legal a:hover {
+  color: var(--au-navy);
+  border-color: var(--au-navy);
+}
+
+/* ----------------------------------------------------------- formulário -- */
+
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.label {
+  color: var(--au-navy);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.inputWrap {
+  position: relative;
+  display: grid;
+}
+
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 15px;
+  border: 1px solid var(--au-sand);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--au-navy);
+  font-size: 15px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: #a3947f;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--au-navy);
+  box-shadow: 0 0 0 3px rgb(14 42 68 / 10%);
+}
+
+.inputWrap .input {
+  padding-right: 56px;
+}
+
+.toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--au-navy-soft);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--au-navy);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--au-navy);
+  outline-offset: -2px;
+}
+
+.help {
+  color: var(--au-navy-soft);
+  font-size: 12.5px;
+}
+
+.terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--au-navy-soft);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.terms input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--au-navy);
+}
+
+.terms a {
+  color: var(--au-navy);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 4px;
+  padding: 15px 27px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--au-navy);
+  color: var(--au-cream-soft);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.28s ease,
+    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.submit:hover:not(:disabled),
+.submit:focus-visible:not(:disabled) {
+  background: #16395a;
+  transform: translateY(-1px);
+}
+
+.submit:focus-visible {
+  outline: 2px solid var(--au-navy);
+  outline-offset: 3px;
+}
+
+.submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.arrow {
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.submit:hover:not(:disabled) .arrow {
+  transform: translateX(3px);
+}
+
+.spin {
+  animation: au-spin 0.9s linear infinite;
+}
+
+@keyframes au-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----------------------------------------------------------- mensagens -- */
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.message > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.message:empty {
+  display: none;
+}
+
+.error {
+  background: var(--au-danger-bg);
+  color: var(--au-danger-ink);
+}
+
+.success {
+  background: var(--au-ok-bg);
+  color: var(--au-ok-ink);
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 13px 15px;
+  border-radius: 10px;
+  background: var(--au-beige);
+  color: var(--au-navy);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.aside {
+  margin: 0;
+  font-size: 14px;
+}
+
+.link {
+  color: var(--au-navy);
+  text-decoration: none;
+  border-bottom: 1px solid rgb(14 42 68 / 32%);
+  padding-bottom: 2px;
+  transition: border-color 0.2s ease;
+}
+
+.link:hover,
+.link:focus-visible {
+  border-color: var(--au-navy);
+}
+
+.footnote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  color: var(--au-navy-soft);
+  font-size: 14px;
+}
+
+.footnote a {
+  color: var(--au-navy);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------ estados de concluído -- */
+
+/* Enviado / atualizado / confirmado: ícone simples e a única ação que existe.
+   O título e o texto do estado vêm do `AuthFormShell` — aqui vive só o miolo. */
+.done {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.doneIcon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: var(--au-beige);
+  color: var(--au-navy);
+}
+
+.doneAction {
+  margin-top: 4px;
+}
+
+/* Ação secundária: contorno areia sobre creme — irmã do CTA, nunca competindo
+   com ele. Usada no reenvio de verificação, em sair da conta e nas saídas
+   secundárias das telas de recuperação. */
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 50px;
+  padding: 13px 24px;
+  border: 1px solid var(--au-sand);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--au-navy);
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.ghost:hover,
+.ghost:focus-visible {
+  background: var(--au-beige);
+  border-color: var(--au-beige);
+}
+
+.ghost:focus-visible {
+  outline: 2px solid var(--au-navy);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------------------ onboarding -- */
+
+/* Indicador de preenchimento: mede o que a pessoa já preencheu dos campos
+   essenciais — não simula etapas que o formulário não tem. */
+.progress {
+  display: grid;
+  gap: 9px;
+  margin: 0 0 28px;
+}
+
+.progressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.progressLabel {
+  color: var(--au-navy-soft);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+
+.progressValue {
+  color: var(--au-navy);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--au-beige);
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--au-navy);
+  transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Dois campos na mesma linha (cidade/UF, universo/criação). */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.groupLabel {
+  margin: 6px 0 -4px;
+  color: var(--au-navy-soft);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.fieldset {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 20px 18px 22px;
+  border: 1px solid rgb(216 193 173 / 80%);
+  border-radius: 12px;
+}
+
+.legend {
+  padding: 0 8px;
+  color: var(--au-navy);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.muted {
+  margin: 0;
+  color: var(--au-navy-soft);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* Bloco de aviso + ação que senta ACIMA do formulário (verificação pendente). */
+.block {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 26px;
+}
+
+/* Ações secundárias da própria tela (reenvio, sair da conta). */
+.inlineForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 22px 0 0;
+}
+
+/* O select veste o mesmo corpo do input; a seta é desenhada em SVG no fundo
+   para não precisar de elemento extra dentro do campo. */
+select.input {
+  appearance: none;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%234a6076' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+
+/* -------------------------------------------------------------- mobile -- */
+
+@media (max-width: 900px) {
+  .header {
+    /* Mesma calha da landing no mobile: a régua é a mesma variável. */
+    padding: 12px var(--au-gutter);
+  }
+
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Faixa de lifestyle: o formulário começa logo abaixo dela. */
+  .visual {
+    min-height: 0;
+    height: 220px;
+  }
+
+  /* Na faixa curta o véu precisa alcançar as duas linhas da frase: a primeira
+     linha ficava sobre as partes claras da foto (medido em 4,47:1). */
+  .visual::after {
+    height: 64%;
+    background: linear-gradient(
+      to top,
+      rgb(14 42 68 / 76%) 0%,
+      rgb(14 42 68 / 52%) 46%,
+      rgb(14 42 68 / 0%) 100%
+    );
+  }
+
+  .visualCompact {
+    height: 180px;
+  }
+
+  .visualPhrase {
+    left: var(--au-gutter);
+    bottom: 16px;
+    max-width: none;
+    font-size: 1.15rem;
+    text-shadow: 0 1px 14px rgb(14 42 68 / 55%);
+  }
+
+  .column {
+    align-items: stretch;
+    padding: 22px var(--au-gutter) 26px;
+  }
+
+  .formShell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .title {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .lead {
+    margin-bottom: 22px;
+    font-size: 15px;
+  }
+
+  .legal {
+    margin-top: 30px;
+  }
+}
+
+/* Telefone: os pares do onboarding viram uma coluna só — dois selects lado a
+   lado em 390px espremeriam os rótulos. */
+@media (max-width: 620px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fieldset {
+    padding: 16px 14px 18px;
+  }
+}
