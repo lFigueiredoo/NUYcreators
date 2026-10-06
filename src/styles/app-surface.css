@@ -1,0 +1,29 @@
+/*
+ * NUY Creators — folha global da área autenticada.
+ *
+ * Mesma razão da `landing-reveal.css` da landing: os poucos seletores que o
+ * CSS Modules do Turbopack reprova no dev (composto sem classe — `:focus-visible`
+ * solto, seletor de atributo) vivem aqui, escopados pela classe estável
+ * `.nuy-app` da raiz do shell. Especificidade 0,2,0 para foco, abaixo de
+ * qualquer regra de componente que precise vencer.
+ *
+ * Cor de foco: `--nuy-app-focus` é definida no módulo do app (mauve profundo da
+ * Proposta C) e tem fallback aqui para não depender da ordem das folhas.
+ */
+
+.nuy-app :focus-visible {
+  outline: 2px solid var(--nuy-app-focus, #9d6c85);
+  outline-offset: 2px;
+}
+
+.nuy-app ::selection {
+  background: #eadcc8;
+  color: #0e2a44;
+}
+
+/* O `body` global é navy (superfície pública). A área autenticada é clara: se
+   alguma rota do app renderizar sem o shell, o fundo não pode ficar escuro. */
+.nuy-app {
+  background: #f9f5ef;
+  color: #0e2a44;
+}

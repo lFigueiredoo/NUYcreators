@@ -1,0 +1,72 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+/**
+ * Portão contra dado inventado na área autenticada.
+ *
+ * A regra do produto é dura: em produção, ou o dado é real (lido do Appwrite
+ * com a sessão da própria usuária) ou a tela mostra o próprio vazio. Fixture
+ * mora só em `tests/`. Este teste falha se alguém trouxer mock para dentro do
+ * `/app` — é mais barato que revisar arquivo por arquivo a cada rodada.
+ */
+const ROOT = join(process.cwd(), 'src');
+
+/** Onde a regra vale: o produto autenticado e as rotas que o servem. */
+const GUARDED = [join(ROOT, 'features', 'workspace'), join(ROOT, 'app', '(protected)')];
+
+/** Um `creator fictício` com nome e pontos é o formato clássico do mock. */
+const FORBIDDEN = [
+  { pattern: /\bmock[A-Z]\w*/, what: 'identificador de mock' },
+  { pattern: /\b(fake|dummy|sampleData|demoData)\w*/i, what: 'nome de dado fictício' },
+  { pattern: /lorem ipsum/i, what: 'texto de preenchimento' },
+  { pattern: /Math\.random\(/, what: 'valor sorteado no cliente' },
+  { pattern: /from ['"][^'"]*\/tests\//, what: 'import de fixture de teste' },
+  { pattern: /\b(TODO|FIXME)\b.*(mock|fake|dado real|real data)/i, what: 'pendência de dado real' },
+];
+
+function filesIn(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    if (statSync(path).isDirectory()) return filesIn(path);
+    return /\.(ts|tsx)$/.test(path) && !path.includes('.test.') ? [path] : [];
+  });
+}
+
+const files = GUARDED.flatMap(filesIn);
+
+describe('área autenticada', () => {
+  it('encontra os arquivos do produto', () => {
+    expect(files.length).toBeGreaterThan(20);
+  });
+
+  it.each(FORBIDDEN)('não contém $what', ({ pattern }) => {
+    const offenders = files.filter((path) => pattern.test(readFileSync(path, 'utf8')));
+    expect(offenders.map((path) => relative(ROOT, path))).toEqual([]);
+  });
+
+  it('nenhuma tela do /app monta conteúdo próprio: todas leem do serviço', () => {
+    const pages = filesIn(join(ROOT, 'app', '(protected)', 'app')).filter((path) =>
+      path.endsWith('page.tsx'),
+    );
+    // As oito telas do produto mais o detalhe do desafio.
+    expect(pages.length).toBe(9);
+    for (const page of pages) {
+      const source = readFileSync(page, 'utf8');
+      const name = relative(ROOT, page);
+      // Toda tela passa por `workspaceSession` (a sessão da própria usuária) e
+      // por pelo menos um `load*` da camada de serviço — nunca por literal.
+      expect(source, `${name} não lê a sessão`).toMatch(/workspaceSession\(\)/);
+      expect(source, `${name} não lê dados de serviço`).toMatch(
+        /from '@\/features\/workspace\/services\//,
+      );
+    }
+  });
+
+  it('os serviços de leitura são server-only', () => {
+    for (const service of readdirSync(join(ROOT, 'features', 'workspace', 'services'))) {
+      const source = readFileSync(join(ROOT, 'features', 'workspace', 'services', service), 'utf8');
+      expect(source.startsWith("import 'server-only';"), service).toBe(true);
+    }
+  });
+});

@@ -1,0 +1,1499 @@
+/*
+ * NUY Creators — produto autenticado, identidade Proposta C.
+ *
+ * Mesma paleta da landing pública (creme, warm white, navy, bege, mauve e
+ * dourado discreto), com régua própria: aqui a proporção é ~75% claro · ~20%
+ * navy · ~5% mauve/dourado — o inverso da landing, que é editorial. Nada de
+ * cosmos, órbitas, glow, hero gigante ou fundo escuro: isto é ferramenta de
+ * trabalho, não vitrine.
+ *
+ * Inter na interface inteira; Playfair Display só em títulos de seção e nos
+ * números de destaque. O global pinta h1/h2/p/em: tudo é sobrescrito por classe
+ * (classe vence seletor de elemento).
+ */
+
+.app {
+  /* Paleta oficial (valores idênticos aos da landing) */
+  --app-cream: #f9f5ef;
+  --app-warm: #fdfaf5;
+  --app-deep: #f2e9dc;
+  --app-beige: #eadcc8;
+  --app-sand: #d8c1ad;
+  --app-navy: #0e2a44;
+  --app-navy-soft: #4a6076;
+  --app-mauve: #c7a1b3;
+  --app-mauve-ink: #9d6c85;
+  --app-gold: #d4b98a;
+  --app-focus: #9d6c85;
+  --app-radius: 20px;
+  --app-radius-sm: 12px;
+  --app-shadow: 0 1px 2px rgba(14, 42, 68, 0.04), 0 12px 28px -22px rgba(14, 42, 68, 0.28);
+
+  position: relative;
+  min-height: 100dvh;
+  background: var(--app-cream);
+  color: var(--app-navy);
+  font-family: var(--pl-font-body), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color-scheme: light;
+}
+
+/* O global define Georgia/lavanda/1.8: o produto não herda nada disso. */
+.app h1,
+.app h2 {
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-weight: 500;
+  color: var(--app-navy);
+  letter-spacing: -0.02em;
+}
+.app h1 {
+  font-size: clamp(1.85rem, 2.9vw, 2.5rem);
+  line-height: 1.08;
+}
+.app h2 {
+  font-size: clamp(1.1rem, 1.5vw, 1.32rem);
+  line-height: 1.2;
+}
+.app h3 {
+  font-family: inherit;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--app-navy);
+}
+.app p {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--app-navy-soft);
+}
+.app em {
+  color: inherit;
+  font-weight: inherit;
+}
+
+/* ---------------------------------------------------------------- shell -- */
+
+.shell {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding: clamp(22px, 3vw, 38px) clamp(18px, 3vw, 40px) 72px;
+  flex: 1;
+}
+
+/* -------------------------------------------------------------- sidebar -- */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 26px 18px 20px;
+  background: var(--app-warm);
+  border-right: 1px solid var(--app-beige);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 10px;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--app-navy);
+}
+.brandWord {
+  font-family: var(--pl-font-body), system-ui, sans-serif;
+  font-size: 0.63rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--app-mauve-ink);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.navSecondary {
+  border-top: 1px solid var(--app-beige);
+  padding-top: 14px;
+}
+.navLabel {
+  margin: 0 0 8px;
+  padding: 0 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: var(--app-radius-sm);
+  color: var(--app-navy-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.navLink:hover {
+  background: var(--app-deep);
+  color: var(--app-navy);
+}
+.navLinkActive,
+.navLinkActive:hover {
+  background: var(--app-navy);
+  color: var(--app-cream);
+}
+.navIcon {
+  display: inline-flex;
+  color: currentColor;
+  opacity: 0.75;
+}
+.navLinkActive .navIcon {
+  opacity: 1;
+}
+.navLinkButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.navBadge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--app-mauve);
+  color: var(--app-navy);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sidebarFooter {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* --------------------------------------------------------------- topbar -- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px clamp(18px, 3vw, 40px);
+  background: color-mix(in srgb, var(--app-cream) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--app-beige);
+}
+.topbarLead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.topbarKicker {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--app-mauve-ink);
+}
+.topbarKicker::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  margin-right: 10px;
+  background: var(--app-sand);
+  vertical-align: middle;
+}
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--app-navy-soft);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.iconButton:hover {
+  background: var(--app-deep);
+  color: var(--app-navy);
+}
+.iconButtonPlain {
+  padding: 0 10px;
+}
+.iconWrap {
+  position: relative;
+  display: inline-flex;
+}
+.dot {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--app-mauve-ink);
+  border: 2px solid var(--app-cream);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+}
+
+.avatarButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 38px;
+  padding: 0 10px 0 4px;
+  border: 1px solid var(--app-beige);
+  border-radius: 999px;
+  background: var(--app-warm);
+  color: var(--app-navy);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.avatarButton:hover {
+  border-color: var(--app-sand);
+}
+.avatarInitial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--app-beige);
+  color: var(--app-navy);
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.avatarLabel {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuWrap {
+  position: relative;
+}
+.menuPanel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 224px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-warm);
+  box-shadow: 0 18px 40px -24px rgba(14, 42, 68, 0.4);
+}
+.menuIdentity {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--app-beige);
+  margin-bottom: 6px;
+}
+.menuName {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.menuEmail {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--app-navy-soft);
+  overflow-wrap: anywhere;
+}
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--app-navy-soft);
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+}
+.menuItem:hover {
+  background: var(--app-deep);
+  color: var(--app-navy);
+}
+/* Recompensas/Ranking só aparecem no menu do mobile, onde a sidebar não existe. */
+.menuExtra {
+  display: none;
+}
+
+/* ----------------------------------------------------------- bottom nav -- */
+
+.bottomNav {
+  display: none;
+}
+
+/* ------------------------------------------------------- page structure -- */
+
+.screenHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: clamp(20px, 2.6vw, 30px);
+}
+.screenIntro {
+  max-width: 60ch;
+  margin: 8px 0 0;
+}
+.kicker {
+  margin: 0 0 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--app-mauve-ink);
+}
+
+.block {
+  margin-top: clamp(24px, 3vw, 34px);
+}
+.blockHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.blockTitle {
+  margin: 0;
+}
+.blockLink {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--app-mauve-ink);
+}
+.blockLink:hover {
+  text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------- cards -- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: clamp(18px, 2vw, 24px);
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  box-shadow: var(--app-shadow);
+}
+.cardNavy {
+  background: var(--app-navy);
+  border-color: var(--app-navy);
+  color: var(--app-cream);
+}
+.cardNavy h2,
+.cardNavy h3 {
+  color: var(--app-cream);
+}
+.cardNavy p {
+  color: #d8e0ea;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.gridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.gridThree {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.gridSummary {
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
+}
+
+/* ------------------------------------------------------------- tipografia -- */
+
+.statLabel {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  /* Rótulo de uma linha só: "PONTOS DISPONÍVEIS" cabe inteiro no cartão. */
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.cardNavy .statLabel {
+  color: #b9c8d6;
+}
+.statValue {
+  margin: 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: clamp(1.7rem, 2.3vw, 2.1rem);
+  line-height: 1.05;
+  color: var(--app-navy);
+}
+.cardNavy .statValue {
+  color: var(--app-cream);
+}
+.statHint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--app-navy-soft);
+}
+.cardNavy .statHint {
+  color: #b9c8d6;
+}
+
+/* --------------------------------------------------------------- botões -- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+.buttonPrimary {
+  background: var(--app-navy);
+  color: var(--app-cream);
+}
+.buttonPrimary:hover {
+  background: #16385a;
+}
+.buttonGhost {
+  background: transparent;
+  border-color: var(--app-sand);
+  color: var(--app-navy);
+}
+.buttonGhost:hover {
+  background: var(--app-deep);
+}
+.buttonQuiet {
+  background: var(--app-deep);
+  color: var(--app-navy-soft);
+}
+/* Estado desabilitado por classe, não por atributo: seletor de atributo em CSS
+   Module é reprovado pela checagem de pureza do Turbopack no dev. */
+.buttonDisabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+.buttonNavy {
+  background: var(--app-cream);
+  color: var(--app-navy);
+}
+.buttonNavy:hover {
+  background: #fff;
+}
+
+/* --------------------------------------------------------------- pílulas -- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.toneNeutral {
+  background: var(--app-deep);
+  color: var(--app-navy-soft);
+}
+.toneProgress {
+  background: #e7ecf3;
+  color: #2b4f74;
+}
+.toneSuccess {
+  background: #e6ede4;
+  color: #3d5c3a;
+}
+.toneAttention {
+  background: #f6e7ee;
+  color: var(--app-mauve-ink);
+}
+.toneMuted {
+  background: transparent;
+  border: 1px solid var(--app-beige);
+  color: var(--app-navy-soft);
+}
+
+/* -------------------------------------------------------------- progresso -- */
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.progressTrack {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--app-deep);
+  overflow: hidden;
+}
+.cardNavy .progressTrack {
+  background: rgba(249, 245, 239, 0.18);
+}
+.progressBar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--app-gold);
+}
+.progressMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+.cardNavy .progressMeta {
+  color: #b9c8d6;
+}
+
+/* ------------------------------------------------------- vazio / estado -- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px dashed var(--app-sand);
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-warm) 70%, transparent);
+}
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 2px;
+  border-radius: 999px;
+  background: var(--app-deep);
+  color: var(--app-mauve-ink);
+}
+.emptyTitle {
+  margin: 0;
+}
+.emptyText {
+  margin: 0;
+  max-width: 52ch;
+}
+.emptyAction {
+  margin-top: 8px;
+}
+
+.note {
+  display: flex;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--app-beige);
+  border-left: 3px solid var(--app-mauve);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-warm);
+}
+.noteIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--app-mauve-ink);
+}
+.noteBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.noteTitle {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.noteText {
+  margin: 0;
+}
+.noteAction {
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------- abas -- */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--app-beige);
+  border-radius: 999px;
+  background: var(--app-warm);
+  width: fit-content;
+  max-width: 100%;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  color: var(--app-navy-soft);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+.tab:hover {
+  background: var(--app-deep);
+  color: var(--app-navy);
+}
+.tabActive,
+.tabActive:hover {
+  background: var(--app-navy);
+  color: var(--app-cream);
+}
+.tabCount {
+  font-size: 0.76rem;
+  opacity: 0.7;
+}
+
+/* --------------------------------------------------------------- listas -- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-warm);
+}
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.itemHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.itemTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+/* Ícone discreto ao lado de um título de cartão. */
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.itemText {
+  margin: 0;
+}
+.itemAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+  flex: none;
+}
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thumb {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-deep);
+  color: var(--app-mauve-ink);
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.3rem;
+}
+.amount {
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--app-navy);
+}
+.amountCredit {
+  color: #3d5c3a;
+}
+.amountDebit {
+  color: var(--app-mauve-ink);
+}
+
+/* ------------------------------------------------------------ esqueleto -- */
+
+.skeleton {
+  border-radius: var(--app-radius-sm);
+  background: linear-gradient(90deg, var(--app-deep) 0%, #f7f1e6 50%, var(--app-deep) 100%);
+  background-size: 200% 100%;
+  animation: skeletonShift 1.4s ease-in-out infinite;
+}
+.skeletonLine {
+  height: 12px;
+}
+.skeletonCard {
+  height: 132px;
+  border-radius: var(--app-radius);
+}
+@keyframes skeletonShift {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+
+/* ------------------------------------------------------------ dashboard -- */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: clamp(22px, 3vw, 32px);
+}
+.heroTitle {
+  margin: 0;
+}
+.heroText {
+  margin: 0;
+  max-width: 56ch;
+  font-size: 0.98rem;
+}
+.levelHead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.levelName {
+  margin: 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.34rem;
+  font-weight: 500;
+  color: var(--app-cream);
+}
+.levelPoints {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #b9c8d6;
+}
+.levelTag {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(212, 185, 138, 0.22);
+  color: var(--app-gold);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.quickLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.quickLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid var(--app-beige);
+  border-radius: 999px;
+  background: var(--app-warm);
+  color: var(--app-navy-soft);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+.quickLink:hover {
+  border-color: var(--app-sand);
+  color: var(--app-navy);
+}
+
+/* ------------------------------------------------------- desafios/cards -- */
+
+.challengeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.challengeCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  box-shadow: var(--app-shadow);
+}
+.challengeMedia {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, var(--app-deep), var(--app-beige));
+  color: var(--app-mauve-ink);
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.8rem;
+}
+/* Sem imagem publicada, a capa vira uma faixa discreta: melhor uma faixa do que
+   um retângulo grande e vazio parecendo imagem quebrada. */
+.challengeMediaEmpty {
+  aspect-ratio: 16 / 5;
+}
+
+.challengeBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+.challengeTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.points {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--app-mauve-ink);
+}
+.challengeTitle {
+  margin: 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.12rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--app-navy);
+}
+.challengeText {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.challengeFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.challengeAction {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.challengeAction:hover {
+  text-decoration: underline;
+}
+.deadline {
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+
+/* --------------------------------------------------- desafio — detalhe -- */
+
+.detailHead {
+  margin-bottom: clamp(20px, 2.6vw, 30px);
+}
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* Número grande com ícone na mesma linha do valor. */
+.statValueInline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: clamp(1.7rem, 2.3vw, 2.1rem);
+  line-height: 1.05;
+  color: var(--app-navy);
+}
+.cardNavy .statValueInline {
+  color: var(--app-cream);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--app-navy-soft);
+}
+.backLink:hover {
+  color: var(--app-navy);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.detailMain {
+  min-width: 0;
+}
+.detailAside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+/* O primeiro bloco principal encosta no topo do aside, sem o respiro do bloco. */
+.detailMain > .block:first-child {
+  margin-top: 0;
+}
+
+.requirementList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  overflow: hidden;
+}
+.requirementItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--app-beige);
+}
+.requirementItem:last-child {
+  border-bottom: 0;
+}
+.requirementMain {
+  min-width: 0;
+}
+.requirementLabel {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.requirementValue {
+  margin: 3px 0 0;
+  font-size: 0.84rem;
+  color: var(--app-navy-soft);
+  overflow-wrap: anywhere;
+}
+
+.metaGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.metaPair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.metaLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.metaValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--app-navy);
+  overflow-wrap: anywhere;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px;
+}
+
+.footNote {
+  margin: 18px 0 0;
+  font-size: 0.82rem;
+  color: var(--app-navy-soft);
+}
+
+/* -------------------------------------------------------- pontos/extrato -- */
+
+.balanceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.levelRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.levelRowSide {
+  text-align: right;
+}
+.levelInline {
+  margin: 4px 0 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.2rem;
+  color: var(--app-navy);
+}
+.ledger {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  overflow: hidden;
+}
+.ledgerItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--app-beige);
+}
+.ledgerItem:last-child {
+  border-bottom: 0;
+}
+.ledgerMain {
+  flex: 1;
+  min-width: 0;
+}
+.ledgerDate {
+  flex: none;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+
+/* -------------------------------------------------------------- ranking -- */
+
+.podiumRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  /* `<ol>` de verdade: os marcadores do navegador saem de cena, mas a posição
+     continua sendo texto de dado (1º, 2º, 2º…), nunca numeração implícita. */
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.podium {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+}
+.podiumFirst {
+  border-color: var(--app-sand);
+  background: linear-gradient(180deg, #fff9ee, var(--app-warm));
+}
+.podiumPlace {
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.5rem;
+  color: var(--app-mauve-ink);
+}
+.podiumName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.podiumPoints {
+  font-size: 0.82rem;
+  color: var(--app-navy-soft);
+}
+.rankList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  overflow: hidden;
+}
+.rankItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--app-beige);
+}
+.rankItem:last-child {
+  border-bottom: 0;
+}
+.rankItemSelf {
+  background: var(--app-deep);
+}
+.rankPosition {
+  flex: none;
+  width: 34px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--app-navy-soft);
+}
+.rankName {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  color: var(--app-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rankPoints {
+  flex: none;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-navy-soft);
+}
+
+/* --------------------------------------------------------- notificações -- */
+
+.notifList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius);
+  background: var(--app-warm);
+  overflow: hidden;
+}
+.notif {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--app-beige);
+}
+.notif:last-child {
+  border-bottom: 0;
+}
+.notifUnread {
+  background: color-mix(in srgb, var(--app-deep) 46%, var(--app-warm));
+}
+.notifMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.notifTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.notifDate {
+  font-size: 0.78rem;
+  color: var(--app-navy-soft);
+}
+.notifUnread .itemTitle {
+  font-weight: 700;
+}
+.unreadTag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-mauve-ink);
+}
+
+/* --------------------------------------------------------------- perfil -- */
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  margin: 0;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.fieldLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.fieldValue {
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--app-navy);
+  overflow-wrap: anywhere;
+}
+.fieldMissing {
+  color: var(--app-navy-soft);
+  font-style: italic;
+}
+
+/* ========================================================= responsivo ==== */
+
+@media (max-width: 1180px) {
+  .gridSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .challengeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profileGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar {
+    display: none;
+  }
+  .main {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+  .bottomNav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--app-warm) 96%, transparent);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--app-beige);
+  }
+  .bottomLink {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 2px;
+    border-radius: var(--app-radius-sm);
+    color: var(--app-navy-soft);
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .bottomLinkActive {
+    color: var(--app-navy);
+    background: var(--app-deep);
+  }
+  .gridTwo,
+  .gridThree,
+  .gridSummary,
+  .challengeGrid,
+  .podiumRow,
+  .balanceGrid,
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .podiumRow {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .screenHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .tabs {
+    width: 100%;
+    border-radius: var(--app-radius-sm);
+    overflow-x: auto;
+  }
+  .item {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .itemAside {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .ledgerItem {
+    align-items: flex-start;
+  }
+  .avatarLabel {
+    display: none;
+  }
+  .menuExtra {
+    display: flex;
+  }
+}

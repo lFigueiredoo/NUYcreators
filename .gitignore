@@ -14,3 +14,5 @@ functions/complete-onboarding/src/
 .pw-browsers/
 artifacts/
 debug.log
+# Par self-signed do stub de testes: gerado por `tests/support/certs.mjs`.
+tests/support/appwrite-stub/.certs/
