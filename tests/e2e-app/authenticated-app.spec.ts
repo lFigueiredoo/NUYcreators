@@ -70,6 +70,19 @@ test('sessão sem onboarding concluído volta para o onboarding', async ({ page 
   await expect(page.locator('nav[aria-label="Navegação principal"]')).toHaveCount(0);
 });
 
+test('sem membership em nuy-admins, o /admin nega — e nada do painel é montado', async ({
+  page,
+}) => {
+  // A guarda da administração é a membership da SESSÃO, apurada no servidor: a
+  // criadora autenticada é devolvida à área dela, com o aviso, e o painel não
+  // chega a existir. (O papel nunca vem de campo, cookie ou parâmetro.)
+  await signIn(page, USERS.ana.email, USERS.ana.password);
+  await page.goto(`${stack.origin}/admin`, { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveURL(/\/app\?access=denied/);
+  await expect(page.locator('nav[aria-label="Administração"]')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Visão geral', level: 1 })).toHaveCount(0);
+});
+
 test('sessão com onboarding entra na área e vê a própria jornada', async ({ page }) => {
   await signIn(page, USERS.ana.email, USERS.ana.password);
   await openApp(page, '/app');

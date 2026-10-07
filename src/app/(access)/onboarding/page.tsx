@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Info } from 'lucide-react';
 import { currentUser, authConfigured } from '@/lib/appwrite/server';
+import { currentSessionRoles } from '@/lib/security/authorization';
 import { getEnvironment } from '@/lib/env/server';
 import { resendAction, logoutAction } from '@/features/auth/services/actions';
 import { AuthLayout } from '@/features/auth/components/auth-access-shell';
@@ -46,6 +47,11 @@ export default async function Onboarding({
 
   const user = await currentUser();
   if (!user) redirect('/login');
+  // Operação administrativa não passa pelo onboarding de criadora — nem na
+  // visita manual: quem tem membership confirmada em `nuy-admins` sai daqui
+  // para a sua área. É destino, não autorização: a porta do `/admin` continua
+  // sendo o `requireStaff` de lá dentro.
+  if ((await currentSessionRoles(user.$id)).length) redirect('/admin');
   const params = await searchParams;
 
   return (

@@ -13,6 +13,8 @@ import {
   sessionClient,
 } from '@/lib/appwrite/server';
 import { getEnvironment } from '@/lib/env/server';
+import { sessionRoles } from '@/lib/security/authorization';
+import type { AdminRole } from '@/lib/security/permissions';
 import {
   loginSchema,
   recoverySchema,
@@ -21,7 +23,7 @@ import {
   verificationSchema,
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
-import { postLoginRoute } from './onboarding-gate';
+import { signedInRoute } from './onboarding-gate';
 import { failureMessage, refusalMessage } from './onboarding-refusal';
 
 export type FormState = { message: string; success?: boolean };
@@ -55,16 +57,28 @@ export async function loginAction(_previous: FormState, form: FormData): Promise
       message: 'Não foi possível entrar. Confira seus dados ou tente novamente mais tarde.',
     };
   }
-  // O destino sai da fonte de verdade do onboarding (o perfil privado que a
-  // função `complete-onboarding` grava). Se a leitura falhar, o login já feito
-  // não cai: o onboarding é resumível e o destino conservador.
-  let profile: { onboardingCompletedAt?: unknown } | null = null;
+  // Prioridade do destino: sessão → membership confirmada em `nuy-admins` →
+  // `/admin`; fora dela, a fonte de verdade do onboarding (o perfil privado que
+  // a função `complete-onboarding` grava). Operador administrativo não passa
+  // pelo onboarding de criadora. Nenhuma das duas leituras derruba o login já
+  // feito: sem confirmação, o destino conservador é o onboarding, que é
+  // resumível e regrava por upsert.
+  let roles: AdminRole[] = [];
   try {
-    profile = await readOwnProfile(session.secret, session.userId);
+    roles = await sessionRoles(session.secret, session.userId);
   } catch {
-    /* indiferente: `null` manda para o onboarding */
+    /* indiferente: sem papéis confirmados, o destino é o de criadora */
   }
-  redirect(postLoginRoute(profile));
+  // Operador confirmado não tem perfil de criadora a consultar.
+  let profile: { onboardingCompletedAt?: unknown } | null = null;
+  if (!roles.length) {
+    try {
+      profile = await readOwnProfile(session.secret, session.userId);
+    } catch {
+      /* indiferente: `null` manda para o onboarding */
+    }
+  }
+  redirect(signedInRoute(profile, roles));
 }
 export async function signupAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !registrationConfigured())

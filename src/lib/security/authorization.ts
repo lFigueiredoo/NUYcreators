@@ -38,6 +38,20 @@ export const sessionRoles = cache(async (secret: string, userId: string): Promis
   }
 });
 
+/**
+ * Papéis da sessão ATUAL a partir do cookie — a mesma apuração de `requireStaff`,
+ * para quem já tem o usuário em mãos e só precisa decidir um DESTINO (a guarda
+ * do `/onboarding`, por exemplo). Sem cookie, nenhum privilégio.
+ *
+ * O destino é experiência, não autorização: quem exibe a área continua sendo
+ * `requireStaff`, dentro do `/admin`, com a mesma apuração.
+ */
+export async function currentSessionRoles(userId: string): Promise<AdminRole[]> {
+  const secret = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!secret) return [];
+  return sessionRoles(secret, userId);
+}
+
 export async function requireSession() {
   const user = await currentUser();
   if (!user) redirect('/login');

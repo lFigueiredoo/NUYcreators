@@ -68,6 +68,7 @@ let teams: Teams;
 let users: Users;
 let creator: Actor;
 let admin: Actor;
+let newcomer: Actor;
 let adminSecret = '';
 let membershipId = '';
 let startedAt = '';
@@ -218,6 +219,9 @@ test.beforeAll(async () => {
 
   creator = await createActor('criadora', true);
   admin = await createActor('equipe', false);
+  // Sem perfil e sem membership: o estado de quem acabou de se cadastrar. É o
+  // caminho conservador do destino (onboarding), que este arquivo cobra.
+  newcomer = await createActor('nova', false);
   const membership = await teams.createMembership({
     teamId: team.id,
     userId: admin.id,
@@ -295,7 +299,7 @@ test.beforeAll(async () => {
  */
 test.afterAll(async () => {
   if (!db) return;
-  const mine = [creator?.id, admin?.id].filter(Boolean) as string[];
+  const mine = [creator?.id, admin?.id, newcomer?.id].filter(Boolean) as string[];
 
   // Drain final ANTES de varrer. O resgate emite evento e a notificação dele só
   // nasce no processamento: sem drenar aqui, o evento fica na fila, é processado
@@ -361,7 +365,7 @@ test.afterAll(async () => {
         ? 1
         : 0,
     });
-  for (const user of [creator, admin])
+  for (const user of [creator, admin, newcomer])
     if (user)
       sweeps.push({
         target: `users.${user.id.slice(-8)}`,
@@ -533,4 +537,57 @@ test('jornada operacional de ponta a ponta, pela tela, com o runtime do Appwrite
 
   await creatorContext.close();
   await adminContext.close();
+});
+
+/**
+ * Destino por estado da sessão — a prioridade da OPERAÇÃO, com membership real.
+ *
+ * O operador desta rodada tem membership CONFIRMADA em `nuy-admins` (cunhada no
+ * `beforeAll`, apagada na limpeza, e o papel nunca vem de campo, cookie ou
+ * parâmetro). O que se prova aqui, na tela:
+ *
+ *  A. operador SEM perfil de criadora entra e cai na administração — e o painel
+ *     ABRE, com o papel confirmado no runtime;
+ *  B. a visita MANUAL ao `/onboarding` sai para a administração;
+ *  C. quem não tem perfil nem membership cai no formulário de perfil;
+ *  D. e o `/admin` nega essa mesma pessoa: o destino é experiência, a guarda de
+ *     dentro é que autoriza;
+ *  E. a criadora com o marcador de conclusão segue entrando na área.
+ */
+test('destino por sessão: operador na administração, criadora no onboarding', async ({
+  browser,
+}) => {
+  // ------------------------------------------------- operador administrativo
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
+  await signIn(adminPage, admin);
+  await expect(adminPage).toHaveURL(`${stack.origin}/admin`);
+  await expect(adminPage.getByRole('heading', { name: 'Visão geral', level: 1 })).toBeVisible();
+  // A visita manual ao onboarding não prende a operação: sai para a área dela.
+  await adminPage.goto(`${stack.origin}/onboarding`, { waitUntil: 'domcontentloaded' });
+  await expect(adminPage).toHaveURL(`${stack.origin}/admin`);
+  await expect(adminPage.getByRole('heading', { name: 'Visão geral', level: 1 })).toBeVisible();
+  // Evidência da rodada: o painel aberto, com membership real de sessão.
+  await adminPage.screenshot({ path: `artifacts/admin-destino-${runId}.png`, fullPage: true });
+  await adminContext.close();
+
+  // --------------------------------------------------- recém-cadastrada
+  const newcomerContext = await browser.newContext();
+  const newcomerPage = await newcomerContext.newPage();
+  await signIn(newcomerPage, newcomer);
+  await expect(newcomerPage).toHaveURL(`${stack.origin}/onboarding`);
+  await expect(newcomerPage.getByRole('heading', { name: /sua história/i })).toBeVisible();
+  // O painel não abre para ela: a negação devolve ao que falta cumprir, sem
+  // montar nada da área.
+  await newcomerPage.goto(`${stack.origin}/admin`, { waitUntil: 'domcontentloaded' });
+  await expect(newcomerPage).toHaveURL(`${stack.origin}/onboarding`);
+  await expect(newcomerPage.locator('nav[aria-label="Navegação principal"]')).toHaveCount(0);
+  await newcomerContext.close();
+
+  // --------------------------------------- criadora com o perfil concluído
+  const creatorContext = await browser.newContext();
+  const creatorPage = await creatorContext.newPage();
+  await signIn(creatorPage, creator);
+  await expect(creatorPage).toHaveURL(`${stack.origin}/app`);
+  await creatorContext.close();
 });

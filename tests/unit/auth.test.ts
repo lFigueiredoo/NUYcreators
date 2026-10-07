@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { signupSchema, loginSchema } from '../../src/features/auth/schemas/auth';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
-import { postLoginRoute } from '../../src/features/auth/services/onboarding-gate';
+import { postLoginRoute, signedInRoute } from '../../src/features/auth/services/onboarding-gate';
 import {
   failureMessage,
   refusalMessage,
@@ -59,6 +59,33 @@ describe('post-login destination', () => {
     // a leitura indisponível (`null`) — cai no onboarding, que é resumível.
     for (const value of [null, {}, { onboardingCompletedAt: '' }, { onboardingCompletedAt: 0 }])
       expect(postLoginRoute(value)).toBe('/onboarding');
+  });
+});
+
+describe('destino de quem já está autenticado', () => {
+  const concluded = { onboardingCompletedAt: '2026-01-01T00:00:00.000Z' };
+
+  it('operador com onboarding de criadora INCOMPLETO vai para a administração', () => {
+    // A operação não passa pelo formulário de perfil: sem perfil nenhum, o
+    // destino de quem tem membership confirmada em `nuy-admins` é o /admin.
+    expect(signedInRoute(null, ['admin'])).toBe('/admin');
+    expect(signedInRoute({}, ['moderator'])).toBe('/admin');
+    expect(signedInRoute({ onboardingCompletedAt: '' }, ['fulfillment'])).toBe('/admin');
+  });
+
+  it('criadora sem onboarding concluído vai para o onboarding', () => {
+    for (const value of [null, {}, { onboardingCompletedAt: '' }])
+      expect(signedInRoute(value, [])).toBe('/onboarding');
+  });
+
+  it('criadora com onboarding concluído vai para a área', () => {
+    expect(signedInRoute(concluded, [])).toBe('/app');
+  });
+
+  it('o destino administrativo tem precedência sobre o perfil concluído', () => {
+    // Mesmo com o onboarding de criadora feito, quem opera entra na
+    // administração — a prioridade é a da operação, não a do perfil.
+    expect(signedInRoute(concluded, ['admin'])).toBe('/admin');
   });
 });
 
