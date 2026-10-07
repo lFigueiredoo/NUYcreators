@@ -1,0 +1,131 @@
+/**
+ * Documento legal público — termos e privacidade.
+ *
+ * A identidade é a mesma da landing (Playfair nos títulos, Inter no corpo,
+ * navy sobre branco, dourado só no sobretítulo), mas a página aqui é um
+ * documento: coluna estreita, ritmo de leitura, nenhuma animação. O chrome
+ * (header/rodapé) continua vindo do layout de `(public)`; este módulo cuida
+ * só do miolo.
+ *
+ * Os tokens (`--nuy-*`, `--pl-font-*`) são herdados do contêiner que o layout
+ * monta — não são redefinidos aqui, para a página não divergir da landing.
+ */
+
+.document {
+  width: min(720px, calc(100% - 2 * var(--nuy-ruler, 24px)));
+  margin-inline: auto;
+  padding-block: clamp(44px, 6vw, 80px) clamp(64px, 9vw, 112px);
+}
+
+.head {
+  padding-bottom: clamp(20px, 3vw, 32px);
+  border-bottom: 1px solid rgba(8, 43, 85, 0.14);
+}
+
+.eyebrow {
+  color: var(--nuy-gold-ink);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.title {
+  margin-top: 14px;
+  font-family: var(--pl-font-display, Georgia, 'Times New Roman', serif);
+  font-size: clamp(2rem, 3.4vw, 2.8rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--nuy-navy);
+}
+
+.subtitle {
+  margin-top: 14px;
+  color: var(--nuy-muted);
+  font-size: 0.98rem;
+}
+
+/*
+ * O aviso de versão provisória fica no topo, antes de qualquer cláusula: quem
+ * lê precisa saber o que está lendo antes de ler, não depois.
+ */
+.notice {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--nuy-gold);
+  background: var(--nuy-cream);
+  color: var(--nuy-ink);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/*
+ * A medida de leitura.
+ *
+ * A moldura do documento continua com os mesmos 720px — o título, a linha de
+ * versão, o aviso do topo e a régua que fecha o cabeçalho seguem usando a
+ * largura inteira. Quem para antes é o CORPO: documento jurídico se lê em
+ * coluna, não em faixa. A 720px a linha fechava em ~98 caracteres.
+ *
+ * O tamanho do texto aqui é 0.95rem, o mesmo parágrafo do resto do site: é o
+ * que a regra global de `p` (globals.css) aplica a TODO parágrafo do app, e
+ * ela vence a herança. Declarar o mesmo valor no corpo deixa a coluna ser
+ * medida no tamanho que o texto REALMENTE tem — antes o `.body` dizia 1.075rem
+ * enquanto os parágrafos renderizavam em 0.95rem, e uma coluna pedida em `em`
+ * saía 13% mais larga que o previsto.
+ *
+ * 41em de 0.95rem = 623px, e a linha fecha entre 68 e 70 caracteres nos dois
+ * documentos (os termos medem um pouco menos que a política porque têm mais
+ * palavras longas; a coluna é a mesma). A largura NÃO é pedida em `ch`: em
+ * fonte proporcional `1ch` é a largura do ZERO, bem mais larga que a média das
+ * letras — 70ch daria os mesmos 720px de antes. Em `em`, a medida acompanha o
+ * texto se o tamanho-base mudar.
+ *
+ * No celular nada muda: 623px é mais largo que a coluna disponível (~350px),
+ * então lá quem manda continua sendo a moldura.
+ */
+.body {
+  max-width: 41em;
+  margin-top: clamp(26px, 3.6vw, 40px);
+  color: var(--nuy-ink);
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+/* Ritmo entre blocos irmãos, sem tocar no primeiro. */
+.body > * + * {
+  margin-top: 1.1em;
+}
+
+.body h2 {
+  margin-top: 2em;
+  font-family: var(--pl-font-display, Georgia, 'Times New Roman', serif);
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--nuy-navy);
+}
+
+.body h2:first-child {
+  margin-top: 0;
+}
+
+.body ul {
+  padding-left: 1.15rem;
+}
+
+.body li + li {
+  margin-top: 0.5em;
+}
+
+.body strong {
+  font-weight: 600;
+  color: var(--nuy-navy);
+}
+
+.body a {
+  color: var(--nuy-navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

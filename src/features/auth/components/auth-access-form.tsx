@@ -125,8 +125,9 @@ export function AuthAccessForm({
         <label className={styles.terms}>
           <input type="checkbox" name="terms" required />
           <span>
-            Ao criar sua conta, você concorda com os <Link href="/termos">Termos de Uso</Link> e a{' '}
-            <Link href="/privacidade">Política de Privacidade</Link>.
+            Declaro que tenho 18 anos ou mais e li e concordo com os{' '}
+            <Link href="/termos">Termos de Uso</Link> e a{' '}
+            <Link href="/privacidade">Política de Privacidade</Link> do NUY Creators.
           </span>
         </label>
       )}

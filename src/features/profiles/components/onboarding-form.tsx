@@ -1,5 +1,6 @@
 'use client';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleCheck, Info, LoaderCircle } from 'lucide-react';
 import { onboardingAction } from '@/features/auth/services/actions';
 import { brazilianStates } from '../schemas/onboarding';
@@ -239,7 +240,11 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
 
       <label className={styles.terms}>
         <input type="checkbox" name="terms" required />
-        <span>Confirmo os dados e aceito os termos e o tratamento necessário ao meu perfil.</span>
+        <span>
+          Declaro que tenho 18 anos ou mais e li e concordo com os{' '}
+          <Link href="/termos">Termos de Uso</Link> e a{' '}
+          <Link href="/privacidade">Política de Privacidade</Link> do NUY Creators.
+        </span>
       </label>
 
       <button type="submit" className={styles.submit} disabled={!enabled || pending}>

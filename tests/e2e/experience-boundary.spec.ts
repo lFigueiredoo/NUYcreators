@@ -115,22 +115,31 @@ test('nenhum link público é morto: sem "#" solto e sem destino quebrado', asyn
 test('as páginas legais usam a chrome pública e mantêm o aviso honesto', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
+  // A versão em vigor é provisória (2026-10-07-v1) e continua marcada como tal:
+  // os termos avisam no topo, a política fecha o corpo dizendo o mesmo. O que o
+  // gate protege é a honestidade do aviso, não a redação de uma versão passada.
   for (const [route, title, notice] of [
     [
       '/termos',
-      'Termos de uso',
-      /Os termos definitivos aguardam aprovação jurídica\. Esta página não constitui uma política legal final\./,
+      'Termos de Uso — NUY Creators',
+      /Versão provisória — sujeita à revisão jurídica antes do lançamento definitivo\./,
     ],
     [
       '/privacidade',
-      'Privacidade',
-      /O aviso de privacidade definitivo aguarda aprovação jurídica\./,
+      'Política de Privacidade — NUY Creators',
+      /Esta versão é provisória para validação operacional e deverá ser revisada antes da abertura definitiva ao público\./,
     ],
   ] as const) {
     await page.goto(route);
     await page.evaluate(() => document.fonts.ready);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
     await expect(page.getByText(notice)).toBeVisible();
+    // A versão anterior destas páginas não tinha coluna: o texto transbordava a
+    // viewport. O documento precisa caber na largura em que está sendo lido.
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `${route} não pode rolar na horizontal`,
+    ).toBe(true);
 
     // Fora da landing as âncoras ficam absolutas: o header não pode apontar
     // para um `#` que não existe nesta rota.
@@ -144,6 +153,79 @@ test('as páginas legais usam a chrome pública e mantêm o aviso honesto', asyn
     await expect(footer.getByRole('link', { name: 'FAQ' })).toHaveAttribute('href', '/#faq');
     await expect(footer.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
     await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
+  }
+});
+
+test('a coluna dos documentos legais mantém a medida de leitura', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const mobile = test.info().project.name === 'mobile';
+
+  // O que este gate protege é a GEOMETRIA, não a redação de uma medição. A
+  // média de caracteres por linha (~68 na rodada legal), a contagem de linhas e
+  // o ponto exato das quebras são EVIDÊNCIA daquela rodada — ficam no relatório
+  // e nos `probes.json`, e mudam com qualquer palavra nova. O contrato é a
+  // largura da coluna: é ela que volta a 720px (~98 caracteres por linha) se
+  // alguém apagar o `max-width`, e é ela que este teste trava.
+  //
+  // A leitura é do elemento REAL que contém os parágrafos, por `data-testid` —
+  // o nome da classe é hasheado pelo CSS Module e não serve de âncora. Sem
+  // screenshot, sem pixel, sem OCR: `getBoundingClientRect()`.
+  for (const route of ['/termos', '/privacidade'] as const) {
+    await page.goto(route);
+    await page.evaluate(() => document.fonts.ready);
+
+    const geometria = await page.evaluate(() => {
+      const corpo = document.querySelector('[data-testid="legal-body"]');
+      if (!corpo) return null;
+      const moldura = corpo.closest('article');
+      return {
+        corpo: corpo.getBoundingClientRect().width,
+        moldura: moldura ? moldura.getBoundingClientRect().width : null,
+        minWidth: getComputedStyle(corpo).minWidth,
+        paragrafos: corpo.querySelectorAll('p').length,
+        viewport: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+
+    expect(geometria, `${route}: corpo jurídico não encontrado`).not.toBeNull();
+    const corpo = geometria!.corpo;
+    const moldura = geometria!.moldura;
+
+    expect(geometria!.paragrafos, `${route}: o corpo precisa ter parágrafos`).toBeGreaterThan(0);
+    // Vale nos dois projetos: o documento cabe na largura em que é lido.
+    expect(geometria!.scrollWidth, `${route} não pode rolar na horizontal`).toBeLessThanOrEqual(
+      geometria!.viewport,
+    );
+
+    // A faixa de 600–640px só pode ser exigida de uma viewport que caiba nela.
+    // No celular (390px) e em qualquer viewport estreita, 623px não cabe e a
+    // medida legítima é a da moldura — exigir a faixa ali seria exigir uma tela
+    // que não existe.
+    if (!mobile && geometria!.viewport >= 700) {
+      expect(corpo, `${route}: coluna do corpo abaixo da medida de leitura`).toBeGreaterThanOrEqual(
+        600,
+      );
+      expect(
+        corpo,
+        `${route}: coluna do corpo acima da medida de leitura — o texto voltou à faixa`,
+      ).toBeLessThanOrEqual(640);
+      // E a coluna para ANTES da moldura: título, linha de versão e aviso do
+      // topo continuam na largura cheia. Se os dois empatarem, o `max-width`
+      // saiu do corpo e a medida foi embora com ele.
+      expect(corpo, `${route}: o corpo deve ser mais estreito que a moldura`).toBeLessThan(
+        moldura ?? Infinity,
+      );
+    } else {
+      // Estreito: o corpo usa toda a largura disponível, sem piso próprio. Um
+      // `min-width` em px empurraria a página para além da viewport — e nesse
+      // caso o overflow acima já teria caído também.
+      expect(
+        Math.abs(corpo - (moldura ?? 0)),
+        `${route}: no estreito o corpo usa a largura disponível`,
+      ).toBeLessThanOrEqual(1);
+      expect(parseFloat(geometria!.minWidth) || 0, `${route}: corpo com piso de largura`).toBe(0);
+    }
   }
 });
 
