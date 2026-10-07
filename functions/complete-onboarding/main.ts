@@ -1,6 +1,7 @@
 import { Account, Client, TablesDB } from 'node-appwrite';
 import { ownerReadPermissions } from '../../src/lib/security/permissions';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
+import { resolveEndpoint } from '../shared/host';
 import { createHash } from 'node:crypto';
 type Context = {
   req: { headers: Record<string, string>; bodyJson: unknown };
@@ -17,7 +18,11 @@ const sdkServices: Services = {
 };
 // The optional adapter is used only by isolated unit tests, never derived from requests.
 export default async function main({ req, res, error }: Context, services: Services = sdkServices) {
-  const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
+  // O endpoint injetado passa pela MESMA resolução do núcleo (`shared/host`): sem
+  // ela, `createRow` (POST) seguia o 301 para https e VIRAVA GET — a listagem
+  // respondia 200 e a function dizia `saved:true` sem ter gravado nada. Medido.
+  const injected = process.env.APPWRITE_FUNCTION_API_ENDPOINT;
+  const endpoint = injected ? await resolveEndpoint({ error }, injected) : null;
   const project = process.env.APPWRITE_FUNCTION_PROJECT_ID;
   const key = req.headers['x-appwrite-key'];
   const jwt = req.headers['x-appwrite-user-jwt'];

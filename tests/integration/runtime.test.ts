@@ -320,6 +320,13 @@ beforeAll(async () => {
   await createActor('notifyee');
   await createActor('forger');
   await createActor('flow');
+  // A porta de entrada (§ complete-onboarding). `onboarder` tem e-mail COMPROVADO —
+  // é o único estado em que a function grava — e `stranger` fica sem comprovar,
+  // para o caminho de recusa. Comprovar exige chave de servidor: o app não tem
+  // como fazer isso por conta própria, e é assim que deve ser.
+  const onboarder = await createActor('onboarder');
+  await createActor('stranger');
+  await users.updateEmailVerification({ userId: onboarder.id, emailVerification: true });
 });
 
 afterAll(async () => {
@@ -358,6 +365,11 @@ afterAll(async () => {
     ['challenge_submissions', 'userId'],
     ['challenge_participants', 'userId'],
     ['reward_redemptions', 'userId'],
+    // As três que o PRÓPRIO `complete-onboarding` cria (não o harness): sem elas
+    // uma rodada aprovada deixaria perfil órfão de uma conta já apagada.
+    ['profiles', 'userId'],
+    ['social_accounts', 'userId'],
+    ['users', 'authUserId'],
   ] as const)
     removed.push(`${tableId}:${await sweep(tableId, column, userIds)}`);
   removed.push(`submission_history:${await sweep('submission_history', 'submissionId', ids)}`);
@@ -410,6 +422,162 @@ afterAll(async () => {
     throw new Error(
       `Limpeza incompleta (${failures}) na run ${runId}. Não apague dado de origem não provada.`,
     );
+});
+
+/**
+ * A porta de entrada — a function que FALTAVA nesta suíte.
+ *
+ * `complete-onboarding` era a única sem prova de runtime, e foi justamente a única
+ * a carregar um defeito de transporte até o Sprint 8: montava o cliente com o
+ * endpoint INJETADO (`http://`), o POST seguia o 301 virando GET, a listagem
+ * respondia 200 e a function devolvia `{"saved":true}` **sem gravar linha
+ * nenhuma**. Teste unitário não pega isso — o defeito só existe dentro do
+ * container, e é por isso que ele sobreviveu a nove functions provadas.
+ *
+ * A POLÍTICA DE PARTICIPAÇÃO (versão dos termos e idade mínima) é decisão de quem
+ * opera: chega por variável do CONTAINER, e o repositório não guarda valor
+ * aprovado nenhum. Por isso o bloco MEDE o estado em vez de supô-lo — e o que ele
+ * afirma no estado atual é o que mais importa: a recusa é NOMEADA
+ * (`participation_policy_unconfigured`, nunca o `profile_unavailable` genérico que
+ * significaria "o container quebrou") e acontece ANTES de qualquer escrita.
+ * Instalada a política, o MESMO bloco passa a exercer o caminho completo sozinho,
+ * sem edição.
+ */
+describe('complete-onboarding (runtime)', () => {
+  const profile = {
+    name: 'Pessoa de prova',
+    phone: '11999999999',
+    city: 'São Paulo',
+    state: 'SP',
+    // Adulta em qualquer piso plausível (o schema aceita 18..100). O valor
+    // aprovado substitui este por decisão; aqui só se exige que haja idade.
+    birthDate: '1980-01-01',
+    niche: 'casa',
+    creatorType: 'ugc',
+    instagram: '',
+    tiktok: '',
+    youtube: '',
+    terms: 'on',
+  };
+
+  /** O estado da política mora no CONTAINER: é medido uma vez, não suposto. */
+  let gate: Promise<{ unconfigured: boolean; run: Run }> | null = null;
+  function policyGate() {
+    gate ??= (async () => {
+      const run = await runFunction(
+        { kind: 'session', actor: actors.get('onboarder')! },
+        'complete-onboarding',
+        profile,
+      );
+      return { unconfigured: json(run).error === 'participation_policy_unconfigured', run };
+    })();
+    return gate;
+  }
+
+  it('recusa corpo inválido com o motivo NOMEADO e sem gravar nada', async () => {
+    const actor = actors.get('onboarder')!;
+    const invalid = await runFunction({ kind: 'session', actor }, 'complete-onboarding', {
+      name: 'sem o resto',
+    });
+    expect(proved(invalid)).toEqual({ http: 400, executionStatus: 'completed', trigger: 'http' });
+    // O motivo, não um 503 genérico: quem digitou o formulário precisa saber o que
+    // consertar, e `refusalMessage` traduz exatamente estes códigos.
+    expect(json(invalid)).toEqual({ error: 'invalid_profile' });
+    expect(
+      await responseCode(() =>
+        adminDb.getRow({ databaseId, tableId: 'profiles', rowId: actor.id }),
+      ),
+    ).toBe(404);
+  });
+
+  it('mede a política de participação: recusa nomeada, ou grava de verdade', async () => {
+    const actor = actors.get('onboarder')!;
+    const { unconfigured, run } = await policyGate();
+
+    if (unconfigured) {
+      // Fail-closed de propósito (§ não inventar política). O que NÃO se aceita é o
+      // produto se declarar aberto e recusar na porta de entrada —
+      // `parseEnvironment` já proíbe essa combinação no app; aqui ela é medida.
+      if (process.env.APPWRITE_REGISTRATION_ENABLED === 'true')
+        throw new Error(
+          'Cadastro aberto com a política de participação ausente no runtime: a criadora não sai do onboarding.',
+        );
+      expect(run.http).toBe(503);
+      // 5xx conta como execução falha para a plataforma — e ainda assim o corpo
+      // traz o motivo de NEGÓCIO. Recusa nomeada não é defeito.
+      expect(run.executionStatus).toBe('failed');
+      // Zero escrita: a recusa é anterior a qualquer `createRow`.
+      for (const [tableId, column] of [
+        ['profiles', 'userId'],
+        ['social_accounts', 'userId'],
+        ['users', 'authUserId'],
+      ] as const)
+        expect(await countRows(tableId, [Query.equal(column, actor.id)])).toBe(0);
+      console.log(
+        'complete-onboarding: política de participação AUSENTE no container — recusa nomeada ' +
+          '(503) e sem escrita, medido. O caminho de escrita passa a ser provado sozinho quando ' +
+          'NUY_TERMS_VERSION/NUY_MINIMUM_AGE aprovados forem instalados.',
+      );
+      return;
+    }
+
+    // Política instalada: o caminho que o defeito do Sprint 8 quebrava em silêncio.
+    expect(proved(run)).toEqual({ http: 200, executionStatus: 'completed', trigger: 'http' });
+    expect(json(run)).toEqual({ saved: true });
+
+    const saved = await adminDb.getRow({ databaseId, tableId: 'profiles', rowId: actor.id });
+    expect(saved.userId).toBe(actor.id);
+    expect(saved.niche).toBe('casa');
+    expect(saved.publicProfile).toBe(false); // perfil novo não nasce público
+    expect(String(saved.onboardingCompletedAt ?? '').length).toBeGreaterThan(0);
+    const mirror = await adminDb.getRow({ databaseId, tableId: 'users', rowId: actor.id });
+    expect(mirror.authUserId).toBe(actor.id);
+    expect(String(mirror.acceptedTermsVersion ?? '').length).toBeGreaterThan(0);
+    // Os três campos sociais vieram vazios: nada de linha órfã de plataforma.
+    expect(await countRows('social_accounts', [Query.equal('userId', actor.id)])).toBe(0);
+
+    // Repetir não duplica: o onboarding é resumível, e cada linha existe UMA vez.
+    const again = await runFunction({ kind: 'session', actor }, 'complete-onboarding', profile);
+    expect(json(again)).toEqual({ saved: true });
+    expect(await countRows('profiles', [Query.equal('userId', actor.id)])).toBe(1);
+    expect(await countRows('users', [Query.equal('authUserId', actor.id)])).toBe(1);
+
+    // E-mail não comprovado é recusado ANTES da primeira escrita.
+    const pending = actors.get('stranger')!;
+    const refused = await runFunction(
+      { kind: 'session', actor: pending },
+      'complete-onboarding',
+      profile,
+    );
+    expect(proved(refused)).toEqual({ http: 403, executionStatus: 'completed', trigger: 'http' });
+    expect(json(refused)).toEqual({ error: 'email_not_verified' });
+    expect(await countRows('profiles', [Query.equal('userId', pending.id)])).toBe(0);
+  });
+
+  it('identidade NÃO vem do payload: userId forjado no corpo é ignorado', async () => {
+    const { unconfigured } = await policyGate();
+    if (unconfigured) return; // sem política não há caminho de escrita a forjar
+
+    const actor = actors.get('stranger')!;
+    const victim = actors.get('rival')!;
+    await users.updateEmailVerification({ userId: actor.id, emailVerification: true });
+    const forged = await runFunction({ kind: 'session', actor }, 'complete-onboarding', {
+      ...profile,
+      userId: victim.id,
+    });
+    expect(json(forged)).toEqual({ saved: true });
+    // O perfil nasce na identidade da SESSÃO, nunca na do corpo.
+    expect(
+      await responseCode(() =>
+        adminDb.getRow({ databaseId, tableId: 'profiles', rowId: actor.id }),
+      ),
+    ).toBe(200);
+    expect(
+      await responseCode(() =>
+        adminDb.getRow({ databaseId, tableId: 'profiles', rowId: victim.id }),
+      ),
+    ).toBe(404);
+  });
 });
 
 describe('join-challenge (runtime)', () => {
@@ -1066,7 +1234,12 @@ describe('redeem-reward (runtime)', () => {
 
 describe('matriz de segurança (runtime)', () => {
   it('não deixa sessão anônima executar nada: a plataforma recusa antes do container', async () => {
-    for (const functionId of ['join-challenge', 'submit-content', 'redeem-reward']) {
+    for (const functionId of [
+      'complete-onboarding',
+      'join-challenge',
+      'submit-content',
+      'redeem-reward',
+    ]) {
       const anonymous = await runFunction({ kind: 'anonymous' }, functionId, {});
       expect(anonymous.http).toBe(401);
       expect(anonymous.platformRefusal).not.toBe('');

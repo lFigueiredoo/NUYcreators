@@ -65,6 +65,13 @@ aplicar silenciosamente; documentar mudança, motivo, impacto e rollback".
   volta é de um deploy, sem migração.
 - **Prova:** o plano remoto a mostra como `NOOP` (publicada e habilitada como
   declarada) e a suíte de integração exercita o fluxo inteiro por ela.
+- **Deploy corrigido (§4), medido no fechamento:** a function está ativa com
+  `deploymentId 6ac686006e204d8189f8` — `status: ready`, criado em
+  `2026-10-07T17:48:48Z`, **posterior** à correção. Não foi o comando que
+  respondeu por isso: as execuções da jornada de fechamento foram conferidas uma a
+  uma e **todas** carregam esse `deploymentId`, incluindo a que devolveu **409**
+  na edição obsoleta. Rebuildar e reenviar só a `admin-console` foi deliberado —
+  nenhum outro recurso entrou de carona no deploy.
 
 ## 4. Bug real encontrado pelo teste de integração — e corrigido
 
@@ -96,9 +103,13 @@ Pergunta da rodada, respondida com o que está medido — e a resposta **não** 
 - **Por que está fechada:** o manifesto declara `audience: 'closed'`
   (`enabled=false`, sem papel de execução). O app está com
   `APPWRITE_FUNCTIONS_ENABLED` desligado, então o formulário de onboarding não é
-  acionável e ninguém alcança a function. A razão original ("nunca teve
-  deployment") já não vale — ela está publicada — mas a operante continua valendo:
-  abrir seria declarar pronta uma porta que o produto não usa.
+  acionável e ninguém alcança a function. **Correção do fechamento (medida, não
+  suposta):** uma versão anterior deste parágrafo afirmava que "a razão original
+  ('nunca teve deployment') já não vale — ela está publicada". Isso era **falso**.
+  A sonda de estado remoto responde `deploymentId: ""` e `listDeployments` devolve
+  `total 0`: a function **nunca foi publicada**, nunca teve deployment nenhum. A
+  razão original continua valendo inteira, e as duas — "nunca publicada" e "o
+  produto não a usa" — apontam para o mesmo lado.
 - **O que a function faria se abrisse:** identidade vem do JWT da sessão
   (`Account.get()`), nunca de um `userId` do corpo; exige e-mail verificado;
   aplica idade mínima e versão dos termos no servidor; não faz escrita financeira.
@@ -142,11 +153,24 @@ Auditado lendo o código, não a documentação:
   consegue ler `/tablesdb` (o probe reporta `authKey=accepted-over-scoped`), e
   `sessionsWrite=authorized`. O gate `verifyIntegrationIdentity` **bloqueia a
   qualificação do app** enquanto isso: é requisito, não aviso.
+- **A troca é ato de Console — medido, não presumido.** No fechamento tentou-se
+  criar a chave por API, com a chave de provisionamento: a rota de leitura responde
+  `200`, mas a de criação responde **403 `key_creation_denied`** — _"An API key
+  cannot be created from a request authorized with an API key. Authenticate with a
+  session instead."_ Não há endpoint de chave efêmera nesta versão (`404`). Ou
+  seja: **nenhum script deste repositório consegue reduzir a chave SSR**; é ato
+  humano no Console, e a plataforma o exige de propósito.
 - **Pendência (ação humana, no Console):** criar uma chave nova **somente**
   `sessions.write`, trocar no ambiente server-side, rodar `npm run infra:preflight`
   (esperado: `accepted-with-read-denied` + `sessionsWrite=authorized`), repetir os
   testes de login e revogar a antiga. Procedimento completo em
   `docs/delivery-sprint6-fechamento.md` §3.
+- **Agravante registrado no fechamento:** **as três** chaves do projeto
+  (`nuy-creators`, `APPWRITE_API_KEY`, `APPWRITE_AUTH_API_KEY`) foram lidas e todas
+  têm escopo **máximo** — inclusive `keys.read`, `keys.write`, `databases.write` e
+  `project.write`. A separação exigida pelo guard de `identity.ts` (valores
+  distintos) é real, mas **hoje é só de valor, não de escopo**. Reduzir a SSR é o
+  primeiro passo; as outras duas merecem rodada própria.
 
 ## 8. Testes desta rodada
 
@@ -161,12 +185,16 @@ Auditado lendo o código, não a documentação:
   mesmo commit, editar exige a versão que a tela viu, encerrar tira do ar sem
   apagar, creator entra e envia, moderação decide, pontos e ranking andam — com
   limpeza depois. Foi ela que encontrou o defeito do §4.
-- **E2E:** `tests/e2e-staging/operacoes.spec.ts` percorre o mesmo caminho pelo
-  navegador (admin e creator) contra o staging: **1 passou**. O log traz as
-  execuções reais que a jornada disparou — `join-challenge` 201,
-  `submit-content` 201, `moderate-submission` 200, `process-outbox` 200,
-  `redeem-reward` 201 — e a tela de `/admin/submissoes` foi operada pelo navegador
-  (fila → Analisar → Aprovar) até a creator ver os pontos.
+- **E2E:** **duas** suítes contra o staging, ambas passando.
+  `tests/e2e-staging/operacoes.spec.ts` percorre o caminho operacional pelo
+  navegador (admin e creator) — o log traz as execuções reais que a jornada
+  disparou (`join-challenge` 201, `submit-content` 201, `moderate-submission` 200,
+  `process-outbox` 200, `redeem-reward` 201) e a tela de `/admin/submissoes` foi
+  operada pelo navegador (fila → Analisar → Aprovar) até a creator ver os pontos.
+  `tests/e2e-staging/catalogo.spec.ts` cobre o catálogo administrado: rascunho não
+  aparece para a creator, editar → publicar troca estado/versão/permissão, a
+  creator vê o publicado, a segunda edição com a versão antiga leva **409**, e o
+  mesmo vale para recompensa.
 
 ## 9. O que ficou no ambiente depois dos testes
 

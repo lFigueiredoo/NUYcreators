@@ -383,16 +383,20 @@ describe('plano remoto de provisionamento', () => {
     expect(entry(entries, 'bucket', 'avatars').action).toBe('CREATE');
   });
 
-  it('function fechada habilitada, ou executável publicamente, é divergência de segurança', async () => {
-    // `complete-onboarding` é `closed` no manifesto: habilitar o container é
-    // ampliar acesso além do declarado.
-    const closed = provisioned();
-    closed.functions = closed.functions!.map((item) =>
-      item.$id === 'complete-onboarding' ? { ...item, enabled: true } : item,
+  it('function com container fora do declarado, ou executável publicamente, é divergência de segurança', async () => {
+    // O manifesto declara `complete-onboarding` para o papel `users`, então o
+    // container DESLIGADO é divergência: a porta de entrada fechada com o produto
+    // declarado aberto — a armadilha do Sprint 7, agora cobrada pelo plano.
+    // (Antes do Sprint 8 este caso usava o sentido oposto, `closed` + habilitada;
+    //  o manifesto não tem mais function `closed`, e o que se cobra aqui é a mesma
+    //  comparação `found.enabled !== expectedEnabled`, no sentido alcançável.)
+    const disabled = provisioned();
+    disabled.functions = disabled.functions!.map((item) =>
+      item.$id === 'complete-onboarding' ? { ...item, enabled: false } : item,
     );
-    const enabled = await plan(closed);
+    const enabled = await plan(disabled);
     expect(entry(enabled, 'function', 'complete-onboarding').action).toBe('DRIFT_SECURITY');
-    expect(entry(enabled, 'function', 'complete-onboarding').found).toContain('enabled=true');
+    expect(entry(enabled, 'function', 'complete-onboarding').found).toContain('enabled=false');
 
     // `redeem-reward` executa com a sessão da usuária (`execute=["users"]`):
     // abrir para `any` é ampliação de acesso, mesmo com o container habilitado

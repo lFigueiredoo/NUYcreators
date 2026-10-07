@@ -85,10 +85,19 @@ function body(event: FunctionEvent): Record<string, unknown> {
  * por container; se o https não atender (instalação interna http-only), o
  * endpoint injetado é mantido e o fato fica registrado — melhor um sinal alto do
  * que trocar um erro por outro.
+ *
+ * Exportado porque `complete-onboarding` não passa por `hosted()` e, enquanto
+ * montou o cliente com o valor injetado cru, sofreu exatamente este defeito:
+ * `getRow` (GET) respondia 404 corretamente, `createRow` (POST) virava listagem com
+ * HTTP 200, e a function devolvia `{"saved":true}` sem ter gravado linha nenhuma —
+ * falha silenciosa, medida contra o staging no Sprint 8. A resolução mora aqui, e
+ * não copiada lá, para não haver duas versões da mesma regra.
  */
+export type EndpointHost = { error: (message: string) => void };
+
 let resolvedEndpoint: Promise<string | null> | null = null;
 
-function endpointFor(event: FunctionEvent, injected: string): Promise<string | null> {
+export function resolveEndpoint(event: EndpointHost, injected: string): Promise<string | null> {
   resolvedEndpoint ??= (async () => {
     let url: URL;
     try {
@@ -144,7 +153,7 @@ export async function hosted(
   const key = event.req.headers['x-appwrite-key'];
   const jwt = event.req.headers['x-appwrite-user-jwt'];
   const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT
-    ? await endpointFor(event, process.env.APPWRITE_FUNCTION_API_ENDPOINT)
+    ? await resolveEndpoint(event, process.env.APPWRITE_FUNCTION_API_ENDPOINT)
     : null;
   if (!endpoint || !project || !key) {
     return { ready: false, response: event.res.json({ error: 'runtime_unconfigured' }, 500) };

@@ -277,18 +277,24 @@ export type FunctionDefinition = {
 };
 
 export const functionDefinitions: FunctionDefinition[] = [
-  // FECHADA de propósito, e auditada no Sprint 7: `APPWRITE_FUNCTIONS_ENABLED` está
-  // desligado no ambiente, então o formulário de onboarding não é acionável e
-  // ninguém alcança esta function. Ela fica fechada até ser publicada e provada
-  // pelo runtime — declarar aberta seria declarar pronta.
+  // ABERTA no Sprint 8, e a ordem em que isso aconteceu é a decisão: a function
+  // foi publicada e PROVADA pelo runtime (autorização, idempotência, integração e
+  // E2E) ANTES de `APPWRITE_FUNCTIONS_ENABLED` ser ligada. Declarar aberta sem
+  // prova seria declarar pronta; ligar a flag antes de publicar travaria o produto
+  // na porta de entrada (§ armadilha abaixo).
   //
-  // ARMADILHA CONHECIDA — a MESMA flag abre esta porta e a do núcleo operacional
-  // (`join-challenge`, `submit-content`, `redeem-reward`). Ao ligar
-  // `APPWRITE_FUNCTIONS_ENABLED`, mude esta linha para `audience: 'users'` e
-  // publique no MESMO deploy: com o formulário acionável e a function fechada, a
-  // creator cadastrada não sai do onboarding (a recusa é permanente, não uma
-  // indisponibilidade passageira) e o produto fica travado na porta de entrada.
-  { id: 'complete-onboarding', implemented: true, audience: 'closed', readsTeams: false },
+  // AUDIENCE `users`, nunca `any`: a function só é utilizável por quem tem sessão
+  // — a identidade vem do JWT e sai de `Account.get()`, e e-mail não verificado é
+  // recusado antes de qualquer escrita. `any` não acrescentaria ninguém capaz de
+  // usá-la; só alargaria a superfície. É a regra mínima que atende o caso.
+  //
+  // A ARMADILHA do Sprint 7, agora desarmada — registrada porque continua
+  // valendo para quem mexer aqui depois: a MESMA flag abre esta porta e a do
+  // núcleo operacional (`join-challenge`, `submit-content`, `redeem-reward`).
+  // Com o formulário acionável e esta function fechada, a creator cadastrada não
+  // sai do onboarding (a recusa é permanente, não indisponibilidade passageira) e
+  // o produto fica travado na entrada. Publicar ANTES de ligar a flag, sempre.
+  { id: 'complete-onboarding', implemented: true, audience: 'users', readsTeams: false },
   { id: 'join-challenge', implemented: true, audience: 'users', readsTeams: false },
   { id: 'submit-content', implemented: true, audience: 'users', readsTeams: false },
   { id: 'redeem-reward', implemented: true, audience: 'users', readsTeams: false },
