@@ -110,7 +110,14 @@ export function Hero() {
             <span className={styles.heroLight} />
           </span>
           <div className={styles.heroGroup}>
-            <span className={styles.heroBase} aria-hidden="true" data-pl-reveal data-pl-index="0" />
+            {/* O plano NÃO entra no reveal. Ele é o chão da cena: um chão que
+                sobe 11px para "aparecer" não é um chão, e como o reveal deixa
+                o elemento deslocado até o observer disparar, o plano ficava
+                permanentemente baixo em qualquer viewport onde ele caísse
+                abaixo da folga de 12% do observer — no empilhado, os três
+                frascos boiavam 9px acima da linha de apoio. Fica de fora do
+                movimento e no lugar desde o primeiro quadro. */}
+            <span className={styles.heroBase} aria-hidden="true" />
             {HERO_PRODUCTS.map((product, index) => (
               <span
                 key={product.src}

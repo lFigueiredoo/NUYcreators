@@ -572,50 +572,104 @@
 }
 
 /*
- * Plano horizontal: uma bandeja baixa, quase sem contraste. Não é cenário —
- * é só o degrau de luz que separa o grupo do creme chapado do fundo.
+ * O plano de apoio: um plinto baixo, off-white, fosco, visto quase de perfil.
  *
- * Ele é BEM mais largo que o grupo (1,4×) e some antes de chegar nas bordas da
- * seção: um poço de luz estreito vira mancha, e um que encoste nas bordas vira
- * faixa com horizonte. O que assenta os frascos é a área, não a intensidade —
- * o miolo escurece uns 15/255 do creme.
+ * A cena tem UM chão, e é isto. A aresta de cima é a linha de apoio — os três
+ * frascos encostam nela (o `--pl-sit` de cada item é quem os traz para cá).
+ * Abaixo dela a face pega luz, escorre e encontra o próprio vinco no pé: é o
+ * lábio, a face e o vinco que dão espessura à peça, sem caixa desenhada, sem
+ * perspectiva e sem canto.
+ *
+ * CALIBRAGEM — o creme da página é #F8F4EC, ou seja 248/244/236. Branco puro
+ * por cima dele rende no MÁXIMO Δ+7/+11/+19; a α de 0.22 isso dá Δ+1.5/+2.4/
+ * +4.2, que simplesmente não existe na tela. Foi o que aconteceu na primeira
+ * versão deste bloco: o plano estava a 3/255 do fundo e ninguém o via. Os
+ * valores abaixo estão nesta escala — `scripts/polish3-perfil.mjs` lê o pixel
+ * e imprime o Δ linha a linha.
+ *
+ * A MÁSCARA horizontal é o que impede o plinto de virar FAIXA. Ele é mais largo
+ * que o grupo, mas morre antes das bordas da seção; sem ela a aresta
+ * atravessaria a página inteira e leria como divisor, não como móvel.
+ *
+ * A aresta cai 2px acima do pé da caixa do grupo — que é exatamente onde as
+ * bases dos três frascos assentam depois do alinhamento.
  */
 .heroBase {
   position: absolute;
-  left: -20%;
-  right: -20%;
-  bottom: -106px;
+  left: -15%;
+  right: -15%;
+  top: calc(100% - 2px);
   z-index: 0;
-  height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    rgba(199, 186, 160, 0.4),
-    rgba(214, 203, 180, 0.22) 45%,
-    rgba(232, 224, 206, 0) 82%
+  height: 70px;
+  background-image:
+    /* O lábio: 1px branco cheio onde a superfície encontra o fundo. Um degrau
+       acima da face, e é essa diferença que faz a aresta ser aresta. Ele já
+       está no teto do que o creme aceita — branco sobre #F8F4EC não passa de
+       Δ+19 no azul —, então quem carrega a leitura da aresta é o CONTRASTE
+       com a face, não o brilho do lábio. Some nas pontas com a máscara: não
+       tem começo nem fim visíveis. */
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 1) 24%,
+      rgba(255, 255, 255, 1) 76%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    /* O vinco do pé: a face não termina em nada, ela encosta em si mesma. Sem
+       esta linha o plano se dissolve e volta a ser mancha. */
+    linear-gradient(180deg, rgba(8, 43, 85, 0) 0%, rgba(8, 43, 85, 0.06) 100%),
+    /* A face: clara no lábio, caindo até o vinco sem parar em nenhum degrau.
+       A queda é o que dá a leitura de plano RECUANDO — uma face de brilho
+       constante vira fita colada.
+       70px, e não os 54 de antes: na altura antiga a peça lia como fita e não
+       como plano. A queda acompanha a altura nova. */
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0.34) 50%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+  background-size: 100% 1px, 100% 7px, 100% 100%;
+  background-position: left top, left bottom, left top;
+  background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 15%,
+    #000 85%,
+    transparent 100%
   );
+  mask-image: linear-gradient(90deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
   pointer-events: none;
 }
 
-/* Sombra coletiva: onde os três frascos escurecem o plano juntos. Fica bem
-   abaixo das sombras de contato — é o que une a fileira num só chão, e não
-   mais uma mancha a competir com elas. */
+/* Sombra coletiva: onde os três frascos escurecem o plano juntos. Abraça a
+   linha de apoio e escorre um pouco pela face — é o que une a fileira num só
+   chão em vez de três manchas soltas. Larga, rasa e sem núcleo escuro: quem
+   tem núcleo é a sombra de contato de cada frasco.
+   Ela pinta POR CIMA do plinto (mesmo z-index, mais adiante no DOM), então o
+   valor aqui não é "sombra sobre o creme", é "quanto a fileira apaga de uma
+   superfície já clara". Com os 0.085 de antes ela comia metade da face no vão
+   entre os frascos — medido em -4 de azul contra os +10 do plano, ou seja o
+   plano sumia justamente onde não tem frasco para explicar o escuro.
+   O centro desceu para o PÉ, não para a aresta: o lábio é a linha mais clara
+   da peça e não pode ser atravessado por sombra. */
 .heroGroup::after {
   content: '';
   position: absolute;
-  left: 2%;
-  right: 2%;
-  bottom: -18px;
+  left: 4%;
+  right: 4%;
+  bottom: -20px;
   z-index: 0;
-  height: 34px;
+  height: 28px;
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    rgba(8, 43, 85, 0.07),
-    rgba(8, 43, 85, 0.03) 60%,
-    rgba(8, 43, 85, 0) 88%
+    rgba(8, 43, 85, 0.05),
+    rgba(8, 43, 85, 0.019) 62%,
+    rgba(8, 43, 85, 0) 90%
   );
-  filter: blur(4px);
+  filter: blur(7px);
   pointer-events: none;
 }
 
@@ -638,13 +692,27 @@
 .heroItem {
   --pl-from-scale: 0.97;
   /* Base da garrafa dentro da caixa do arquivo (left/right em % da largura).
-     Cada frasco declara a sua — o padrão aqui é só o caso genérico. */
+     Cada frasco declara a sua — o padrão aqui é só o caso genérico. Os valores
+     por frasco são os MEDIDOS no alpha do arquivo (scripts/polish3-hero-base.mjs
+     imprime), não estimados: com um valor expandido à mão a sombra de contato
+     sai de baixo do pé e passa a ler como mancha. */
   --pl-base-left: 5%;
   --pl-base-right: 5%;
+  /* Largura do pé, derivada das duas acima. As sombras se dimensionam por ela
+     e não por `%` da CAIXA: a caixa é bem mais larga que o frasco e cada um
+     tem uma folga diferente, então medir pela caixa dava um pool 1.67× o pé no
+     aromatizador e 1.37× no sabonete — e o do sabonete ainda vazava da caixa. */
+  --pl-base-w: calc(100% - var(--pl-base-left) - var(--pl-base-right));
+  /* Quanto o frasco desce para pousar na linha de apoio. O arquivo do packshot
+     quase não tem margem transparente embaixo (1–2px), então o valor é pequeno
+     e existe só para levar as três bases ao MESMO y: antes cada item trazia o
+     seu degrau (-9px e -20px) e a fileira ficava em três alturas, sem chão. */
+  --pl-sit: 0px;
   position: relative;
   display: block;
   flex: 0 0 auto;
   z-index: 1;
+  margin-bottom: var(--pl-sit);
   transform-origin: bottom center;
 }
 
@@ -653,40 +721,60 @@
   height: auto;
 }
 
-/* Sombra ambiente: larga, muito suave, um passo além da base. */
+/* Sombra ambiente: larga, muito rasa, um passo além da base. Não tem núcleo —
+   ela só diz que o frasco ocupa aquele chão. `bottom` negativo pequeno porque
+   o que ancora é a linha de apoio, não o pé da caixa.
+   16% da largura do pé de cada lado: o pool fica 1.32× o pé nos três, que é
+   o que faz os três lerem como o mesmo tipo de objeto no mesmo tipo de chão. */
 .heroItem::before {
   content: '';
   position: absolute;
-  left: calc(var(--pl-base-left) - 12%);
-  right: calc(var(--pl-base-right) - 12%);
-  bottom: -12px;
+  left: calc(var(--pl-base-left) - var(--pl-base-w) * 0.16);
+  right: calc(var(--pl-base-right) - var(--pl-base-w) * 0.16);
+  bottom: -8px;
   z-index: -1;
-  height: 26px;
+  height: 18px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(8, 43, 85, 0.15), rgba(8, 43, 85, 0) 80%);
-  filter: blur(6px);
+  background: radial-gradient(closest-side, rgba(8, 43, 85, 0.1), rgba(8, 43, 85, 0) 82%);
+  filter: blur(8px);
   pointer-events: none;
 }
 
-/* Sombra de contato: curta e escura, com o miolo em cima da linha da base —
-   encostada no chão é o que dá peso. Um degrau acima (ou atrás do frasco) ela
-   some por baixo da garrafa e não lê como contato nenhum. */
+/* Sombra de contato: curta, escura e com blur pequeno — é ela que dá o peso, e
+   ela só convence ENCOSTADA na linha de apoio.
+   O centro dela cai 1.5px ABAIXO do pé do frasco, não em cima: com o centro na
+   linha, metade da elipse ficava escondida atrás da garrafa e o que sobrava era
+   um fio. Assim ela nasce de baixo do pé e escorre para a frente, que é como a
+   luz se comporta quando o objeto encosta.
+   O blur é 2px e não 2.5: sobre uma elipse de 7px de altura o blur grande come
+   o pico, e a sombra perde justamente o miolo que dá o peso. O α subiu junto
+   para compensar o que ela ganhou de área visível.
+   Como ela mora DENTRO do item, o `--pl-sit` já a leva junto: o valor aqui é
+   fixo e continua preso ao pé, que é o que interessa. */
 .heroItem::after {
   content: '';
   position: absolute;
-  left: var(--pl-base-left);
-  right: var(--pl-base-right);
-  bottom: -6px;
+  /* 3% de largura do pé de cada lado: o radial já caiu para 0 a 86% do raio,
+     então uma elipse do tamanho exato do pé perde justamente as pontas — e
+     são elas que fazem a sombra acompanhar a largura do frasco. */
+  left: calc(var(--pl-base-left) - var(--pl-base-w) * 0.03);
+  right: calc(var(--pl-base-right) - var(--pl-base-w) * 0.03);
+  bottom: -5px;
   z-index: -1;
-  height: 11px;
+  height: 7px;
   border-radius: 50%;
+  /* O perfil é achatado de propósito. Num gradiente radial sobre uma elipse
+     muito baixa (90px por 7px), o α cai para um sexto já a 66% da largura: o
+     miolo fica fundo e as pontas somem, e o frasco passa a parecer apoiado num
+     pé só. Os stops seguram o α até 64% e só então despenam, que é o que faz a
+     sombra acompanhar a largura do frasco em vez de virar um ponto. */
   background: radial-gradient(
     closest-side,
-    rgba(8, 43, 85, 0.28),
-    rgba(8, 43, 85, 0.1) 58%,
-    rgba(8, 43, 85, 0) 86%
+    rgba(8, 43, 85, 0.46),
+    rgba(8, 43, 85, 0.28) 64%,
+    rgba(8, 43, 85, 0) 100%
   );
-  filter: blur(3.5px);
+  filter: blur(2px);
   pointer-events: none;
 }
 
@@ -704,33 +792,39 @@
   width: min(100px, 9.8vw);
 }
 
-/* Aromatizador: protagonista, no plano de base, no meio do grupo. */
+/* Aromatizador: protagonista, no meio do grupo. O maior define a altura do
+   grupo e é ele quem manda na linha de apoio — por isso é o único com `--pl-sit`
+   zerado: os outros dois sobem até ele, e não o contrário. */
 .heroItemMain {
   z-index: 2;
-  /* base 15.3%..57.3% do arquivo */
-  --pl-base-left: 10%;
-  --pl-base-right: 37%;
+  --pl-sit: 0px;
+  /* base 15.3%..57.0% do arquivo — medido, não estimado */
+  --pl-base-left: 15%;
+  --pl-base-right: 43%;
 }
 
-/* Sabonete: um degrau à frente, encostando na lateral do aromatizador. */
+/* Sabonete: encostando na lateral do aromatizador. A profundidade dele é a
+   ESCALA (.96), não mais um degrau para baixo — era isso que o deixava 10px
+   abaixo da base do vizinho, boiando. */
 .heroItemFront {
   z-index: 3;
   margin-left: -14px;
-  margin-bottom: -9px;
   --pl-rest-scale: 0.96;
-  /* base 15.8%..82.9% do arquivo */
+  --pl-sit: 1px;
+  /* base 11.8%..86.2% do arquivo — medido, não estimado */
   --pl-base-left: 12%;
-  --pl-base-right: 13%;
+  --pl-base-right: 14%;
 }
 
-/* Limpador: o menor, mais baixo e deslocado à esquerda — o mais próximo da câmera. */
+/* Limpador: o menor, à esquerda, no plano mais distante. Mesma escala-como-
+   profundidade e mesma linha de apoio dos outros dois. */
 .heroItemBack {
   z-index: 1;
-  margin-bottom: -20px;
   --pl-rest-scale: 0.92;
-  /* base 12.9%..64.1% do arquivo */
+  --pl-sit: 1px;
+  /* base 8.3%..61.2% do arquivo — medido, não estimado */
   --pl-base-left: 8%;
-  --pl-base-right: 30%;
+  --pl-base-right: 39%;
 }
 
 /* --------------------------------------------------------- comunidade */
@@ -1526,11 +1620,15 @@
     width: min(104%, 680px);
   }
 
+  /* No empilhado a fileira é menor, e o plinto encolhe na mesma proporção —
+     mas o TOPO dele continua em `calc(100% - 2px)`, que é a linha de apoio. O
+     `bottom` que existia aqui brigava com esse `top` e ainda esticava o plano
+     para 140px; o `top` vence a disputa, e o que sobrava era um plinto fundo
+     demais com a aresta no lugar certo por acidente. */
   .heroBase {
     left: -6%;
     right: -6%;
-    bottom: -74px;
-    height: 140px;
+    height: 56px;
   }
 
   .heroProductMain {
@@ -1545,14 +1643,13 @@
     width: min(100px, 21vw);
   }
 
-  /* No empilhado os degraus encolhem: menos sobreposição, base mais rasa. */
+  /* No empilhado a sobreposição encolhe; a LINHA DE APOIO não. Os
+     `margin-bottom` que existiam aqui (-7px e -14px) eram o degrau antigo, e
+     depois do alinhamento eles passaram a brigar com o `--pl-sit` — no celular
+     os três pés voltavam a ficar em três alturas. O `--pl-sit` do bloco de
+     cima já vale, e vale igual para os três. */
   .heroItemFront {
     margin-left: -8px;
-    margin-bottom: -7px;
-  }
-
-  .heroItemBack {
-    margin-bottom: -14px;
   }
 
   .creatorGrid {
