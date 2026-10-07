@@ -140,7 +140,7 @@ function parseJson(raw: string): Record<string, unknown> | null {
  * retentável, com o FATO registrado no log — nunca corpo de resposta nem
  * credencial (pode carregar detalhe de conta).
  */
-async function runFunction<T>(
+export async function runFunction<T>(
   functionId: string,
   body: Record<string, unknown>,
 ): Promise<FunctionReply<T>> {

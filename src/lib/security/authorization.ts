@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { Teams, Query } from 'node-appwrite';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -16,8 +17,12 @@ import type { AdminRole } from './permissions';
  *
  * Falha de leitura devolve lista vazia: sem papel confirmado não há privilégio —
  * o caminho conservador é sempre negar.
+ *
+ * `cache` é por REQUISIÇÃO: o layout do /admin e a página que ele embrulha pedem
+ * os mesmos papéis, e não há motivo para ler a mesma membership duas vezes no mesmo
+ * pedido. Duas requisições nunca compartilham resultado.
  */
-export async function sessionRoles(secret: string, userId: string): Promise<AdminRole[]> {
+export const sessionRoles = cache(async (secret: string, userId: string): Promise<AdminRole[]> => {
   const teamId = getEnvironment().APPWRITE_ADMIN_TEAM_ID;
   try {
     // A listagem de sessão redige a identidade (medido): o filtro por `userId`
@@ -31,7 +36,7 @@ export async function sessionRoles(secret: string, userId: string): Promise<Admi
     if (![401, 403, 404].includes((error as { code?: number }).code ?? 0)) throw error;
     return [];
   }
-}
+});
 
 export async function requireSession() {
   const user = await currentUser();

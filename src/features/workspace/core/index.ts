@@ -18,6 +18,46 @@ export {
 } from './moderate';
 export { adjustPoints, type AdjustInput, type AdjustResult } from './adjust';
 export { redeemReward, type RedeemInput, type RedeemResult } from './redeem';
+export {
+  saveChallenge,
+  publishChallenge,
+  closeChallenge,
+  saveReward,
+  publishReward,
+  closeReward,
+  setRewardStock,
+  saveCampaign,
+  type ChallengeResult,
+  type RewardResult,
+  type CampaignResult,
+} from './catalog';
+export {
+  adminOverview,
+  adminChallenges,
+  adminChallenge,
+  adminRewards,
+  adminReward,
+  adminCampaigns,
+  adminOptions,
+  adminSubmissions,
+  adminSubmission,
+  adminCreators,
+  adminCreator,
+  adminAudit,
+  adminRecentAudit,
+  adminReport,
+  type CatalogChallenge,
+  type CatalogChallengeDetail,
+  type CatalogReward,
+  type CatalogCampaign,
+  type CatalogOptions,
+  type AdminSubmission,
+  type AdminSubmissionDetail,
+  type CreatorSummary,
+  type CreatorDetail,
+  type AuditEntry,
+  type ReportSummary,
+} from './console';
 export { processOutbox, outboxPending, type OutboxOutcome } from './outbox';
 export { rebuildRanking, type RebuildResult } from './rebuild';
 export { setNotificationRead, markAllNotificationsRead, deliverNotification } from './notify';

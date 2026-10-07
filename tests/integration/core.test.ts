@@ -8,14 +8,26 @@ import { periodKey, rowId } from '../../src/features/workspace/core';
 import { rankingTimeZone } from '../../src/features/workspace/domain/ranking';
 import {
   adjustPoints,
+  adminChallenges,
+  adminCreator,
+  adminCreators,
+  adminOverview,
+  adminReward,
+  closeChallenge,
   deliverNotification,
   joinChallenge,
   markAllNotificationsRead,
   moderateSubmission,
   processOutbox,
+  publishChallenge,
+  publishReward,
   rebuildRanking,
   redeemReward,
+  saveCampaign,
+  saveChallenge,
+  saveReward,
   setNotificationRead,
+  setRewardStock,
   submitContent,
   syncPublicProfile,
   updateOwnProfile,
@@ -1082,5 +1094,363 @@ describe('matriz de permissões da sessão', () => {
       queries: [Query.equal('userId', actorB.id), Query.limit(10)],
     });
     expect(ranking.total).toBe(0);
+  });
+});
+
+/**
+ * Catálogo administrado — o que a equipe cria, publica, encerra e ajusta.
+ *
+ * A administração inteira se apoia em três promessas que só o banco de verdade
+ * pode confirmar:
+ *
+ *  1. **Rascunho não vaza.** A linha nasce com `permissions: []`; a sessão da
+ *     criadora não a lê nem sabendo o id. Publicar é o que troca a permissão, no
+ *     MESMO commit da mudança de estado — não há janela em que o desafio está no
+ *     ar e invisível, nem o contrário.
+ *  2. **Encerrado sai do ar sem apagar.** Quem já participou continua lendo o
+ *     desafio (e o próprio histórico); entrar nele, não.
+ *  3. **A leitura administrativa lê o esquema pelo nome da COLUNA.** A tela chama
+ *     dois números de "pontos"; o banco os chama `availableBalance` e
+ *     `qualifyingPoints`. Ler o nome da tela devolveria `undefined` — e o zero
+ *     resultante tem cara de resposta. Este bloco trava isso contra o schema real.
+ */
+describe('catálogo administrado pela equipe', () => {
+  const adminSlug = `${runId}-admin`;
+  const adminChallenge = rowId('challenge', adminSlug);
+  const adminRewardKey = `${runId}-chave-admin`;
+  const managedReward = rowId('reward', adminRewardKey);
+  const draftRewardKey = `${runId}-chave-rascunho`;
+  const draftReward = rowId('reward', draftRewardKey);
+  const adminCampaignKey = `${runId}-chave-campanha`;
+  const adminCampaign = rowId('campaign', adminCampaignKey);
+  const requirementIds = [0, 1].map((index) => rowId('requirement', adminChallenge, index));
+  const sessionB = () => new TablesDB(clients().setSession(actorB.secret));
+
+  const challengeDraft = (name: string) => ({
+    slug: adminSlug,
+    name,
+    description: 'Fixture do teste de integração — apagada ao fim da rodada.',
+    platform: 'instagram',
+    startsAt: '2026-10-01T09:00',
+    endsAt: '2026-11-01T23:59',
+    points: 120,
+    imageFileId: '',
+    requiredLevelId: '',
+    participantLimit: null,
+    campaignId: '',
+    productId: '',
+    hashtags: '#nuycreators',
+    mentions: '@nuycreators',
+    requirements: [
+      { type: 'hashtag', required: true, configJson: '{"value":"#nuycreators"}' },
+      { type: 'link', required: true, configJson: '{"value":"link da publicação"}' },
+    ],
+  });
+
+  it('rascunho nasce sem permissão: a sessão não lê a linha nem sabendo o id', async () => {
+    const created = await saveChallenge(staff(), {
+      draft: challengeDraft('Desafio administrado (teste isolado)'),
+      publish: false,
+      timeZone: rankingTimeZone,
+    });
+    expect(codeOf(created)).toBe('ok');
+    expect(created.ok && created.value).toMatchObject({
+      challengeId: adminChallenge,
+      status: 'draft',
+      created: true,
+      version: 1,
+    });
+    track('challenges', adminChallenge);
+    for (const id of requirementIds) track('challenge_requirements', id);
+
+    const row = await readRow('challenges', adminChallenge);
+    expect(row?.status).toBe('draft');
+    // O rascunho não é "escondido na tela": ele não tem permissão nenhuma.
+    expect(row?.$permissions).toEqual([]);
+    // A criadora da rodada não o alcança — nem por id direto.
+    const denied = await rejection(() =>
+      sessionB().getRow({ databaseId, tableId: 'challenges', rowId: adminChallenge }),
+    );
+    expect(denied.status).toBeGreaterThanOrEqual(400);
+
+    // E o rascunho aparece para a equipe, que é quem trabalha nele.
+    const listed = await adminChallenges(staff(), { status: 'draft' });
+    expect(
+      listed.ok && listed.value.items.some((item) => item.challengeId === adminChallenge),
+    ).toBe(true);
+    // Moderar não é administrar catálogo: o papel não abre esta porta.
+    expect(codeOf(await adminChallenges(staff(['moderator'])))).toBe('forbidden');
+  });
+
+  it('publicar troca a permissão no mesmo commit: a criadora passa a ler, e os requisitos junto', async () => {
+    const published = await publishChallenge(staff(), {
+      challengeId: adminChallenge,
+      expectedVersion: 1,
+    });
+    expect(published.ok && published.value).toMatchObject({ status: 'published', version: 2 });
+
+    const row = await readRow('challenges', adminChallenge);
+    expect(row?.$permissions).toEqual([Permission.read(Role.any())]);
+    expect(
+      await responseCode(() =>
+        sessionB().getRow({ databaseId, tableId: 'challenges', rowId: adminChallenge }),
+      ),
+    ).toBe(200);
+    // Requisito publicado sem permissão seria exigência que a criadora não lê.
+    for (const id of requirementIds) {
+      const requirement = await readRow('challenge_requirements', id);
+      expect(requirement?.$permissions).toEqual([Permission.read(Role.any())]);
+      expect(
+        await responseCode(() =>
+          sessionB().getRow({ databaseId, tableId: 'challenge_requirements', rowId: id }),
+        ),
+      ).toBe(200);
+    }
+    // Publicar duas vezes com a mesma versão não passa: a segunda é conflito.
+    expect(
+      codeOf(await publishChallenge(staff(), { challengeId: adminChallenge, expectedVersion: 1 })),
+    ).toBe('conflict');
+  });
+
+  it('editar exige a versão que a tela viu, e não inventa estado', async () => {
+    expect(
+      codeOf(
+        await saveChallenge(staff(), {
+          draft: challengeDraft('Desafio administrado — revisado (teste isolado)'),
+          publish: false,
+          expectedVersion: 1,
+          timeZone: rankingTimeZone,
+        }),
+      ),
+    ).toBe('conflict');
+
+    const edited = await saveChallenge(staff(), {
+      draft: challengeDraft('Desafio administrado — revisado (teste isolado)'),
+      publish: false,
+      expectedVersion: 2,
+      timeZone: rankingTimeZone,
+    });
+    expect(edited.ok && edited.value.version).toBe(3);
+    // A versão da LINHA anda junto com a resposta — foi um defeito real: a edição
+    // gravava só os campos do formulário, a linha ficava na versão antiga e o
+    // `expectedVersion` deixava de barrar a segunda edição de quem estava com a
+    // tela aberta. A prova aqui é a linha, não o retorno.
+    expect((await readRow('challenges', adminChallenge))?.version).toBe(3);
+    // Salvar sem publicar NÃO tira do ar quem já está no ar.
+    expect((await readRow('challenges', adminChallenge))?.status).toBe('published');
+
+    // A auditoria guarda o que MUDOU e fica presa à correlação desta rodada.
+    const logs = await ops.listRows({
+      databaseId,
+      tableId: 'audit_logs',
+      queries: [
+        Query.equal('entityId', adminChallenge),
+        Query.orderDesc('occurredAt'),
+        Query.limit(10),
+      ],
+    });
+    const actions = logs.rows.map((log) => String(log.action));
+    expect(actions).toContain('challenge.created');
+    expect(actions).toContain('challenge.published');
+    expect(actions).toContain('challenge.updated');
+    const updated = logs.rows.find((log) => log.action === 'challenge.updated');
+    expect(updated?.actorId).toBe(actorA.id);
+    expect(String(updated?.correlationId).startsWith(runId)).toBe(true);
+  });
+
+  it('encerrar tira do ar sem apagar: sai do join, continua legível', async () => {
+    const closed = await closeChallenge(staff(), {
+      challengeId: adminChallenge,
+      expectedVersion: 3,
+    });
+    // O código antes do objeto: uma recusa aqui é `conflict` (a versão que a tela
+    // viu não é a da linha) e o teste precisa dizer isso, não só "não bateu".
+    expect(codeOf(closed)).toBe('ok');
+    expect(closed.ok && closed.value).toMatchObject({ status: 'closed', version: 4 });
+
+    const row = await readRow('challenges', adminChallenge);
+    expect(row?.status).toBe('closed');
+    // Encerrado continua legível: quem participou precisa reencontrar o desafio.
+    expect(row?.$permissions).toEqual([Permission.read(Role.any())]);
+    // ...mas não aceita entrada nova.
+    expect(codeOf(await joinChallenge(context(actorA.id), { challengeId: adminChallenge }))).toBe(
+      'not_published',
+    );
+  });
+
+  it('recompensa: a chave de intenção não cria duas, e o rascunho não é catálogo', async () => {
+    const reward = {
+      name: 'Recompensa administrada (teste isolado)',
+      type: 'produto físico',
+      description: 'Fixture do teste de integração.',
+      pointsCost: 150,
+      stock: 4,
+      perUserLimit: 2,
+      startsAt: '2026-10-01T09:00',
+      endsAt: '2026-11-01T23:59',
+      imageFileId: '',
+    };
+    const first = await saveReward(staff(), {
+      key: adminRewardKey,
+      draft: reward,
+      publish: false,
+      timeZone: rankingTimeZone,
+    });
+    expect(first.ok && first.value).toMatchObject({
+      rewardId: managedReward,
+      status: 'draft',
+      created: true,
+      stock: 4,
+    });
+    track('rewards', managedReward);
+    // Repetir a chave devolve o MESMO item — não um segundo.
+    const again = await saveReward(staff(), {
+      key: adminRewardKey,
+      draft: reward,
+      publish: false,
+      timeZone: rankingTimeZone,
+    });
+    expect(again.ok && again.value).toMatchObject({ rewardId: managedReward, created: false });
+
+    const draft = await saveReward(staff(), {
+      key: draftRewardKey,
+      draft: { ...reward, name: 'Recompensa em rascunho (teste isolado)' },
+      publish: false,
+      timeZone: rankingTimeZone,
+    });
+    expect(draft.ok && draft.value.status).toBe('draft');
+    track('rewards', draftReward);
+    // Rascunho de recompensa não está no catálogo de ninguém.
+    const denied = await rejection(() =>
+      sessionB().getRow({ databaseId, tableId: 'rewards', rowId: draftReward }),
+    );
+    expect(denied.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('estoque muda por comando auditado — nunca por escrita de tela', async () => {
+    expect(
+      codeOf(await publishReward(staff(), { rewardId: managedReward, expectedVersion: 1 })),
+    ).toBe('ok');
+    expect((await readRow('rewards', managedReward))?.status).toBe('published');
+    expect(
+      await responseCode(() =>
+        sessionB().getRow({ databaseId, tableId: 'rewards', rowId: managedReward }),
+      ),
+    ).toBe(200);
+
+    // Sem motivo não há ajuste: o motivo é o que a auditoria guarda.
+    expect(
+      codeOf(await setRewardStock(staff(), { rewardId: managedReward, stock: 9, reason: '  ' })),
+    ).toBe('invalid');
+    // Papel sem `manage-catalog` não mexe em estoque.
+    expect(
+      codeOf(
+        await setRewardStock(staff(['fulfillment']), {
+          rewardId: managedReward,
+          stock: 9,
+          reason: 'Reposição do lote',
+        }),
+      ),
+    ).toBe('forbidden');
+
+    const adjusted = await setRewardStock(staff(), {
+      rewardId: managedReward,
+      stock: 9,
+      reason: 'Reposição do lote de outubro',
+      expectedVersion: 2,
+    });
+    expect(adjusted.ok && adjusted.value).toMatchObject({ stock: 9, version: 3 });
+    expect((await readRow('rewards', managedReward))?.stock).toBe(9);
+
+    const logs = await ops.listRows({
+      databaseId,
+      tableId: 'audit_logs',
+      queries: [Query.equal('entityId', managedReward), Query.limit(20)],
+    });
+    const stockLog = logs.rows.find((log) => log.action === 'reward.stock_changed');
+    expect(stockLog?.reason).toBe('Reposição do lote de outubro');
+    expect(stockLog?.actorId).toBe(actorA.id);
+    // Versão velha não sobrescreve o ajuste que outra pessoa acabou de fazer.
+    expect(
+      codeOf(
+        await setRewardStock(staff(), {
+          rewardId: managedReward,
+          stock: 2,
+          reason: 'Engano',
+          expectedVersion: 2,
+        }),
+      ),
+    ).toBe('conflict');
+    expect((await readRow('rewards', managedReward))?.stock).toBe(9);
+  });
+
+  it('campanha é da equipe: nasce sem permissão e exige administrar catálogo', async () => {
+    const campaign = {
+      name: 'Campanha administrada (teste isolado)',
+      description: 'Fixture do teste de integração.',
+      startsAt: '2026-10-01T09:00',
+      endsAt: '2026-11-01T23:59',
+      status: 'draft' as const,
+    };
+    expect(
+      codeOf(
+        await saveCampaign(staff(['moderator']), {
+          key: adminCampaignKey,
+          draft: campaign,
+          timeZone: rankingTimeZone,
+        }),
+      ),
+    ).toBe('forbidden');
+
+    const created = await saveCampaign(staff(), {
+      key: adminCampaignKey,
+      draft: campaign,
+      timeZone: rankingTimeZone,
+    });
+    expect(created.ok && created.value).toMatchObject({ campaignId: adminCampaign, created: true });
+    track('campaigns', adminCampaign);
+    const row = await readRow('campaigns', adminCampaign);
+    expect(row?.status).toBe('draft');
+    expect(row?.$permissions).toEqual([]);
+  });
+
+  it('a leitura da equipe traduz a coluna, não o rótulo da tela', async () => {
+    // O resumo chama dois números de "pontos"; o banco os chama
+    // `availableBalance` e `qualifyingPoints`. Se a leitura usar o nome da TELA,
+    // o valor vira `undefined` → 0, e um zero errado passa por resposta.
+    const existing = await readRow('point_accounts', actorA.id);
+    if (!existing)
+      await fixture('point_accounts', actorA.id, {
+        userId: actorA.id,
+        availableBalance: 700,
+        qualifyingPoints: 900,
+        lifetimePoints: 900,
+      });
+    const account = await readRow('point_accounts', actorA.id);
+    const balance = Number(account?.availableBalance);
+    const journey = Number(account?.qualifyingPoints);
+
+    const summary = await adminCreator(staff(), { userId: actorA.id });
+    expect(codeOf(summary)).toBe('ok');
+    const creator = summary.ok ? summary.value : null;
+    expect(creator).not.toBe(null);
+    expect(creator?.availablePoints).toBe(balance);
+    expect(creator?.journeyPoints).toBe(journey);
+    // A forma do bug: coluna com valor, tela mostrando zero.
+    if (balance !== 0) expect(creator?.availablePoints).not.toBe(0);
+    if (journey !== 0) expect(creator?.journeyPoints).not.toBe(0);
+
+    // A lista usa a mesma tradução da tela de detalhe.
+    const list = await adminCreators(staff(), {});
+    const listed = list.ok ? list.value.items.find((item) => item.userId === actorA.id) : undefined;
+    expect(listed?.availablePoints).toBe(balance);
+    expect(listed?.journeyPoints).toBe(journey);
+
+    // Visão geral: contagem exata, e a leitura do catálogo é de quem administra.
+    expect(codeOf(await adminOverview(staff()))).toBe('ok');
+    const overviewByModerator = await adminOverview(staff(['moderator']));
+    expect(codeOf(overviewByModerator)).toBe('forbidden');
+    const reward = await adminReward(staff(), { rewardId: managedReward });
+    expect(reward.ok ? reward.value?.stock : null).toBe(9);
   });
 });

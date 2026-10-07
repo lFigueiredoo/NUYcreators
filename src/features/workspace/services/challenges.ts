@@ -2,6 +2,7 @@ import 'server-only';
 import { Query } from 'node-appwrite';
 import { functionsOnline } from './commands';
 import { challengeBucket, type ChallengeTab } from '../domain/status';
+import { isVisibleToCreators } from '../domain/catalog';
 import { parseRequirementConfig, type RequirementConfig } from '../domain/requirements';
 import {
   first,
@@ -189,6 +190,11 @@ export async function loadChallenges(
 
   return loaded(
     [...catalogResult.items]
+      // Rascunho não é catálogo. A barreira de verdade são as permissões da linha
+      // (rascunho nasce com `permissions: []`), mas a tela não depende de uma
+      // configuração remota para estar certa: o que não é visível à creator não
+      // entra na lista, nem por engano de permissão.
+      .filter((challenge) => isVisibleToCreators(challenge.status))
       .sort(byStart)
       .map((challenge) =>
         join(challenge, byChallenge.get(challenge.id) ?? null, latest.get(challenge.id) ?? null),
@@ -230,7 +236,9 @@ export async function loadChallengeDetail(
   if (found.state !== 'ok')
     return { challenge: unavailable<ChallengeView>(), requirements: loaded([]) };
   const challenge = found.items[0];
-  if (!challenge)
+  // Mesma regra da lista: um rascunho responde "não encontrado" para quem não é
+  // da equipe — inclusive nos requisitos, que descrevem o que ainda não existe.
+  if (!challenge || !isVisibleToCreators(challenge.status))
     return { challenge: loaded<ChallengeView>([]), requirements: loaded<Requirement>([]) };
 
   const [participation, submission, requirements] = await Promise.all([

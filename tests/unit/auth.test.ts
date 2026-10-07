@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { signupSchema, loginSchema } from '../../src/features/auth/schemas/auth';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
 import { postLoginRoute } from '../../src/features/auth/services/onboarding-gate';
+import {
+  failureMessage,
+  refusalMessage,
+} from '../../src/features/auth/services/onboarding-refusal';
 const profile = {
   name: 'Pessoa',
   phone: '11999999999',
@@ -55,5 +59,40 @@ describe('post-login destination', () => {
     // a leitura indisponível (`null`) — cai no onboarding, que é resumível.
     for (const value of [null, {}, { onboardingCompletedAt: '' }, { onboardingCompletedAt: 0 }])
       expect(postLoginRoute(value)).toBe('/onboarding');
+  });
+});
+
+describe('motivo da recusa ao salvar o perfil', () => {
+  it('recusa com motivo conhecido diz o que fazer — não convida a insistir', () => {
+    // Idade mínima e e-mail não verificado são recusas definitivas: a frase
+    // "tente novamente mais tarde" prendia as duas num laço sem saída.
+    for (const code of ['age_requirement', 'email_not_verified', 'account_disabled'])
+      expect(refusalMessage(400, JSON.stringify({ error: code }))).not.toMatch(/tentar novamente/i);
+    expect(refusalMessage(400, '{"error":"age_requirement"}')).toMatch(/idade mínima/i);
+    expect(refusalMessage(403, '{"error":"email_not_verified"}')).toMatch(/e-mail/i);
+  });
+
+  it('motivo desconhecido e corpo ilegível continuam genéricos e retentáveis', () => {
+    const generic = refusalMessage(503, '{"error":"profile_unavailable"}');
+    expect(generic).toMatch(/tentar novamente/i);
+    // Nunca inventa causa: corpo vazio, HTML de proxy ou JSON torto caem na
+    // mesma frase — e o salvamento é resumível, então a frase é verdadeira.
+    for (const body of [undefined, '', '<html>502</html>', '{"error":42}'])
+      expect(refusalMessage(500, body)).toBe(generic);
+  });
+
+  it('Function sem a identidade da sessão é instalação não liberada, não indisponibilidade', () => {
+    const notReleased = refusalMessage(401, '{"error":"unauthorized"}');
+    expect(notReleased).not.toMatch(/tentar novamente/i);
+    // Instalação sem idade mínima/versão dos termos configuradas na Function é a
+    // mesma família: definitiva, resolvida por quem opera.
+    expect(refusalMessage(503, '{"error":"participation_policy_unconfigured"}')).toBe(notReleased);
+    // A plataforma recusando a execução (função desabilitada ou fora dos papéis
+    // de `execute`) é a mesma conclusão vista do outro lado.
+    for (const code of [401, 403, 404]) expect(failureMessage({ code })).toBe(notReleased);
+    for (const code of [429, 500, 503, undefined])
+      expect(failureMessage({ code })).toMatch(/tentar novamente/i);
+    // Falha de rede chega sem `code`: retentável, como sempre foi.
+    expect(failureMessage(new Error('fetch failed'))).toMatch(/tentar novamente/i);
   });
 });

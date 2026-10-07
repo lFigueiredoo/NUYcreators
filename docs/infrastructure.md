@@ -97,6 +97,8 @@ Configurar `APPWRITE_DATABASE_ID`, `NUY_TERMS_VERSION` e `NUY_MINIMUM_AGE` na Fu
 
 Na aplicação web, ativar `APPWRITE_FUNCTIONS_ENABLED` somente após deploy seguro. Cadastro permanece desabilitado por `APPWRITE_REGISTRATION_ENABLED=false`; liberação exige termos e privacidade definitivos, versão legal e idade mínima aprovadas no servidor e na Function. Substituir as páginas legais provisórias antes de liberar. A política de idade é aplicada no onboarding; cadastro Auth incompleto não obtém acesso à gamificação.
 
+A mesma flag liga o formulário de onboarding **e** o núcleo operacional (`join-challenge`, `submit-content`, `redeem-reward`). Ao ligá-la, publique `complete-onboarding` no mesmo deploy (`audience: 'users'` no manifesto): com o formulário acionável e a function fechada, a creator cadastrada não sai do onboarding — a recusa é permanente, não indisponibilidade passageira. Auditoria completa em `delivery-sprint7-administracao.md` §5.
+
 ## Gate transacional obrigatório — NÃO validado
 
 Não há implementação de aprovação, débito/crédito financeiro, estoque ou resgate nesta rodada. `APPWRITE_TRANSACTIONS_VERIFIED=false` é configuração de intenção, não comprovação automática de segurança. Não habilitar funções futuras apenas alterando uma variável.

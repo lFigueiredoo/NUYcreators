@@ -55,3 +55,11 @@ const REQUIREMENT_LABELS: Record<string, string> = {
 export function requirementLabel(type: string) {
   return REQUIREMENT_LABELS[type] ?? type;
 }
+
+/**
+ * Tipos com nome de exibição publicado — a lista que a administração oferece no
+ * formulário. É DERIVADA do mapa acima, não uma segunda lista paralela: um tipo
+ * novo que ganhe rótulo aqui aparece sozinho no formulário, e nenhum formulário
+ * oferece um tipo que a tela da creator não saberia nomear.
+ */
+export const requirementTypes = Object.keys(REQUIREMENT_LABELS);

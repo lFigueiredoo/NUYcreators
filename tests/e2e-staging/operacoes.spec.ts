@@ -425,17 +425,28 @@ test('jornada operacional de ponta a ponta, pela tela, com o runtime do Appwrite
   const adminPage = await adminContext.newPage();
   await signIn(adminPage, admin);
   await adminPage.goto(`${stack.origin}/admin/submissoes`, { waitUntil: 'domcontentloaded' });
-  await expect(adminPage.getByRole('heading', { name: 'Envios em análise' })).toBeVisible();
+  await expect(adminPage.getByRole('heading', { name: 'Submissões', level: 1 })).toBeVisible();
 
-  // A fila é lida pela Function (papel apurado no runtime), e o item deste QA
-  // aparece com o link canônico — não com o link cru com rastreio.
-  const queueItem = adminPage.locator('li', { hasText: canonical });
-  await expect(queueItem).toBeVisible();
-  await queueItem.getByRole('button', { name: 'Aprovar' }).click();
-  // Aprovado, o envio deixa a fila: a página revalida e o item — junto do
-  // formulário de decisão — desaparece. O crédito é conferido logo abaixo, na
-  // tela da criadora, que é onde ele tem que aparecer.
-  await expect(queueItem).toHaveCount(0);
+  // A lista consolidada é lida pela Function (papel apurado no runtime) e mostra
+  // o envio pela linha — criadora, desafio, estado. O link canônico NÃO mora
+  // aqui: ele mora na tela do envio, que é onde a equipe decide.
+  const queueRow = adminPage.locator('tr', { hasText: CHALLENGE_NAME });
+  await expect(queueRow).toBeVisible();
+  await expect(queueRow.getByRole('link', { name: `Criadora QA ${runId}` })).toBeVisible();
+  await expect(queueRow.getByText('Em análise', { exact: true })).toBeVisible();
+  await queueRow.getByRole('link', { name: 'Analisar' }).click();
+  await expect(adminPage).toHaveURL(/\/admin\/submissoes\/.+/);
+
+  // Na tela do envio, o conteúdo aparece como ele ficou gravado: o link é o
+  // CANÔNICO, não o cru com rastreio que a criadora colou.
+  await expect(adminPage.getByRole('link', { name: canonical })).toBeVisible();
+  await adminPage.fill('input[name="reason"]', 'Conteúdo confere com o briefing do desafio.');
+  await adminPage.getByRole('button', { name: 'Aprovar' }).click();
+  // O aviso vive no formulário, mas é o ESTADO que fica: a pílula vira
+  // "Aprovado" e o histórico ganha a decisão. O crédito é conferido logo abaixo,
+  // na tela da criadora, que é onde ele tem que aparecer.
+  await expect(adminPage.getByText('Envio aprovado.')).toBeVisible();
+  await expect(adminPage.getByText('Aprovado', { exact: true }).first()).toBeVisible();
 
   // 3. a fila de eventos entrega o aviso — caminho de MÁQUINA (é o que o
   // agendamento faz em produção; não existe botão de tela para drenar a fila).

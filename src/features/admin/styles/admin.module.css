@@ -1,0 +1,581 @@
+/*
+ * NUY Creators — área administrativa.
+ *
+ * Mesmo produto, mesmo shell: as classes estruturais (.app, .shell, .sidebar,
+ * .nav, .navLink, .main, .topbar, .card, .button, .pill…) continuam vindo de
+ * app.module.css, e a paleta é a mesma — quem opera reconhece onde está.
+ *
+ * O que muda é a RÉGUA: aqui a densidade é de ferramenta de trabalho. Lista e
+ * tabela no lugar de cards, réguas de 1px no lugar de sombra, números tabulares
+ * alinhados à direita, 1400px de largura em vez de 1180px. A landing continua
+ * sendo vitrine; isto não é a landing.
+ *
+ * TODOS os seletores começam com `.admin`, e não é estilo: `.app p` (0,1,1)
+ * vence uma classe solta (0,1,0), e duas classes de mesma especificidade
+ * decidiriam por ordem de folha — que ninguém controla. `.admin .x` (0,2,0)
+ * vence as duas, sempre.
+ */
+
+.admin {
+  --adm-line: #e8dfd1;
+  --adm-line-strong: var(--app-beige);
+  --adm-radius: 14px;
+  --adm-ok: #1f5d3a;
+  --adm-warn: #8a6320;
+  --adm-stop: #8c2f2f;
+}
+
+/* Conteúdo mais largo que o da creator: a tabela de submissões não cabe em
+ * 1180px sem virar uma coluna de retalhos. */
+.admin .main {
+  max-width: 1400px;
+  padding-top: clamp(18px, 2.2vw, 26px);
+}
+
+/* --------------------------------------------------------------- sidebar -- */
+
+/*
+ * Selo do topo: a única diferença estrutural da sidebar. O menu escondido é
+ * conveniência — a barreira é o `requireStaff` de cada rota, não este selo.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  margin: 0 10px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--app-navy);
+  color: var(--app-cream);
+  font-size: 0.62rem;
+  font-weight: 600;
+  /* Uma linha só: o selo é curto de propósito para caber na largura da sidebar. */
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Identidade de quem opera, na topbar. */
+.operator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.admin .operatorName {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.admin .operatorRole {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--app-navy-soft);
+}
+
+/* ------------------------------------------------------------ indicadores -- */
+
+.kpis {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 15px 17px;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  background: var(--app-warm);
+}
+.admin .kpiLabel {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.admin .kpiValue {
+  margin: 0;
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 1.85rem;
+  line-height: 1.05;
+  color: var(--app-navy);
+  font-variant-numeric: tabular-nums;
+}
+.admin .kpiHint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--app-navy-soft);
+}
+/* Zero é resposta, não ausência: o número continua sendo número. */
+.admin .kpiHintZero {
+  color: var(--app-mauve-ink);
+}
+
+/* ---------------------------------------------------------------- tabela -- */
+
+/* A rolagem é da moldura, não da página: no mobile a tabela desliza sozinha. */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  background: var(--app-warm);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.admin .table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-line);
+  background: color-mix(in srgb, var(--app-deep) 55%, var(--app-warm));
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+  text-align: left;
+  white-space: nowrap;
+}
+.admin .table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--adm-line);
+  color: var(--app-navy);
+  vertical-align: top;
+}
+.admin .table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.tableNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Legenda da tabela: existe para leitor de tela, não ocupa linha na tela. */
+.srCaption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.tableNowrap {
+  white-space: nowrap;
+}
+.tableWide {
+  min-width: 220px;
+}
+.tableMuted {
+  color: var(--app-navy-soft);
+}
+.tableLink {
+  color: var(--app-navy);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--app-sand);
+  text-underline-offset: 3px;
+}
+.tableLink:hover {
+  text-decoration-color: var(--app-navy);
+}
+
+/* Números grandes (pontos, estoque) alinhados na coluna. */
+.admin .money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.admin .moneyDebit {
+  color: var(--adm-stop);
+}
+.admin .moneyCredit {
+  color: var(--adm-ok);
+}
+
+/* ----------------------------------------------------------------- filtro -- */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+.admin .filterField label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.admin .filterField select,
+.admin .filterField input {
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 1px solid var(--app-sand);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--app-navy);
+}
+.admin .filterField select:focus-visible,
+.admin .filterField input:focus-visible {
+  outline: 2px solid var(--app-navy);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------- colunas -- */
+
+.cols {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: start;
+}
+.colsEven {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ------------------------------------------------------------------ metas -- */
+
+/* Descrições de registro: termo pequeno em cima, valor legível embaixo. */
+.meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px 18px;
+  margin: 0;
+}
+.admin .meta dt {
+  margin: 0 0 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-navy-soft);
+}
+.admin .meta dd {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--app-navy);
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- barras -- */
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.barRow {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+}
+.admin .barLabel {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+.barTrack {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--app-deep);
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--app-navy);
+}
+.admin .barValue {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--app-navy);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------------- histórico -- */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.timelineItem {
+  position: relative;
+  padding: 0 0 14px 18px;
+  border-left: 1px solid var(--adm-line);
+}
+.timelineItem:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+.timelineItem::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--app-sand);
+}
+.admin .timelineHead {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.admin .timelineMeta {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  color: var(--app-navy-soft);
+}
+.admin .timelineReason {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--app-navy);
+}
+.admin .timelineDiff {
+  margin: 6px 0 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.76rem;
+  color: var(--app-navy-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ------------------------------------------------------------- formulário -- */
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--adm-line);
+}
+.formSection:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.admin .formSectionTitle {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-mauve-ink);
+}
+.admin .formHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+.admin .formHint code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.78rem;
+}
+.required {
+  font-weight: 600;
+  color: var(--app-mauve-ink);
+}
+.admin .textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 14px;
+  border: 1px solid var(--app-sand);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--app-navy);
+  resize: vertical;
+}
+.admin .textarea:focus-visible {
+  outline: 2px solid var(--app-navy);
+  outline-offset: 1px;
+}
+.admin .inputReadonly {
+  background: var(--app-deep);
+  color: var(--app-navy-soft);
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+/* Linha de requisito: tipo, obrigatoriedade, configuração e remover. */
+.requirementRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1.4fr) 40px;
+  align-items: end;
+  gap: 10px;
+}
+.requirementConfig {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.requirementRows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.iconOnly {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--app-sand);
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--adm-stop);
+  cursor: pointer;
+}
+.iconOnly:hover {
+  background: var(--app-deep);
+}
+
+/* ---------------------------------------------------------------- avisos -- */
+
+/*
+ * Aviso de consequência: publicar, encerrar, mexer em estoque e ajustar pontos
+ * mudam o que a creator vê. O texto diz o que muda, não "atenção!".
+ */
+.warn {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--adm-warn) 30%, var(--app-warm));
+  border-radius: var(--adm-radius);
+  background: color-mix(in srgb, var(--adm-warn) 7%, var(--app-warm));
+}
+.warnIcon {
+  display: inline-flex;
+  flex: none;
+  color: var(--adm-warn);
+}
+.admin .warnText {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-navy);
+}
+
+/* --------------------------------------------------------- linha de ação -- */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin .counter {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--app-navy-soft);
+}
+
+/* --------------------------------------------------------------- responsivo */
+
+@media (max-width: 1024px) {
+  .cols,
+  .colsEven {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .barRow {
+    grid-template-columns: 118px minmax(0, 1fr) 40px;
+  }
+}
+
+@media (max-width: 900px) {
+  /*
+   * Diferente do produto da creator, aqui a sidebar NÃO desaparece: são sete
+   * destinos e uma barra inferior de sete colunas não cabe. Ela vira uma faixa
+   * no topo, com o menu rolando na horizontal — some o cromo, não o acesso.
+   */
+  .admin .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    height: auto;
+    display: flex;
+    gap: 10px;
+    padding: 12px 12px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-beige);
+  }
+  .admin .brand {
+    padding: 0 4px;
+  }
+  .admin .nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .admin .navLink {
+    white-space: nowrap;
+    padding: 8px 12px;
+  }
+  .admin .navLabel {
+    display: none;
+  }
+  .admin .sidebarFooter {
+    flex-direction: row;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--app-beige);
+  }
+  .chip {
+    margin: 0 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .requirementRow {
+    grid-template-columns: minmax(0, 1fr) 104px 40px;
+  }
+  /* A configuração do requisito desce para a linha de baixo, inteira. */
+  .admin .requirementRow .requirementConfig {
+    grid-column: 1 / -1;
+  }
+  .barRow {
+    grid-template-columns: minmax(0, 1fr) 40px;
+  }
+  .admin .barLabel {
+    grid-column: 1 / -1;
+  }
+}

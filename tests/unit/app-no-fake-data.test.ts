@@ -12,8 +12,16 @@ import { describe, expect, it } from 'vitest';
  */
 const ROOT = join(process.cwd(), 'src');
 
-/** Onde a regra vale: o produto autenticado e as rotas que o servem. */
-const GUARDED = [join(ROOT, 'features', 'workspace'), join(ROOT, 'app', '(protected)')];
+/**
+ * Onde a regra vale: o produto autenticado e as rotas que o servem — inclusive a
+ * área administrativa, que lê o banco de verdade e não pode ganhar um número de
+ * exemplo "só para a tela não ficar vazia". Zero é resposta nas duas áreas.
+ */
+const GUARDED = [
+  join(ROOT, 'features', 'workspace'),
+  join(ROOT, 'features', 'admin'),
+  join(ROOT, 'app', '(protected)'),
+];
 
 /** Um `creator fictício` com nome e pontos é o formato clássico do mock. */
 const FORBIDDEN = [
@@ -59,6 +67,30 @@ describe('área autenticada', () => {
       expect(source, `${name} não lê a sessão`).toMatch(/workspaceSession\(\)/);
       expect(source, `${name} não lê dados de serviço`).toMatch(
         /from '@\/features\/workspace\/services\//,
+      );
+    }
+  });
+
+  it('nenhuma tela do /admin monta dado próprio: a página é casca, e quem lê passa pela porta', () => {
+    const pages = filesIn(join(ROOT, 'app', '(protected)', 'admin')).filter((path) =>
+      path.endsWith('page.tsx'),
+    );
+    expect(pages.length).toBe(13);
+    // A única tela que não lê nada é o formulário de recompensa em branco: ele sai
+    // vazio a partir do schema e não tem de onde tirar dado. Está nomeada aqui para
+    // que uma tela NOVA que esqueça a porta falhe — e para que a exceção seja lida
+    // por quem for mexer, não descoberta por acidente.
+    const readsNothing = new Set([join('admin', 'recompensas', 'nova', 'page.tsx')]);
+    for (const page of pages) {
+      const source = readFileSync(page, 'utf8');
+      const name = relative(join(ROOT, 'app', '(protected)'), page);
+      // A página não monta markup de dado: ela renderiza a tela da área.
+      expect(source, `${name} não renderiza uma tela da área`).toMatch(
+        /from '@\/features\/admin\/components\//,
+      );
+      if (readsNothing.has(name)) continue;
+      expect(source, `${name} não passa pela porta da administração`).toMatch(
+        /from '@\/features\/admin\/services\//,
       );
     }
   });

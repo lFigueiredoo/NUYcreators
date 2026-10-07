@@ -1,6 +1,7 @@
 import 'server-only';
 import { Query } from 'node-appwrite';
 import { functionsOnline } from './commands';
+import { isVisibleToCreators } from '../domain/catalog';
 import { rewardEligibility, type RewardEligibility } from '../domain/rewards';
 import {
   integer,
@@ -133,15 +134,20 @@ export async function loadCatalog(
     balance: journey.summary.availableBalance,
     rewards: {
       state: 'ok',
-      items: rewards.items.map((reward) => ({
-        ...reward,
-        redemption: latest.get(reward.id) ?? null,
-        eligibility: rewardEligibility(reward, {
-          now,
-          balance: journey.summary.availableBalance,
-          redeemed: counts.get(reward.id) ?? 0,
-        }),
-      })),
+      items: rewards.items
+        // Rascunho de recompensa não está no catálogo. A permissão da linha já o
+        // esconde (`draft` nasce com `permissions: []`); o filtro é a segunda
+        // tranca, e vale mesmo se a configuração remota mudar.
+        .filter((reward) => isVisibleToCreators(reward.status))
+        .map((reward) => ({
+          ...reward,
+          redemption: latest.get(reward.id) ?? null,
+          eligibility: rewardEligibility(reward, {
+            now,
+            balance: journey.summary.availableBalance,
+            redeemed: counts.get(reward.id) ?? 0,
+          }),
+        })),
     },
     redemptions,
   };

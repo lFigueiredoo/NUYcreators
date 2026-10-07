@@ -277,14 +277,30 @@ export type FunctionDefinition = {
 };
 
 export const functionDefinitions: FunctionDefinition[] = [
-  // Fora do escopo desta rodada: o app chama com `APPWRITE_FUNCTIONS_ENABLED`
-  // desligado e a function nunca teve deployment. Fica FECHADA até ser
-  // publicada e provada pelo runtime — declarar aberta seria declarar pronta.
+  // FECHADA de propósito, e auditada no Sprint 7: `APPWRITE_FUNCTIONS_ENABLED` está
+  // desligado no ambiente, então o formulário de onboarding não é acionável e
+  // ninguém alcança esta function. Ela fica fechada até ser publicada e provada
+  // pelo runtime — declarar aberta seria declarar pronta.
+  //
+  // ARMADILHA CONHECIDA — a MESMA flag abre esta porta e a do núcleo operacional
+  // (`join-challenge`, `submit-content`, `redeem-reward`). Ao ligar
+  // `APPWRITE_FUNCTIONS_ENABLED`, mude esta linha para `audience: 'users'` e
+  // publique no MESMO deploy: com o formulário acionável e a function fechada, a
+  // creator cadastrada não sai do onboarding (a recusa é permanente, não uma
+  // indisponibilidade passageira) e o produto fica travado na porta de entrada.
   { id: 'complete-onboarding', implemented: true, audience: 'closed', readsTeams: false },
   { id: 'join-challenge', implemented: true, audience: 'users', readsTeams: false },
   { id: 'submit-content', implemented: true, audience: 'users', readsTeams: false },
   { id: 'redeem-reward', implemented: true, audience: 'users', readsTeams: false },
   { id: 'moderate-submission', implemented: true, audience: 'admins', readsTeams: true },
+  {
+    id: 'admin-console',
+    implemented: true,
+    audience: 'admins',
+    // Lê `teams.read` para apurar a capacidade de quem chama (manage-catalog,
+    // moderate, view-audit) — a mesma porta fechada da moderação.
+    readsTeams: true,
+  },
   { id: 'adjust-points', implemented: true, audience: 'admins', readsTeams: true },
   { id: 'rebuild-ranking', implemented: true, audience: 'admins', readsTeams: true },
   {

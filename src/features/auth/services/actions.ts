@@ -22,6 +22,7 @@ import {
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
 import { postLoginRoute } from './onboarding-gate';
+import { failureMessage, refusalMessage } from './onboarding-refusal';
 
 export type FormState = { message: string; success?: boolean };
 async function allowedRequest() {
@@ -178,13 +179,13 @@ export async function onboardingAction(_previous: FormState, form: FormData): Pr
       body: JSON.stringify(parsed.data),
       async: false,
     });
+    // O motivo da recusa existe e tem conserto na maioria das vezes: a frase que
+    // a pessoa lê sai do que a Function respondeu, não de um "tente mais tarde"
+    // que convidava a insistir para sempre.
     if (result.responseStatusCode !== 200)
-      return { message: 'Não foi possível salvar. Tente novamente mais tarde.' };
-  } catch {
-    return {
-      message:
-        'O serviço de perfis está indisponível. Não foi possível confirmar o salvamento; você pode tentar novamente.',
-    };
+      return { message: refusalMessage(result.responseStatusCode, result.responseBody) };
+  } catch (error) {
+    return { message: failureMessage(error) };
   }
   return {
     success: true,

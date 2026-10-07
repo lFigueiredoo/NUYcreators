@@ -1,32 +1,28 @@
+import { Suspense } from 'react';
+import { OverviewScreen, OverviewSkeleton } from '@/features/admin/components/overview-screen';
+import { loadOverview, loadRecentAudit } from '@/features/admin/services/console';
 import { requireStaff } from '@/lib/security/authorization';
-import { hasCapability } from '@/lib/security/memberships';
+
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Autorização administrativa' };
-export default async function StaffProof() {
-  const { roles } = await requireStaff();
+export const metadata = { title: 'Visão geral' };
+
+/**
+ * Visão geral da operação.
+ *
+ * Toda rota /admin passa por `requireStaff` com a capacidade que ela exige, e este
+ * é o mesmo portão do layout: confirmar o papel aqui não substitui confirmar lá, e
+ * vice-versa. Nada é lido antes de o papel ser confirmado.
+ */
+export default async function AdminOverviewPage() {
+  await requireStaff('view-audit');
   return (
-    <main id="main" className="public-inner">
-      <h1>Autorização verificada.</h1>
-      <p>Roles obtidas de membership confirmada no Appwrite: {roles.join(', ')}.</p>
-      <p>
-        {hasCapability(roles, 'moderate')
-          ? 'Capacidade de moderação autorizada.'
-          : 'Sem acesso de moderação.'}
-      </p>
-      <p>
-        {hasCapability(roles, 'adjust-points')
-          ? 'Capacidade administrativa autorizada; operações financeiras permanecem desativadas.'
-          : 'Sem autorização para ajustes de pontos.'}
-      </p>
-      {hasCapability(roles, 'moderate') ? (
-        <p>
-          <a href="/admin/submissoes">Abrir a fila de moderação</a>
-        </p>
-      ) : null}
-      <p>
-        Esta página valida acesso server-side. A moderação de envios é a interface administrativa de
-        domínio disponível; as demais operações continuam sem tela própria.
-      </p>
-    </main>
+    <Suspense fallback={<OverviewSkeleton />}>
+      <OverviewBody />
+    </Suspense>
   );
+}
+
+async function OverviewBody() {
+  const [overview, audit] = await Promise.all([loadOverview(), loadRecentAudit()]);
+  return <OverviewScreen overview={overview} audit={audit} />;
 }

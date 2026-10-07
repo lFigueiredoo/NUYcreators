@@ -161,17 +161,21 @@ export async function updateProfileAction(
 }
 
 /**
- * Ajuste administrativo de pontos. Fica fora de qualquer tela por enquanto: o
- * comando é de equipe e exige motivo e referência — quando existir uma tela de
- * atendimento, ela chama esta action.
+ * Ajuste administrativo de pontos.
+ *
+ * Uma única implementação, agora usada pela ficha da creator na administração: o
+ * comando é de equipe e exige motivo e referência. Duplicar esta action na área
+ * administrativa criaria duas validações do mesmo ajuste — e uma delas envelheceria.
+ * A revalidação cobre as duas telas que mostram o mesmo saldo.
  */
 export async function adjustPointsAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
   const amount = numberField(data, 'amount');
   if (amount === null || !Number.isInteger(amount) || amount === 0)
     return { message: 'Informe um número inteiro de pontos diferente de zero.' };
+  const userId = field(data, 'userId');
   const outcome = await commandAdjustPoints({
-    userId: field(data, 'userId'),
+    userId,
     amount,
     reason: field(data, 'reason'),
     referenceId: field(data, 'referenceId'),
@@ -179,5 +183,9 @@ export async function adjustPointsAction(_previous: FormState, data: FormData): 
   });
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/pontos');
+  if (userId) {
+    revalidatePath('/admin/creators');
+    revalidatePath(`/admin/creators/${userId}`);
+  }
   return { message: outcome.message, success: true };
 }
