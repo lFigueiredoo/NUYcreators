@@ -18,9 +18,14 @@ export default async function StaffProof() {
           ? 'Capacidade administrativa autorizada; operações financeiras permanecem desativadas.'
           : 'Sem autorização para ajustes de pontos.'}
       </p>
+      {hasCapability(roles, 'moderate') ? (
+        <p>
+          <a href="/admin/submissoes">Abrir a fila de moderação</a>
+        </p>
+      ) : null}
       <p>
-        Esta página valida acesso server-side. Nenhuma interface administrativa de domínio foi
-        implementada.
+        Esta página valida acesso server-side. A moderação de envios é a interface administrativa de
+        domínio disponível; as demais operações continuam sem tela própria.
       </p>
     </main>
   );

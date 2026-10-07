@@ -66,7 +66,8 @@ function proxy(request, response, targetPort) {
   request.pipe(forwarded);
 }
 
-async function waitFor(url, attempts = 60) {
+/** Espera a porta responder abaixo de 5xx — usado também pela pilha conectada. */
+export async function waitFor(url, attempts = 60) {
   for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const response = await fetch(url, { redirect: 'manual' });
@@ -77,6 +78,21 @@ async function waitFor(url, attempts = 60) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return false;
+}
+
+/**
+ * Proxy HTTPS na porta pedida, encaminhando para a porta interna do Next.
+ *
+ * Exportado porque o QA CONECTADO (`tests/e2e-staging/`) precisa do mesmo
+ * terminador TLS: o produto exige `APP_URL` HTTPS e confere a origem das server
+ * actions, e o proxy mantém `Host`/`Origin` coerentes com a origem pública.
+ */
+export async function startProxy({ proxyPort, appPort }) {
+  const server = createHttpsServer(readCertificate(), (request, response) =>
+    proxy(request, response, appPort),
+  );
+  await new Promise((resolve) => server.listen(proxyPort, resolve));
+  return { close: () => new Promise((resolve) => server.close(resolve)) };
 }
 
 export async function startStack({ startApp = true } = {}) {
@@ -95,6 +111,11 @@ export async function startStack({ startApp = true } = {}) {
         APPWRITE_PROJECT_ID: 'nuy-stub',
         APPWRITE_EXPECTED_PROJECT_ID: 'nuy-stub',
         APPWRITE_AUTH_API_KEY: 'stub-auth-key',
+        // Vazio DE PROPÓSITO: o QA da área autenticada mede o estado sem chave
+        // de operação (telas dizem o estado real em vez de gravar). Definida
+        // como string vazia, ela tem precedência sobre o `.env.local` de quem
+        // roda — sem isto, ter a chave no ambiente mudaria o que o teste mede.
+        APPWRITE_OPS_API_KEY: '',
         APPWRITE_FUNCTIONS_ENABLED: 'false',
         APPWRITE_TRANSACTIONS_VERIFIED: 'false',
         APPWRITE_REGISTRATION_ENABLED: 'false',
@@ -109,17 +130,14 @@ export async function startStack({ startApp = true } = {}) {
     if (!ready) throw new Error('A aplicação não subiu a tempo.');
   }
 
-  const proxyServer = createHttpsServer(readCertificate(), (request, response) =>
-    proxy(request, response, APP_PORT),
-  );
-  await new Promise((resolve) => proxyServer.listen(PROXY_PORT, resolve));
+  const proxyServer = await startProxy({ proxyPort: PROXY_PORT, appPort: APP_PORT });
 
   return {
     stub,
     app,
     origin: TEST_ORIGIN,
     close: async () => {
-      await new Promise((resolve) => proxyServer.close(resolve));
+      await proxyServer.close();
       if (app) app.kill();
       await stub.close();
     },

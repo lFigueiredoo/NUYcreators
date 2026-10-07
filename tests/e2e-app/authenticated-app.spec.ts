@@ -141,11 +141,11 @@ test('isolamento: cada sessão vê só os próprios dados', async ({ page }) => 
   await expect(page.locator('main')).not.toContainText('São Paulo');
 });
 
-test('leitura de documento nunca usa a chave administrativa', async ({ page }) => {
+test('leitura de linha nunca usa a chave administrativa', async ({ page }) => {
   await signIn(page, USERS.ana.email, USERS.ana.password);
   for (const route of ROUTES) await openApp(page, route);
   const adminReads = stack.stub.journal.filter(
-    (entry) => entry.admin && entry.path.includes('/databases/'),
+    (entry) => entry.admin && entry.path.includes('/tablesdb/'),
   );
   expect(adminReads).toEqual([]);
 });

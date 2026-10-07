@@ -1,4 +1,4 @@
-import { Account, Client, Databases } from 'node-appwrite';
+import { Account, Client, TablesDB } from 'node-appwrite';
 import { ownerReadPermissions } from '../../src/lib/security/permissions';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
 import { createHash } from 'node:crypto';
@@ -9,13 +9,11 @@ type Context = {
 };
 type Services = {
   account: (client: Client) => Pick<Account, 'get'>;
-  database: (
-    client: Client,
-  ) => Pick<Databases, 'getDocument' | 'createDocument' | 'updateDocument' | 'deleteDocument'>;
+  tables: (client: Client) => Pick<TablesDB, 'getRow' | 'createRow' | 'updateRow' | 'deleteRow'>;
 };
 const sdkServices: Services = {
   account: (client) => new Account(client),
-  database: (client) => new Databases(client),
+  tables: (client) => new TablesDB(client),
 };
 // The optional adapter is used only by isolated unit tests, never derived from requests.
 export default async function main({ req, res, error }: Context, services: Services = sdkServices) {
@@ -45,25 +43,23 @@ export default async function main({ req, res, error }: Context, services: Servi
       .account(new Client().setEndpoint(endpoint).setProject(project).setJWT(jwt))
       .get();
     if (!user.emailVerification) return res.json({ error: 'email_not_verified' }, 403);
-    const db = services.database(
-      new Client().setEndpoint(endpoint).setProject(project).setKey(key),
-    );
+    const db = services.tables(new Client().setEndpoint(endpoint).setProject(project).setKey(key));
     const databaseId = process.env.APPWRITE_DATABASE_ID ?? 'nuy-creators';
     const permissions = ownerReadPermissions(user.$id);
-    async function upsert(collectionId: string, documentId: string, data: Record<string, unknown>) {
+    async function upsert(tableId: string, rowId: string, data: Record<string, unknown>) {
       try {
-        const existing = await db.getDocument({ databaseId, collectionId, documentId });
+        const existing = await db.getRow({ databaseId, tableId, rowId });
         if (existing.userId !== undefined && existing.userId !== user.$id)
           throw new Error('ownership');
-        await db.updateDocument({ databaseId, collectionId, documentId, data, permissions });
+        await db.updateRow({ databaseId, tableId, rowId, data, permissions });
       } catch (err) {
         if ((err as { code?: number }).code !== 404) throw err;
         try {
-          await db.createDocument({ databaseId, collectionId, documentId, data, permissions });
+          await db.createRow({ databaseId, tableId, rowId, data, permissions });
         } catch (conflict) {
           // Concurrent onboarding: retry is safe, but never report partial write as success.
           if ((conflict as { code?: number }).code !== 409) throw conflict;
-          await db.updateDocument({ databaseId, collectionId, documentId, data, permissions });
+          await db.updateRow({ databaseId, tableId, rowId, data, permissions });
         }
       }
     }
@@ -80,20 +76,20 @@ export default async function main({ req, res, error }: Context, services: Servi
     };
     // No financial writes here. Sequential onboarding is resumable, NOT claimed atomic.
     try {
-      const record = await db.getDocument({
+      const record = await db.getRow({
         databaseId,
-        collectionId: 'users',
-        documentId: user.$id,
+        tableId: 'users',
+        rowId: user.$id,
       });
       if (record.status !== 'active' || record.authUserId !== user.$id)
         return res.json({ error: 'account_disabled' }, 403);
     } catch (err) {
       if ((err as { code?: number }).code !== 404) throw err;
       try {
-        await db.createDocument({
+        await db.createRow({
           databaseId,
-          collectionId: 'users',
-          documentId: user.$id,
+          tableId: 'users',
+          rowId: user.$id,
           data: {
             authUserId: user.$id,
             status: 'active',
@@ -107,12 +103,12 @@ export default async function main({ req, res, error }: Context, services: Servi
       }
     }
     for (const [platform, canonicalUrl] of Object.entries({ instagram, tiktok, youtube })) {
-      const documentId = createHash('sha256')
+      const rowId = createHash('sha256')
         .update(`${user.$id}:${platform}`)
         .digest('hex')
         .slice(0, 36);
       if (canonicalUrl)
-        await upsert('social_accounts', documentId, {
+        await upsert('social_accounts', rowId, {
           userId: user.$id,
           platform,
           canonicalUrl,
@@ -120,7 +116,7 @@ export default async function main({ req, res, error }: Context, services: Servi
         });
       else {
         try {
-          await db.deleteDocument({ databaseId, collectionId: 'social_accounts', documentId });
+          await db.deleteRow({ databaseId, tableId: 'social_accounts', rowId });
         } catch (err) {
           if ((err as { code?: number }).code !== 404) throw err;
         }

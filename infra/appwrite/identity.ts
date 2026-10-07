@@ -18,8 +18,14 @@ export type IdentityReport = {
   expectedProjectId: string;
   environment: string;
   provisioningKey: 'accepted';
-  authKey: 'accepted-with-read-denied';
-  sessionsWrite: 'pending-real-session-test';
+  /**
+   * `accepted-with-read-denied` é a chave mínima que o desenho pede. Uma chave
+   * aceita porém larga é registrada como `accepted-over-scoped`: não é chave
+   * inválida, mas não passa no gate de integração do app — provisionar schema
+   * não depende do perfil da chave de sessões, a postura de runtime depende.
+   */
+  authKey: 'accepted-with-read-denied' | 'accepted-over-scoped';
+  sessionsWrite: 'authorized' | 'missing' | 'pending-real-session-test';
   testKey: 'accepted' | 'not-configured';
   marker: 'verified' | 'first-bootstrap' | 'bootstrap-resume';
 };
@@ -30,10 +36,11 @@ async function readOnly(
   projectId: string,
   key: string,
   path: string,
+  method: 'GET' | 'POST' = 'GET',
 ): Promise<ReadResult> {
   try {
     const response = await fetch(`${endpoint}${path}`, {
-      method: 'GET',
+      method,
       redirect: 'error',
       signal: AbortSignal.timeout(20000),
       headers: {
@@ -41,6 +48,7 @@ async function readOnly(
         'X-Appwrite-Key': key,
         'Content-Type': 'application/json',
       },
+      ...(method === 'POST' ? { body: '{}' } : {}),
     });
     const value: unknown = await response.json();
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -138,29 +146,54 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
   assertDedicatedProject(env); // Must finish before ANY request.
   if (!env.APPWRITE_API_KEY || !env.APPWRITE_AUTH_API_KEY)
     throw new IdentityError('Configure chaves separadas de provisionamento e sessões.');
-  if (
-    env.APPWRITE_API_KEY === env.APPWRITE_AUTH_API_KEY ||
-    (env.APPWRITE_TEST_API_KEY &&
-      [env.APPWRITE_API_KEY, env.APPWRITE_AUTH_API_KEY].includes(env.APPWRITE_TEST_API_KEY))
-  )
+  // Operação (linhas) e testes entram no mesmo guard: reaproveitar a chave de
+  // provisionamento ou a de sessões para escrever linhas apagaria a separação que
+  // o desenho exige. Chave ausente é permitida — o core fica desligado, não amplo.
+  const configured = [
+    env.APPWRITE_API_KEY,
+    env.APPWRITE_AUTH_API_KEY,
+    env.APPWRITE_TEST_API_KEY,
+    env.APPWRITE_OPS_API_KEY,
+  ].filter((value): value is string => Boolean(value));
+  if (new Set(configured).size !== configured.length)
     throw new IdentityError(
-      'Chaves de provisionamento, sessões e testes devem ser distintas. Nenhum escopo será ampliado.',
+      'Chaves de provisionamento, sessões, testes e operação devem ser distintas. Nenhum escopo será ampliado.',
     );
   const endpoint = env.APPWRITE_ENDPOINT!,
     projectId = env.APPWRITE_PROJECT_ID!;
-  const provisioning = await readOnly(endpoint, projectId, env.APPWRITE_API_KEY, '/databases');
+  // TablesDB: a listagem de bancos vive em /tablesdb. O escopo exigido continua
+  // sendo databases.read — o vocabulário mudou, o nome do escopo não.
+  const provisioning = await readOnly(endpoint, projectId, env.APPWRITE_API_KEY, '/tablesdb');
   if (!validDatabaseList(provisioning))
     throw new IdentityError(
       `Chave de provisionamento não autorizada no Project ID configurado, ou databases.read ausente (HTTP ${provisioning.status}). Pare e confira a chave no Console; sem fallback.`,
     );
-  const auth = await readOnly(endpoint, projectId, env.APPWRITE_AUTH_API_KEY, '/databases');
-  if (!scopeDeniedByAuthenticatedKey(auth))
+  const auth = await readOnly(endpoint, projectId, env.APPWRITE_AUTH_API_KEY, '/tablesdb');
+  let authKey: IdentityReport['authKey'];
+  if (scopeDeniedByAuthenticatedKey(auth)) authKey = 'accepted-with-read-denied';
+  else if (auth.status === 200 && validDatabaseList(auth)) authKey = 'accepted-over-scoped';
+  else
     throw new IdentityError(
-      `Chave SSR não comprovada como aceita com leitura administrativa negada (HTTP ${auth.status}). Pode haver chave inválida ou privilégio excessivo. Não será ampliada ou reutilizada outra chave.`,
+      `Chave SSR não comprovada como aceita no projeto configurado (HTTP ${auth.status}). Pode ser chave inválida ou de outro projeto. Não será ampliada ou reutilizada outra chave.`,
     );
+  // Prova de aceitação da chave pelo caminho que ela precisa ter. Corpo vazio
+  // não cria sessão nenhuma: só interessa se passou da autorização.
+  const sessions = await readOnly(
+    endpoint,
+    projectId,
+    env.APPWRITE_AUTH_API_KEY,
+    '/account/sessions/email',
+    'POST',
+  );
+  const sessionsWrite: IdentityReport['sessionsWrite'] =
+    sessions.status === 400
+      ? 'authorized'
+      : sessions.status === 401
+        ? 'missing'
+        : 'pending-real-session-test';
   let testKey: IdentityReport['testKey'] = 'not-configured';
   if (env.APPWRITE_TEST_API_KEY) {
-    const probe = await readOnly(endpoint, projectId, env.APPWRITE_TEST_API_KEY, '/databases');
+    const probe = await readOnly(endpoint, projectId, env.APPWRITE_TEST_API_KEY, '/tablesdb');
     if (!validDatabaseList(probe))
       throw new IdentityError(
         `Chave de testes não autorizada no projeto configurado (HTTP ${probe.status}).`,
@@ -168,7 +201,7 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
     testKey = 'accepted';
   }
   const receipt = await receiptFor(endpoint, projectId);
-  const path = '/databases/nuy-creators/collections/platform_settings/documents';
+  const path = '/tablesdb/nuy-creators/tables/platform_settings/rows';
   const params = new URLSearchParams();
   params.append(
     'queries[]',
@@ -176,28 +209,28 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
   );
   const marker = await readOnly(endpoint, projectId, env.APPWRITE_API_KEY, `${path}?${params}`);
   let state: IdentityReport['marker'];
-  if (marker.status === 200 && Array.isArray(marker.body.documents)) {
-    const collection = await readOnly(
+  if (marker.status === 200 && Array.isArray(marker.body.rows)) {
+    const table = await readOnly(
       endpoint,
       projectId,
       env.APPWRITE_API_KEY,
-      '/databases/nuy-creators/collections/platform_settings',
+      '/tablesdb/nuy-creators/tables/platform_settings',
     );
     if (
-      collection.status !== 200 ||
-      collection.body.documentSecurity !== true ||
-      !Array.isArray(collection.body.$permissions) ||
-      collection.body.$permissions.length !== 0
+      table.status !== 200 ||
+      table.body.rowSecurity !== true ||
+      !Array.isArray(table.body.$permissions) ||
+      table.body.$permissions.length !== 0
     )
       throw new IdentityError(
-        'Collection do marker tem permissões/security divergentes. Marker não pode ser considerado privado; nenhuma escrita autorizada.',
+        'Table do marker tem permissões/security divergentes. Marker não pode ser considerado privado; nenhuma escrita autorizada.',
       );
     if (
-      marker.body.documents.length === 1 &&
-      markerMatches(marker.body.documents[0] as Record<string, unknown>, projectId)
+      marker.body.rows.length === 1 &&
+      markerMatches(marker.body.rows[0] as Record<string, unknown>, projectId)
     )
       state = 'verified';
-    else if (marker.body.documents.length === 0 && receipt?.status === 'in_progress')
+    else if (marker.body.rows.length === 0 && receipt?.status === 'in_progress')
       state = 'bootstrap-resume';
     else
       throw new IdentityError(
@@ -207,6 +240,8 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
     marker.status === 404 &&
     [
       'database_not_found',
+      'table_not_found',
+      'row_not_found',
       'collection_not_found',
       'document_not_found',
       'database_collection_not_found',
@@ -234,8 +269,8 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
     expectedProjectId: env.APPWRITE_EXPECTED_PROJECT_ID!,
     environment: env.APPWRITE_TEST_ENVIRONMENT!,
     provisioningKey: 'accepted',
-    authKey: 'accepted-with-read-denied',
-    sessionsWrite: 'pending-real-session-test',
+    authKey,
+    sessionsWrite,
     testKey,
     marker: state,
   };
@@ -245,5 +280,30 @@ export async function verifyIntegrationIdentity(env: Environment) {
   const report = await verifyReadOnlyIdentity(env);
   if (report.marker !== 'verified' || report.testKey !== 'accepted')
     throw new IdentityError('Integração exige marker remoto válido e chave de teste aceita.');
+  // O app roda com a chave de sessões: ela precisa ser mínima e capaz de abrir
+  // sessão. Aqui, sim, o perfil dela é requisito — não no provisionamento.
+  if (report.authKey !== 'accepted-with-read-denied')
+    throw new IdentityError(
+      'Chave SSR aceita mas com privilégio excessivo: reduza APPWRITE_AUTH_API_KEY a sessions.write antes de qualificar o app.',
+    );
+  if (report.sessionsWrite !== 'authorized')
+    throw new IdentityError('Chave SSR não comprovou sessions.write. Integração bloqueada.');
+  return report;
+}
+/**
+ * Gate dos probes de infraestrutura (transações, atomicidade, concorrência).
+ *
+ * O que uma rodada de probes precisa é do marker remoto e da chave de teste —
+ * ela opera o banco com a chave de testes, não com a chave de sessões do app. A
+ * postura da chave SSR é requisito do **app em runtime**, cobrado por
+ * `verifyIntegrationIdentity`; misturar as duas coisas bloquearia a prova de
+ * transações por um motivo que nada tem a ver com transações. O relatório
+ * continua carregando a postura medida, e quem chama é obrigado a mostrá-la.
+ */
+export async function verifyProbeIdentity(env: Environment) {
+  assertTestEnvironment(env);
+  const report = await verifyReadOnlyIdentity(env);
+  if (report.marker !== 'verified' || report.testKey !== 'accepted')
+    throw new IdentityError('Probes exigem marker remoto válido e chave de teste aceita.');
   return report;
 }

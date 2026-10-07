@@ -1,6 +1,8 @@
 # NUY Creators — modelo Appwrite
 
-Status: modelo aprovado; manifest inicial em `infra/appwrite/schema.ts`, ainda sem provisionamento Cloud. IDs de collections estáveis e migrações versionadas. Campos temporais UTC, pontos e quantidades inteiros. `$id`, `$createdAt` e `$updatedAt` são metadados Appwrite; datas de negócio explícitas quando necessárias.
+Status: modelo aprovado; manifest em `infra/appwrite/schema.ts`, provisionado em staging. IDs de recursos estáveis e migrações versionadas. Campos temporais UTC, pontos e quantidades inteiros. `$id`, `$createdAt` e `$updatedAt` são metadados Appwrite; datas de negócio explícitas quando necessárias.
+
+Persistência (Sprint 6): o NUY Creators roda em **TablesDB**. `collection`→table, `document`→row, `attribute`→column, `documentSecurity`→`rowSecurity`; os IDs não mudaram. A plataforma limita a soma dos tamanhos `varchar` a ~16 KB por table e 16.381 caracteres por coluna — medido em staging. Por isso `beforeJson`/`afterJson` de `audit_logs` moram em `audit_log_snapshots`, com a mesma capacidade de 10.000 caracteres por payload: é o único ponto em que o mapa atributo→coluna não é 1:1, e nada é truncado. O adaptador `src/lib/appwrite/data` recompõe os snapshots para o domínio.
 
 ## Collections solicitadas
 
@@ -24,23 +26,24 @@ Status: modelo aprovado; manifest inicial em `infra/appwrite/schema.ts`, ainda s
 | user_badges            | userId, badgeId, awardedAt, referenceId, periodKey                                                                                                                                        | userId+badgeId+periodKey único para badges recorrentes                      |
 | notifications          | userId, type, title, body, referenceId, readAt, eventKey                                                                                                                                  | userId+createdAt; eventKey+userId único                                     |
 | campaigns              | name, description, startsAt, endsAt, status                                                                                                                                               | status+startsAt                                                             |
-| audit_logs             | actorId, action, entityType, entityId, affectedUserId, beforeJson, afterJson, reason, occurredAt, ip, correlationId                                                                       | entityType+entityId; actorId+occurredAt; append-only                        |
+| audit_logs             | actorId, action, entityType, entityId, affectedUserId, reason, occurredAt, ip, correlationId                                                                                              | entityType+entityId; actorId+occurredAt; append-only                        |
 
 ## Collections técnicas adicionais
 
-| Collection              | Finalidade                                                                                                                 |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| point_accounts          | userId único, availableBalance, qualifyingPoints, levelId, version, lastTransactionId; snapshot privado derivado do ledger |
-| ranking_entries         | periodKey+userId único, earnedPoints, lastEarnedAt; projeção pública sanitizada                                            |
-| submission_history      | submissionId, revision, previousStatus, nextStatus, actorId, reason, payloadSnapshotJson, occurredAt; append-only          |
-| redemption_history      | redemptionId, previousStatus, nextStatus, actorId, reason, occurredAt; append-only                                         |
-| operation_keys          | actorId+operation+key único, requestHash, resultId, status; resultado idempotente e detecção de reutilização incompatível  |
-| outbox_events           | eventKey único, type, aggregateId, payloadJson, status, attempts, nextAttemptAt; entrega após commit                       |
-| public_creator_profiles | userId único, displayName, publicAvatarId, bio, approvedSocialUrls; sem PII                                                |
-| shipping_addresses      | userId, recipient, address fields; acesso privado e snapshot de entrega protegido                                          |
-| products                | referência oficial dos produtos NUY; slug único                                                                            |
-| content_categories      | slug, name, active; slug único                                                                                             |
-| platform_settings       | timezone, regras versionadas e configurações públicas separadas das privadas; nunca guardar segredos públicos              |
+| Collection              | Finalidade                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| point_accounts          | userId único, availableBalance, qualifyingPoints, levelId, version, lastTransactionId; snapshot privado derivado do ledger    |
+| ranking_entries         | periodKey+userId único, earnedPoints, lastEarnedAt; projeção pública sanitizada                                               |
+| submission_history      | submissionId, revision, previousStatus, nextStatus, actorId, reason, payloadSnapshotJson, occurredAt; append-only             |
+| redemption_history      | redemptionId, previousStatus, nextStatus, actorId, reason, occurredAt; append-only                                            |
+| operation_keys          | actorId+operation+key único, requestHash, resultId, status; resultado idempotente e detecção de reutilização incompatível     |
+| outbox_events           | eventKey único, type, aggregateId, payloadJson, status, attempts, nextAttemptAt; entrega após commit                          |
+| audit_log_snapshots     | auditLogId+side único, payloadJson, occurredAt; before/after da auditoria, fora de `audit_logs` pelo teto de ~16 KB por table |
+| public_creator_profiles | userId único, displayName, publicAvatarId, bio, approvedSocialUrls; sem PII                                                   |
+| shipping_addresses      | userId, recipient, address fields; acesso privado e snapshot de entrega protegido                                             |
+| products                | referência oficial dos produtos NUY; slug único                                                                               |
+| content_categories      | slug, name, active; slug único                                                                                                |
+| platform_settings       | timezone, regras versionadas e configurações públicas separadas das privadas; nunca guardar segredos públicos                 |
 
 Para limitar tamanho e manter histórico pesquisável, evitar arrays ilimitados e snapshots extensos. Tokens OAuth futuros ficam em armazenamento de segredos protegido, nunca em perfis ou documentos públicos.
 

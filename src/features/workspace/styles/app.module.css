@@ -109,22 +109,15 @@
 }
 
 .brand {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  display: inline-flex;
+  align-items: center;
   padding: 0 10px;
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: 1.35rem;
-  letter-spacing: -0.01em;
-  color: var(--app-navy);
 }
-.brandWord {
-  font-family: var(--pl-font-body), system-ui, sans-serif;
-  font-size: 0.63rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--app-mauve-ink);
+/* Mesma marca da landing, um degrau menor: aqui a sidebar é estreita. */
+.brandImage {
+  display: block;
+  height: 22px;
+  width: auto;
 }
 
 .nav {
@@ -1468,7 +1461,97 @@
   }
 }
 
+/* -------------------------------------------------- formulários do núcleo -- */
+
+/* Classes, nunca seletor de atributo: CSS Module com seletor puro é reprovado
+   pela checagem do Turbopack no dev. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.formInline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.input {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid var(--app-sand);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--app-navy);
+}
+.input:focus-visible {
+  outline: 2px solid var(--app-navy);
+  outline-offset: 1px;
+}
+.formCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--app-navy);
+}
+.checkLabel {
+  font-size: 0.86rem;
+  color: var(--app-navy-soft);
+}
+.formStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.85rem;
+}
+.formBusy {
+  color: var(--app-navy-soft);
+}
+.formError {
+  color: #8c2f2f;
+}
+.formSuccess {
+  color: #1f5d3a;
+}
+.spin {
+  animation: formSpin 1s linear infinite;
+}
+@keyframes formSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .screenHeader {
     flex-direction: column;
     align-items: flex-start;

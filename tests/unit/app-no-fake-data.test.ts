@@ -66,7 +66,14 @@ describe('área autenticada', () => {
   it('os serviços de leitura são server-only', () => {
     for (const service of readdirSync(join(ROOT, 'features', 'workspace', 'services'))) {
       const source = readFileSync(join(ROOT, 'features', 'workspace', 'services', service), 'utf8');
-      expect(source.startsWith("import 'server-only';"), service).toBe(true);
+      // Duas diretivas valem, pela mesma razão: as duas garantem que o módulo
+      // NÃO roda no cliente. `server-only` lança se alguém tentar; e `'use
+      // server'` faz o import virar referência de Server Action — o corpo nunca
+      // é avaliado no navegador. As actions do workspace começam por esta
+      // última, como as de autenticação já começavam.
+      const guarded =
+        source.startsWith("import 'server-only';") || source.startsWith("'use server';");
+      expect(guarded, service).toBe(true);
     }
   });
 });

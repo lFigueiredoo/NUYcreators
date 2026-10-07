@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { LogOut } from 'lucide-react';
 import { logoutAction } from '@/features/auth/services/actions';
@@ -37,8 +38,15 @@ export function AppShell({
       <div className={styles.shell}>
         <aside className={styles.sidebar}>
           <Link href="/app" className={styles.brand} aria-label="NUY Creators — início do painel">
-            nuy
-            <span className={styles.brandWord}>Creators</span>
+            <Image
+              src="/brand/logo/nuy-creators-lockup.png"
+              alt=""
+              width={640}
+              height={149}
+              sizes="95px"
+              className={styles.brandImage}
+              loading="eager"
+            />
           </Link>
           <SidebarNav unread={unread} />
           <div className={styles.sidebarFooter}>

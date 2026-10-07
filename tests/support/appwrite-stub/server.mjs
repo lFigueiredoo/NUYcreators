@@ -2,11 +2,11 @@
  * Stub de Appwrite — SOMENTE TESTE.
  *
  * Implementa o subconjunto da API REST que a área autenticada usa (conta,
- * sessão, documentos e memberships), com três propriedades que importam para
- * validar o produto de verdade:
+ * sessão, linhas de TablesDB e memberships), com três propriedades que importam
+ * para validar o produto de verdade:
  *
- *  1. permissão por documento: `$permissions` é respeitada igual ao Appwrite,
- *     então um documento alheio é 404 mesmo que alguém esqueça o filtro;
+ *  1. permissão por linha: `$permissions` é respeitada igual ao Appwrite, então
+ *     uma linha alheia é 404 mesmo que alguém esqueça o filtro;
  *  2. `queries[]` é interpretado de verdade (equal/isNull/orderBy/limit/offset)
  *     e qualquer método desconhecido vira 400 em vez de ser ignorado em
  *     silêncio — filtro ignorado escondido seria mentira no teste;
@@ -78,16 +78,22 @@ function failure(response, status, type, message) {
   json(response, status, { message, code: status, type, version: '2.0.0' });
 }
 
-function withSystemFields(document, dataset, index) {
-  const created = document.$createdAt ?? document.createdAt ?? dataset.now.toISOString();
+/**
+ * Campos de sistema da linha. `$tableId`/`$databaseId` entram com os nomes do
+ * TablesDB (o antigo `$collectionId` não existe mais): o adaptador da aplicação
+ * lê `$tableId` e o stub não pode ser a única API a falar a linguagem antiga.
+ */
+function withSystemFields(row, dataset, index, tableId) {
+  const created = row.$createdAt ?? row.createdAt ?? dataset.now.toISOString();
   return {
-    $id: document.$id,
+    $id: row.$id,
     $sequence: index,
     $createdAt: created,
-    $updatedAt: document.$updatedAt ?? created,
-    $permissions: document.$permissions ?? [],
+    $updatedAt: row.$updatedAt ?? created,
+    $permissions: row.$permissions ?? [],
     $databaseId: 'nuy-creators',
-    ...document,
+    $tableId: tableId,
+    ...row,
   };
 }
 
@@ -99,7 +105,7 @@ export async function startStub(options = {}) {
   const sessions = new Map();
   const journal = [];
 
-  const documentsOf = (collectionId) => dataset.collections[collectionId] ?? null;
+  const rowsOf = (tableId) => dataset.tables[tableId] ?? null;
 
   const server = createServer(readCertificate(), async (request, response) => {
     const url = new URL(request.url ?? '/', 'https://localhost');
@@ -198,15 +204,16 @@ export async function startStub(options = {}) {
       return failure(response, 404, 'stub_route_not_found', 'Rota de conta desconhecida.');
     }
 
-    // ----------------------------------------------------------- documents
-    if (segments[0] === 'databases' && segments[2] === 'collections') {
+    // ------------------------------------------------------- rows (TablesDB)
+    // GET /tablesdb/{db}/tables/{table}/rows[/{id}] — os mesmos IDs de table do
+    // manifesto, e o envelope do TablesDB (`rows`, não `documents`).
+    if (segments[0] === 'tablesdb' && segments[2] === 'tables') {
       if (!session && !isAdmin)
         return failure(response, 401, 'user_unauthorized', 'Sessão necessária.');
 
-      const collectionId = segments[3];
-      const collection = documentsOf(collectionId);
-      if (!collection)
-        return failure(response, 404, 'collection_not_found', 'Coleção não provisionada.');
+      const tableId = segments[3];
+      const table = rowsOf(tableId);
+      if (!table) return failure(response, 404, 'table_not_found', 'Tabela não provisionada.');
 
       const queries = [];
       for (const [key, entry] of url.searchParams.entries()) {
@@ -226,27 +233,27 @@ export async function startStub(options = {}) {
           `Query não implementada no stub: ${unsupported.method}`,
         );
 
-      const visible = (document) => {
+      const visible = (row) => {
         if (isAdmin) return true;
-        const permissions = document.$permissions ?? [];
+        const permissions = row.$permissions ?? [];
         if (permissions.includes('read("any")')) return true;
         return context.userId ? permissions.includes(`read("user:${context.userId}")`) : false;
       };
 
-      // Documento único: /databases/{db}/collections/{col}/documents/{id}
+      // Linha única: /tablesdb/{db}/tables/{table}/rows/{id}
       if (segments.length === 6) {
-        const documentId = decodeURIComponent(segments[5]);
-        const found = collection.find((entry) => entry.$id === documentId);
+        const rowId = decodeURIComponent(segments[5]);
+        const found = table.find((entry) => entry.$id === rowId);
         if (!found || !visible(found))
-          return failure(response, 404, 'document_not_found', 'Documento não encontrado.');
-        return json(response, 200, withSystemFields(found, dataset, collection.indexOf(found)));
+          return failure(response, 404, 'row_not_found', 'Linha não encontrada.');
+        return json(response, 200, withSystemFields(found, dataset, table.indexOf(found), tableId));
       }
 
       if (segments.length === 5 && request.method === 'GET') {
-        const filtered = collection
-          .map((document, index) => withSystemFields(document, dataset, index))
+        const filtered = table
+          .map((row, index) => withSystemFields(row, dataset, index, tableId))
           .filter(visible)
-          .filter((document) => queries.every((query) => matches(document, query)));
+          .filter((row) => queries.every((query) => matches(row, query)));
 
         const sorts = queries.filter(
           (query) => query.method === 'orderAsc' || query.method === 'orderDesc',
@@ -264,7 +271,7 @@ export async function startStub(options = {}) {
 
         return json(response, 200, {
           total: sorted.length,
-          documents: sorted.slice(offset, offset + limit),
+          rows: sorted.slice(offset, offset + limit),
         });
       }
 

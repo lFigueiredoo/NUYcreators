@@ -17,6 +17,9 @@ export default defineConfig({
       APPWRITE_PROJECT_ID: '',
       APPWRITE_AUTH_API_KEY: '',
       APPWRITE_API_KEY: '',
+      // Vazio de propósito: define a variável e impede que o `.env.local` de
+      // quem roda a suíte ligue a operação no meio do teste.
+      APPWRITE_OPS_API_KEY: '',
       APPWRITE_REGISTRATION_ENABLED: 'false',
       APPWRITE_FUNCTIONS_ENABLED: 'false',
     },

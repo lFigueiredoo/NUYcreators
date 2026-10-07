@@ -7,10 +7,12 @@
  * vazar para estas telas (o layout legado segue montado para
  * recuperar/redefinir/verificar/onboarding até a aprovação do CP4).
  *
- * Paleta e régua: mesmos valores da landing pública
+ * Paleta e régua: os valores-base são os da landing clean
  * (`public-landing/styles/landing.module.css` é a fonte da verdade) — creme
- * #F9F5EF, bege #EADCC8, areia #D8C1AD, navy #0E2A44, mauve #C7A1B3, dourado
- * #D4B98A, 70/20/10. As fontes são as da landing (Playfair Display + Inter),
+ * #F8F4EC, navy #082B55 e a mesma régua horizontal. O bege #EADCC8 e a areia
+ * #D8C1AD são o apoio quente destas telas (superfícies e fios), dentro do mesmo
+ * mundo creme/navy/dourado do brief. As fontes são as da landing (Playfair
+ * Display + Inter),
  * declaradas em `public-landing/landing-fonts.ts` — o acento manuscrito
  * (Caveat) não entra aqui.
  *
@@ -19,21 +21,21 @@
  */
 
 .shell {
-  --au-cream: #f9f5ef;
+  --au-cream: #f8f4ec;
   --au-cream-soft: #fdfaf5;
   --au-beige: #eadcc8;
   --au-sand: #d8c1ad;
-  --au-navy: #0e2a44;
+  --au-navy: #082b55;
   --au-navy-soft: #4a6076;
-  --au-mauve: #c7a1b3;
-  --au-gold: #d4b98a;
   /* Mensagens: fundo muito suave, tinta legível (medido — ver relatório). */
   --au-danger-ink: #7d332d;
   --au-danger-bg: #fbeeec;
   --au-ok-ink: #2f5b46;
   --au-ok-bg: #eef5f0;
-  /* Régua editorial: a mesma da landing, para a transição não ter salto. */
-  --au-gutter: clamp(20px, 5.4vw, 104px);
+  /* Régua editorial: literalmente a mesma fórmula da landing (`--nuy-ruler`),
+     para o header das duas telas cair na mesma calha. O empilhado troca por
+     20px, que é o valor da landing no mobile. */
+  --au-gutter: max(4vw, min(88px, 6vw));
   --au-header-h: 74px;
 
   display: flex;
@@ -41,7 +43,9 @@
   min-height: 100dvh;
   background: var(--au-cream);
   color: var(--au-navy);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
+  /* Declaração idêntica à da landing (`.landing`), e não só "a mesma fonte":
+     o valor computado de `fontFamily` só bate se a declaração bater. */
+  font-family: var(--pl-font-body, system-ui, 'Segoe UI', sans-serif);
   font-size: 16px;
   line-height: 1.6;
   color-scheme: light;
@@ -70,27 +74,19 @@
   border-bottom: 1px solid rgb(216 193 173 / 55%);
 }
 
-/* Mesmo lockup vertical da landing: marca em cima, rótulo embaixo. */
+/* Mesmo lockup da landing — e o mesmo tamanho, para a marca não pular de uma
+   tela para a outra. */
 .lockup {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  color: var(--au-navy);
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
 }
 
-.lockupMark,
-.lockupLabel {
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: 0.12em;
-  font-size: 15px;
-}
-
-.lockupLabel {
-  font-size: 12.5px;
-  letter-spacing: 0.2em;
+.lockupImage {
+  display: block;
+  /* Mesma largura da landing: a marca não muda de tamanho entre as telas. */
+  width: 152px;
+  height: auto;
 }
 
 .back {
@@ -141,28 +137,10 @@
   overflow: hidden;
   margin: 0;
   min-height: 460px;
-}
-
-.visualImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  /* Enquadramento próprio desta tela: coluna alta ancorada na creator e no
-     produto (o hero da landing usa 46% 42% num slot largo — não se repete). */
-  object-position: 36% 50%;
-}
-
-/* Véu de leitura do texto: navy da casa descendo do rodapé da foto. Não é
-   glow nem blur — é o mínimo para o creme se ler sobre a imagem (contraste
-   medido no bitmap servido; ver relatório). */
-.visual::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 46%;
-  background: linear-gradient(to top, rgb(14 42 68 / 72%), rgb(14 42 68 / 0%));
-  pointer-events: none;
+  /* Bloco navy chapado: o painel de marca é a única massa escura da tela, e o
+     creme da frase lê a 14,6:1 sobre ele — o véu em degradê que existia para
+     salvar a leitura sobre a foto saiu junto com a foto. */
+  background: var(--au-navy);
 }
 
 .visualPhrase {
@@ -171,15 +149,16 @@
   bottom: clamp(26px, 3.4vw, 62px);
   z-index: 1;
   margin: 0;
-  max-width: 18ch;
+  /* 24ch: cabe a linha que o `<br />` escreve ("Conteúdos que inspiram."). Com
+     18ch a segunda linha quebrava em duas e a frase saía em três. */
+  max-width: 24ch;
   color: var(--au-cream-soft);
-  font-family: var(--pl-font-display), Georgia, serif;
+  font-family: var(--pl-font-display, Georgia, 'Times New Roman', serif);
   font-style: italic;
   font-weight: 400;
   font-size: clamp(1.55rem, 2.2vw, 2.4rem);
   line-height: 1.12;
   letter-spacing: -0.01em;
-  text-shadow: 0 1px 18px rgb(14 42 68 / 45%);
 }
 
 /* --------------------------------------------------------- coluna form -- */
@@ -200,7 +179,7 @@
 
 .title {
   margin: 0 0 16px;
-  font-family: var(--pl-font-display), Georgia, serif;
+  font-family: var(--pl-font-display, Georgia, 'Times New Roman', serif);
   font-size: clamp(2.05rem, 3vw, 3rem);
   font-weight: 400;
   line-height: 1.06;
@@ -282,7 +261,7 @@
 .input:focus {
   outline: none;
   border-color: var(--au-navy);
-  box-shadow: 0 0 0 3px rgb(14 42 68 / 10%);
+  box-shadow: 0 0 0 3px rgb(8 43 85/ 10%);
 }
 
 .inputWrap .input {
@@ -357,7 +336,8 @@
   background: var(--au-navy);
   color: var(--au-cream-soft);
   font-size: 15px;
-  font-weight: 500;
+  /* Mesmo peso do botão principal da landing. */
+  font-weight: 700;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -457,7 +437,7 @@
 .link {
   color: var(--au-navy);
   text-decoration: none;
-  border-bottom: 1px solid rgb(14 42 68 / 32%);
+  border-bottom: 1px solid rgb(8 43 85/ 32%);
   padding-bottom: 2px;
   transition: border-color 0.2s ease;
 }
@@ -652,32 +632,30 @@ select.input {
 
 /* -------------------------------------------------------------- mobile -- */
 
-@media (max-width: 900px) {
+@media (max-width: 899px) {
+  .shell {
+    /* O mesmo 20px que a landing usa no empilhado (`--nuy-ruler`). */
+    --au-gutter: 20px;
+  }
+
   .header {
     /* Mesma calha da landing no mobile: a régua é a mesma variável. */
     padding: 12px var(--au-gutter);
+  }
+
+  .lockupImage {
+    /* E o mesmo tamanho: a landing encolhe a marca no empilhado. */
+    width: 104px;
   }
 
   .split {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* Faixa de lifestyle: o formulário começa logo abaixo dela. */
+  /* Faixa de marca: o formulário começa logo abaixo dela. */
   .visual {
     min-height: 0;
     height: 220px;
-  }
-
-  /* Na faixa curta o véu precisa alcançar as duas linhas da frase: a primeira
-     linha ficava sobre as partes claras da foto (medido em 4,47:1). */
-  .visual::after {
-    height: 64%;
-    background: linear-gradient(
-      to top,
-      rgb(14 42 68 / 76%) 0%,
-      rgb(14 42 68 / 52%) 46%,
-      rgb(14 42 68 / 0%) 100%
-    );
   }
 
   .visualCompact {
@@ -689,7 +667,6 @@ select.input {
     bottom: 16px;
     max-width: none;
     font-size: 1.15rem;
-    text-shadow: 0 1px 14px rgb(14 42 68 / 55%);
   }
 
   .column {

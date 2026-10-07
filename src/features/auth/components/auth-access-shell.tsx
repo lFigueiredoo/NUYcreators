@@ -30,8 +30,19 @@ export function AuthLayout({
     <main id="main" className={`${styles.shell} ${display.variable} ${body.variable}`}>
       <header className={styles.header}>
         <Link href="/" className={styles.lockup} aria-label="NUY Creators início">
-          <span className={styles.lockupMark}>NUY</span>
-          <span className={styles.lockupLabel}>CREATORS</span>
+          {/* Mesma marca da landing — mesmo ARQUIVO, não só o mesmo desenho:
+              é o único bitmap de logo da casa (ver o contrato em
+              tests/e2e/auth-identity.spec.ts). */}
+          <Image
+            src="/brand/nuy-creators-clean/logo/nuy-creators-logo.png"
+            alt=""
+            width={1278}
+            height={297}
+            sizes="152px"
+            className={styles.lockupImage}
+            loading="eager"
+            priority
+          />
         </Link>
         <Link href="/" className={styles.back}>
           <ArrowLeft size={16} aria-hidden="true" className={styles.backArrow} />
@@ -54,24 +65,20 @@ export function AuthLayout({
 }
 
 /**
- * Fotografia de lifestyle da direção (mesmo arquivo do hero, enquadramento
- * próprio: coluna alta ancorada na creator e no produto). `band` decide a
- * altura da faixa no empilhado — o cadastro usa a faixa menor para o
- * formulário começar mais cedo.
+ * Painel de marca das telas de acesso (login e cadastro).
+ *
+ * Sem fotografia. A imagem que vivia aqui era gerada por IA — a mesma
+ * "mulher artificial segurando produto" que o brief do redesign proíbe — e o
+ * pacote de assets da marca não trouxe nenhuma foto de lifestyle oficial para
+ * substituí-la. O painel passa a ser o bloco navy da casa com a frase da
+ * direção: é o que sobra, honesto, quando só existe marca de verdade.
+ *
+ * `band` decide a altura da faixa no empilhado — o cadastro usa a faixa menor
+ * para o formulário começar mais cedo.
  */
 export function AuthVisualPanel({ band }: { band: 'tall' | 'compact' }) {
   return (
     <figure className={`${styles.visual} ${band === 'compact' ? styles.visualCompact : ''}`}>
-      <Image
-        src="/brand/nuy-creators-v2/hero/hero-lifestyle.webp"
-        alt="Mulher sorrindo no sofá de casa segurando um borrifador NUY, com frascos da linha e flores brancas sobre a mesa"
-        width={1448}
-        height={1086}
-        quality={90}
-        sizes="(max-width: 900px) 100vw, 55vw"
-        className={styles.visualImage}
-        priority
-      />
       <p className={styles.visualPhrase}>
         Rotinas reais.
         <br />

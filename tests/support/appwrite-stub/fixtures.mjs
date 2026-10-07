@@ -5,9 +5,10 @@
  * aplicação (o gate `tests/unit/no-fake-data.test.ts` reprova qualquer fixture
  * vazando para `src/`). O produto em produção mostra dado real ou empty state.
  *
- * Os documentos seguem os campos reais de docs/database.md, incluindo as
- * permissões por documento (`$permissions`), para que a leitura com sessão
- * exercite exatamente o mesmo recorte que o Appwrite faria.
+ * As linhas seguem os campos reais de docs/database.md, incluindo as permissões
+ * por linha (`$permissions`), para que a leitura com sessão exercite exatamente
+ * o mesmo recorte que o Appwrite faria. As chaves são os IDs de TABLE do
+ * manifesto (`infra/appwrite/schema.ts`), que são os mesmos nomes de antes.
  */
 
 const TIME_ZONE = 'America/Sao_Paulo';
@@ -79,7 +80,7 @@ export function buildDataset(now = new Date()) {
   const nova = 'viewer-nova';
   const pendente = 'viewer-pendente';
 
-  const collections = {
+  const tables = {
     profiles: [
       {
         $id: ana,
@@ -1040,9 +1041,9 @@ export function buildDataset(now = new Date()) {
     now,
     periodKey,
     users,
-    collections,
-    /** Coleções legíveis sem sessão — o resto exige dono. */
-    publicCollections: new Set([
+    tables,
+    /** Tabelas legíveis sem sessão — o resto exige dono. */
+    publicTables: new Set([
       'creator_levels',
       'challenges',
       'challenge_requirements',

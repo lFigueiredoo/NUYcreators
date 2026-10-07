@@ -55,13 +55,33 @@ npm run infra:plan
 
 Plano local sem requisições, sem credenciais e sem segredos. Manifest `infra/appwrite/schema.ts`, versão `001`, inclui 30 collections, atributos tipados, índices únicos/de consulta, quatro buckets e equipe `nuy-admins` com `admin`, `moderator` e `fulfillment`.
 
-Depois de conferir o project ID dedicado, definir `APPWRITE_DEDICATED_PROJECT_CONFIRMED=true` no ambiente seguro e executar:
+Antes de escrever qualquer coisa, medir a chave e comparar com o projeto vivo:
+
+```powershell
+npm run infra:capabilities
+npm run infra:plan:remote
+```
+
+`infra:capabilities` mede os escopos da chave de provisionamento sem criar recurso algum (autorização é avaliada antes da validação do corpo: um POST com corpo vazio responde 400 se o escopo existe e 401 se falta) e imprime apenas o nome do escopo ausente. `infra:plan:remote` lê o projeto vivo e classifica cada recurso do manifesto em CREATE, UPDATE, NOOP, DRIFT_SECURITY, DRIFT_IMMUTABLE ou BLOCKED_PERMISSION, com resumo final de contagens. Ele sai com código 1 quando o plano não está limpo, para não encadear apply por engano.
+
+| Classificação        | Significado                                                                                                          | Ação                                               |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `CREATE`             | ausente no projeto                                                                                                   | criar                                              |
+| `NOOP`               | idêntico ao manifesto                                                                                                | nada                                               |
+| `UPDATE`             | propriedade móvel e não sensível (nome, cota, runtime, faixa de nível)                                               | reescrever conforme o manifesto                    |
+| `DRIFT_SECURITY`     | permissões, `documentSecurity`/`fileSecurity`, `execute`/`scopes` de Function, criptografia ou antivírus divergentes | **abortar**; corrigir exige `--reconcile-security` |
+| `DRIFT_IMMUTABLE`    | tipo/tamanho/obrigatoriedade de atributo, tipo/campos de índice, recurso fora do manifesto, marker de identidade     | **abortar sempre**, com ou sem flag                |
+| `BLOCKED_PERMISSION` | a chave não consegue ler o recurso                                                                                   | **abortar**; ampliar o escopo da chave             |
+
+Atributos, índices e collections fora do manifesto são reportados: um schema que não é o do manifesto não pode ser chamado de pronto.
+
+Depois de conferir o project ID dedicado, definir `APPWRITE_DEDICATED_PROJECT_CONFIRMED=true` e `APPWRITE_TEST_ENVIRONMENT` no ambiente seguro e executar:
 
 ```powershell
 npm run infra:apply
 ```
 
-O script cria recursos ausentes, espera atributos e índices ficarem disponíveis e interrompe diante de permissões/schema divergentes. Não apaga nem sobrescreve recursos existentes. Migração não é transação financeira: falha de provisionamento pode deixar recursos parcialmente criados; repetir após diagnóstico. Evoluções futuras exigem migrações explícitas, não edição silenciosa do manifest aplicado.
+O apply monta o mesmo plano remoto antes de escrever e o imprime; sem plano limpo ele para antes da primeira escrita. Só então cria recursos ausentes, espera atributos e índices ficarem disponíveis (a espera é sobre o manifesto inteiro, não apenas sobre o que aquela execução criou) e atualiza as propriedades móveis divergentes. Uma segunda execução sobre um projeto já provisionado é NOOP. `npm run infra:apply -- --reconcile-security` corrige **apenas** os campos de acesso gerenciados pelo manifesto, registrando `RECONCILED_SECURITY` em cada mudança; a flag não autoriza delete+recriação, troca de tipo de atributo, índice incompatível nem mudança destrutiva de schema. Migração não é transação financeira: falha de provisionamento pode deixar recursos parcialmente criados; repetir após diagnóstico. Evoluções futuras exigem migrações explícitas, não edição silenciosa do manifest aplicado.
 
 Collections têm permissions vazias e documentSecurity habilitada. Buckets têm permissions vazias e fileSecurity habilitada, limites de tamanho e extensão. Documentos públicos recebem `read(any)` individualmente; documentos privados recebem somente `read(user)`. Nenhum cliente ganha create/update/delete. Documentos privados futuros de administração deverão ser expostos por serviços autorizados com roles, não leitura indiscriminada da equipe em toda PII.
 

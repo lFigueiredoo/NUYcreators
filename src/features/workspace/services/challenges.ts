@@ -1,5 +1,6 @@
 import 'server-only';
 import { Query } from 'node-appwrite';
+import { functionsOnline } from './commands';
 import { challengeBucket, type ChallengeTab } from '../domain/status';
 import { parseRequirementConfig, type RequirementConfig } from '../domain/requirements';
 import {
@@ -201,12 +202,17 @@ export type ChallengeDetail = {
 };
 
 /**
- * Entrar em um desafio depende da function `join-challenge`, declarada como não
- * implementada (`implemented: false` em infra/appwrite/schema.ts) e sem papel de
- * execução. Sem comando transacional no servidor não existe botão de participar:
- * a tela explica o estado real em vez de simular uma entrada que não grava nada.
+ * Entrar em um desafio depende da Function `join-challenge` publicada.
+ *
+ * Medido no staging: a sessão da usuária recebe 401 em `createRow` mesmo numa
+ * tabela com `rowSecurity`, então toda escrita é mediada pelo servidor — aqui,
+ * pelo runtime do Appwrite com a sessão dela. Sem a Function ligada
+ * (`APPWRITE_FUNCTIONS_ENABLED`), o botão não existe: a tela explica o estado
+ * real em vez de simular uma entrada que não grava nada.
  */
-export const participationEnabled = false;
+export function participationEnabled(): boolean {
+  return functionsOnline();
+}
 
 /**
  * Detalhe por slug. `challenge_requirements` é lido só quando o desafio existe,

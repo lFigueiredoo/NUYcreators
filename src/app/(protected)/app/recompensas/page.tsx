@@ -23,5 +23,5 @@ async function RewardsBody() {
   // tela de Pontos, lido uma vez só.
   const journey = await loadJourney(secret, viewer.id);
   const catalog = await loadCatalog(secret, viewer.id, now, journey);
-  return <RewardsScreen catalog={catalog} redemptionEnabled={redemptionEnabled} />;
+  return <RewardsScreen catalog={catalog} redemptionEnabled={redemptionEnabled()} />;
 }

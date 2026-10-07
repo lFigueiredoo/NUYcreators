@@ -1,22 +1,25 @@
 import {
   Client,
-  Databases,
-  DatabasesIndexType,
   Functions,
   Permission,
   Role,
   Runtime,
   Storage,
+  TablesDB,
+  TablesDBIndexType,
   Teams,
-  ProjectKeyScopes,
 } from 'node-appwrite';
 import {
-  collections,
+  tables,
   buckets,
   team,
   levelSeed,
   schemaVersion,
+  databaseName,
   functionDefinitions,
+  executeRoles,
+  functionScopes,
+  type Column,
 } from './schema';
 import { parseEnvironment } from '../../src/lib/env/schema';
 import { collectionPermissions, bucketPermissions } from '../../src/lib/security/permissions';
@@ -30,23 +33,37 @@ import {
   markerMatches,
   IdentityError,
 } from './identity';
+import {
+  buildPlan,
+  formatPlan,
+  indexKey,
+  summarize,
+  sortedEqual,
+  TEAM_NAME,
+  type PlanAction,
+  type PlanKind,
+} from './plan';
 
 // No network, credentials or project creation in plan mode.
 const apply = process.argv.includes('--apply');
+// Sem esta flag, divergência de segurança interrompe o apply: corrigir acesso
+// sozinho esconderia uma alteração que ninguém pediu.
+const reconcileSecurity = process.argv.includes('--reconcile-security');
+
 try {
   if (!apply) {
     console.log(
       JSON.stringify(
         {
           version: schemaVersion,
-          collections,
+          tables,
           buckets,
           team,
           functions: functionDefinitions,
           seeds: levelSeed,
-          collectionPermissions: [],
+          tablePermissions: [],
           fileSecurity: true,
-          documentSecurity: true,
+          rowSecurity: true,
         },
         null,
         2,
@@ -68,215 +85,255 @@ try {
       .setEndpoint(env.APPWRITE_ENDPOINT)
       .setProject(env.APPWRITE_PROJECT_ID)
       .setKey(process.env.APPWRITE_API_KEY);
-    const db = new Databases(client);
+    const db = new TablesDB(client);
     const storage = new Storage(client);
     const teams = new Teams(client);
     const functions = new Functions(client);
     const databaseId = env.APPWRITE_DATABASE_ID;
-    await recordBootstrap(identity, 'in_progress');
-    // Existing resources are inspected; mismatches fail rather than overwrite.
-    async function exists<T>(read: () => Promise<T>, create: () => Promise<T>): Promise<T> {
-      try {
-        return await read();
-      } catch (error) {
-        if ((error as { code?: number }).code !== 404) throw error;
-        return create();
-      }
-    }
-    await exists(
-      () => db.get({ databaseId }),
-      () => db.create({ databaseId, name: 'NUY Creators' }),
-    );
-    await exists(
-      () => teams.get({ teamId: team.id }),
-      // Appwrite roles belong to memberships, not a global team role registry.
-      () => teams.create({ teamId: team.id, name: 'NUY Creators — Equipe' }),
-    );
-    for (const collection of collections) {
-      const collectionId = collection.id;
-      const result = await exists(
-        () => db.getCollection({ databaseId, collectionId }),
-        () =>
-          db.createCollection({
-            databaseId,
-            collectionId,
-            name: collectionId,
-            permissions: collectionPermissions,
-            documentSecurity: true,
-          }),
+
+    // O plano é a única fonte do que será escrito. Nada é decidido por leitura
+    // solta no meio da escrita: o que o operador viu é o que o apply faz.
+    const plan = await buildPlan({ db, storage, teams, functions }, databaseId, identity);
+    console.log(formatPlan(plan));
+    const summary = summarize(plan);
+    if (summary.immutableDrift || summary.blocked)
+      throw new IdentityError(
+        `${summary.immutableDrift} divergência(s) imutável(is) e ${summary.blocked} bloqueio(s) de escopo. Apply interrompido antes de qualquer escrita; nada foi criado, alterado ou apagado.`,
       );
-      if (result.$permissions.length || !result.documentSecurity)
-        throw new IdentityError(`Permissões divergentes: ${collectionId}. Revisão manual exigida.`);
-      for (const attribute of collection.attributes) {
-        const params = {
-          databaseId,
-          collectionId,
-          key: attribute.key,
-          required: attribute.required,
-        };
-        const value = await exists(
-          () => db.getAttribute({ databaseId, collectionId, key: attribute.key }),
-          () => {
-            if (attribute.type === 'integer') return db.createIntegerAttribute(params);
-            if (attribute.type === 'boolean') return db.createBooleanAttribute(params);
-            if (attribute.type === 'datetime') return db.createDatetimeAttribute(params);
-            return db.createStringAttribute({ ...params, size: attribute.size ?? 255 });
-          },
-        );
-        if (
-          value.type !== attribute.type ||
-          ('required' in value && value.required !== attribute.required)
-        )
-          throw new IdentityError(`Schema divergente: ${collectionId}.${attribute.key}`);
-        if (attribute.type === 'string' && 'size' in value && value.size !== attribute.size)
-          throw new IdentityError(`Tamanho divergente: ${collectionId}.${attribute.key}`);
-      }
-      // Attributes are asynchronous in Appwrite; indexes must wait for availability.
+    if (summary.securityDrift && !reconcileSecurity)
+      throw new IdentityError(
+        `${summary.securityDrift} divergência(s) de segurança. Corrigir exige --reconcile-security explícito, que reconcilia apenas os campos de acesso gerenciados pelo manifesto. Apply interrompido antes de qualquer escrita.`,
+      );
+
+    const actionOf = (kind: PlanKind, id: string): PlanAction =>
+      plan.find((entry) => entry.kind === kind && entry.id === id)?.action ?? 'NOOP';
+
+    const createColumn = (column: Column, tableId: string) => {
+      const params = {
+        databaseId,
+        tableId,
+        key: column.key,
+        required: column.required,
+      };
+      if (column.type === 'integer') return db.createIntegerColumn(params);
+      if (column.type === 'boolean') return db.createBooleanColumn(params);
+      if (column.type === 'datetime') return db.createDatetimeColumn(params);
+      return db.createVarcharColumn({ ...params, size: column.size ?? 255 });
+    };
+
+    /**
+     * Colunas e índices são assíncronos no Appwrite. A espera é sobre o
+     * manifesto inteiro, não sobre o que esta run criou: uma run anterior pode
+     * ter deixado um índice processando, e o "pronto" do provisioner não pode
+     * ser mais otimista que o schema real.
+     */
+    async function waitForColumns(tableId: string, expected: number) {
       for (let attempt = 0; ; attempt++) {
-        const attributes = await db.listAttributes({ databaseId, collectionId });
-        if (attributes.attributes.some((a) => a.status === 'failed'))
-          throw new IdentityError(`Atributo falhou em ${collectionId}`);
+        const columns = await db.listColumns({ databaseId, tableId });
+        if (columns.columns.some((item) => item.status === 'failed'))
+          throw new IdentityError(`Coluna falhou em ${tableId}`);
         if (
-          attributes.attributes.every((a) => a.status === 'available') &&
-          attributes.total >= collection.attributes.length
+          columns.columns.every((item) => item.status === 'available') &&
+          columns.total >= expected
         )
-          break;
-        if (attempt >= 90) throw new IdentityError(`Timeout de atributos: ${collectionId}`);
+          return;
+        if (attempt >= 90) throw new IdentityError(`Timeout de colunas: ${tableId}`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
+    }
+    async function waitForIndex(tableId: string, key: string) {
+      for (let attempt = 0; ; attempt++) {
+        const index = await db.getIndex({ databaseId, tableId, key });
+        if (index.status === 'available') return;
+        if (index.status === 'failed' || attempt >= 90)
+          throw new IdentityError(`Índice indisponível: ${tableId}.${key}`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    await recordBootstrap(identity, 'in_progress');
+    const databaseAction = actionOf('database', databaseId);
+    if (databaseAction === 'CREATE') await db.create({ databaseId, name: databaseName });
+    else if (databaseAction === 'UPDATE') await db.update({ databaseId, name: databaseName });
+
+    const teamAction = actionOf('team', team.id);
+    if (teamAction === 'CREATE') await teams.create({ teamId: team.id, name: TEAM_NAME });
+    else if (teamAction === 'UPDATE') await teams.updateName({ teamId: team.id, name: TEAM_NAME });
+
+    for (const table of tables) {
+      const tableId = table.id;
+      const tableAction = actionOf('table', tableId);
+      if (tableAction === 'CREATE')
+        await db.createTable({
+          databaseId,
+          tableId,
+          name: tableId,
+          permissions: collectionPermissions,
+          rowSecurity: true,
+        });
+      else if (tableAction === 'UPDATE')
+        await db.updateTable({ databaseId, tableId, name: tableId });
+      else if (tableAction === 'DRIFT_SECURITY') {
+        // Só chega aqui com --reconcile-security. Escreve exatamente os campos de
+        // acesso do manifesto; nada de schema é tocado.
+        await db.updateTable({
+          databaseId,
+          tableId,
+          name: tableId,
+          permissions: collectionPermissions,
+          rowSecurity: true,
+        });
+        console.log(`RECONCILED_SECURITY table ${tableId}`);
+      }
+
+      for (const column of table.columns)
+        if (actionOf('column', `${tableId}.${column.key}`) === 'CREATE')
+          await createColumn(column, tableId);
+      await waitForColumns(tableId, table.columns.length);
+
       for (const [unique, groups] of [
-        [true, collection.unique],
-        [false, collection.indexes],
+        [true, table.unique],
+        [false, table.indexes],
       ] as const) {
-        for (const attributes of groups) {
-          const key = `${unique ? 'u' : 'i'}_${attributes.join('_').replace('$', '')}`.slice(0, 36);
-          const result = await exists(
-            () => db.getIndex({ databaseId, collectionId, key }),
-            () =>
-              db.createIndex({
-                databaseId,
-                collectionId,
-                key,
-                type: unique ? DatabasesIndexType.Unique : DatabasesIndexType.Key,
-                attributes,
-              }),
-          );
-          if (
-            result.type !== (unique ? 'unique' : 'key') ||
-            JSON.stringify(result.attributes) !== JSON.stringify(attributes)
-          )
-            throw new IdentityError(`Índice divergente: ${collectionId}.${key}`);
-          for (let attempt = 0; ; attempt++) {
-            const index = await db.getIndex({ databaseId, collectionId, key });
-            if (index.status === 'available') break;
-            if (index.status === 'failed' || attempt >= 90)
-              throw new IdentityError(`Índice indisponível: ${collectionId}.${key}`);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
+        for (const columns of groups) {
+          const key = indexKey(unique, columns);
+          if (actionOf('index', `${tableId}.${key}`) === 'CREATE')
+            await db.createIndex({
+              databaseId,
+              tableId,
+              key,
+              type: unique ? TablesDBIndexType.Unique : TablesDBIndexType.Key,
+              columns,
+            });
+          await waitForIndex(tableId, key);
         }
       }
-      console.log(`Schema preparado: ${collectionId}`);
+      console.log(`Schema preparado: ${tableId}`);
     }
+
     for (const bucket of buckets) {
-      const result = await exists(
-        () => storage.getBucket({ bucketId: bucket.id }),
-        () =>
-          storage.createBucket({
-            bucketId: bucket.id,
-            name: bucket.id,
-            permissions: bucketPermissions,
-            fileSecurity: true,
-            maximumFileSize: bucket.size,
-            allowedFileExtensions: bucket.extensions,
-            encryption: true,
-            antivirus: true,
-          }),
-      );
-      if (result.$permissions.length || !result.fileSecurity)
-        throw new IdentityError(`Permissões divergentes no bucket ${bucket.id}`);
-      if (
-        result.maximumFileSize !== bucket.size ||
-        JSON.stringify([...result.allowedFileExtensions].sort()) !==
-          JSON.stringify([...bucket.extensions].sort()) ||
-        !result.encryption ||
-        !result.antivirus
-      ) {
-        throw new IdentityError(`Configuração divergente no bucket ${bucket.id}; não sobrescrita.`);
+      const bucketAction = actionOf('bucket', bucket.id);
+      if (bucketAction === 'CREATE') {
+        await storage.createBucket({
+          bucketId: bucket.id,
+          name: bucket.id,
+          permissions: bucketPermissions,
+          fileSecurity: true,
+          maximumFileSize: bucket.size,
+          allowedFileExtensions: bucket.extensions,
+          encryption: true,
+          antivirus: true,
+        });
+      } else if (bucketAction === 'UPDATE' || bucketAction === 'DRIFT_SECURITY') {
+        await storage.updateBucket({
+          bucketId: bucket.id,
+          name: bucket.id,
+          permissions: bucketPermissions,
+          fileSecurity: true,
+          enabled: true,
+          maximumFileSize: bucket.size,
+          allowedFileExtensions: bucket.extensions,
+          encryption: true,
+          antivirus: true,
+        });
+        if (bucketAction === 'DRIFT_SECURITY')
+          console.log(`RECONCILED_SECURITY bucket ${bucket.id}`);
       }
     }
+
     for (const [order, level] of levelSeed.entries()) {
       const { id, ...data } = level;
-      const result = await exists(
-        () => db.getDocument({ databaseId, collectionId: 'creator_levels', documentId: id }),
-        () =>
-          db.createDocument({
-            databaseId,
-            collectionId: 'creator_levels',
-            documentId: id,
-            data: { ...data, order, active: true, rulesVersion: schemaVersion },
-            permissions: [Permission.read(Role.any())],
-          }),
-      );
-      if (
-        result.minPoints !== data.minPoints ||
-        result.maxPoints !== data.maxPoints ||
-        result.name !== data.name ||
-        result.order !== order ||
-        result.active !== true ||
-        result.rulesVersion !== schemaVersion ||
-        JSON.stringify(result.$permissions) !== JSON.stringify([Permission.read(Role.any())])
-      )
-        throw new IdentityError(`Configuração de nível divergente: ${id}. Não sobrescrita.`);
+      const fields = { ...data, order, active: true, rulesVersion: schemaVersion };
+      const seedAction = actionOf('seed', id);
+      if (seedAction === 'CREATE')
+        await db.createRow({
+          databaseId,
+          tableId: 'creator_levels',
+          rowId: id,
+          data: fields,
+          permissions: [Permission.read(Role.any())],
+        });
+      else if (seedAction === 'UPDATE' || seedAction === 'DRIFT_SECURITY') {
+        await db.updateRow({
+          databaseId,
+          tableId: 'creator_levels',
+          rowId: id,
+          data: fields,
+          permissions: [Permission.read(Role.any())],
+        });
+        if (seedAction === 'DRIFT_SECURITY') console.log(`RECONCILED_SECURITY seed ${id}`);
+      }
     }
-    // Containers disabled until deployment and staging review. No public execute role.
+
+    // A postura de execução de cada function sai do MANIFESTO: quem pode
+    // executar (`execute`), se o container está habilitado, quais escopos a
+    // chave dinâmica recebe e qual agenda faz o trabalho andar sozinho.
     for (const definition of functionDefinitions) {
-      const result = await exists(
-        () => functions.get({ functionId: definition.id }),
-        () =>
-          functions.create({
-            functionId: definition.id,
-            name: `NUY ${definition.id}`,
-            runtime: Runtime.Node22,
-            execute: [],
-            enabled: false,
-            entrypoint: 'src/main.js',
-            commands: 'npm ci',
-            scopes: definition.implemented
-              ? [ProjectKeyScopes.DocumentsRead, ProjectKeyScopes.DocumentsWrite]
-              : [],
-          }),
-      );
-      if (!definition.implemented && (result.enabled || result.execute.length))
+      const functionAction = actionOf('function', definition.id);
+      const scopes = functionScopes(definition);
+      const execute = executeRoles(definition.audience);
+      const enabled = definition.audience !== 'closed';
+      if (functionAction === 'NOOP') continue;
+      const params = {
+        functionId: definition.id,
+        name: `NUY ${definition.id}`,
+        runtime: Runtime.Node22,
+        execute,
+        enabled,
+        entrypoint: 'src/main.js',
+        commands: 'npm ci',
+        scopes,
+        schedule: definition.schedule ?? '',
+      };
+      if (functionAction === 'CREATE') await functions.create(params);
+      else {
+        await functions.update(params);
+        if (functionAction === 'DRIFT_SECURITY')
+          console.log(`RECONCILED_SECURITY function ${definition.id}`);
+      }
+      // Confere no SERVIDOR, não no que pedimos: o que ficou gravado tem de ser
+      // exatamente a postura declarada. Um cliente executável a mais — ou a
+      // menos — é divergência de acesso que ninguém pediu.
+      const result = await functions.get({ functionId: definition.id });
+      const divergences: string[] = [];
+      if (result.enabled !== enabled) divergences.push(`enabled=${result.enabled}`);
+      if (!sortedEqual(result.execute, execute))
+        divergences.push(`execute=[${result.execute.join(', ')}]`);
+      if (!sortedEqual(result.scopes, scopes))
+        divergences.push(`scopes=[${result.scopes.join(', ')}]`);
+      if (divergences.length)
         throw new IdentityError(
-          `Function financeira/futura habilitada indevidamente: ${definition.id}. Revisão manual exigida.`,
+          `Function ${definition.id} divergiu do manifesto: ${divergences.join('; ')}. ` +
+            `Esperado: enabled=${enabled}, execute=[${execute.join(', ')}], scopes=[${scopes.join(', ')}].`,
+        );
+      if (definition.schedule && result.schedule !== definition.schedule)
+        throw new IdentityError(
+          `Agenda divergente em ${definition.id}: "${result.schedule}" (esperado "${definition.schedule}").`,
         );
     }
-    const marker = await exists(
-      () =>
-        db.getDocument({ databaseId, collectionId: 'platform_settings', documentId: MARKER_ID }),
-      () => {
-        if (identity.marker === 'verified')
-          throw new IdentityError(
-            'Marker sumiu durante provisionamento; recriação automática bloqueada.',
-          );
-        return db.createDocument({
-          databaseId,
-          collectionId: 'platform_settings',
-          documentId: MARKER_ID,
-          data: {
-            key: MARKER_KEY,
-            valueJson: JSON.stringify({
-              applicationId: APPLICATION_ID,
-              projectId: identity.projectId,
-            }),
-            public: false,
-          },
-          permissions: [],
-        });
-      },
-    );
-    if (!markerMatches(marker, identity.projectId))
-      throw new IdentityError('Marker final divergente; não será sobrescrito.');
+
+    if (actionOf('marker', MARKER_ID) === 'CREATE') {
+      if (identity.marker === 'verified')
+        throw new IdentityError(
+          'Marker sumiu durante provisionamento; recriação automática bloqueada.',
+        );
+      const marker = await db.createRow({
+        databaseId,
+        tableId: 'platform_settings',
+        rowId: MARKER_ID,
+        data: {
+          key: MARKER_KEY,
+          valueJson: JSON.stringify({
+            applicationId: APPLICATION_ID,
+            projectId: identity.projectId,
+          }),
+          public: false,
+        },
+        permissions: [],
+      });
+      if (!markerMatches(marker as unknown as Record<string, unknown>, identity.projectId))
+        throw new IdentityError('Marker final divergente; não será sobrescrito.');
+    }
     await recordBootstrap(identity, 'completed');
     console.log(
       'Base preparada. Functions NÃO publicadas/ativadas. Execute revisão de staging antes da conexão.',

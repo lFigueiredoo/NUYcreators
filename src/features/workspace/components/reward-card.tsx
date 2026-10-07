@@ -2,6 +2,7 @@ import { Gift } from 'lucide-react';
 import { formatPoints } from '../domain/points';
 import { redemptionView } from '../domain/status';
 import type { RewardView } from '../services/rewards';
+import { RedeemRewardForm } from './core-forms';
 import { Pill } from './ui/pill';
 import styles from '../styles/app.module.css';
 
@@ -44,12 +45,11 @@ export function RewardCard({
         {reward.description ? <p className={styles.challengeText}>{reward.description}</p> : null}
         <div className={styles.challengeFoot}>
           <span className={styles.deadline}>{availability}</span>
-          {/* Sem backend de resgate validado não existe CTA — nenhum botão
-              desabilitado fingindo um fluxo que ainda não roda. */}
+          {/* Sem operação configurada não existe CTA — nenhum botão fingindo um
+              fluxo que não roda. Com ela, o resgate é transacional: o custo que
+              a tela mostrou viaja junto e o servidor recusa se tiver mudado. */}
           {redemptionEnabled && reward.eligibility.eligible ? (
-            <button type="button" className={`${styles.button} ${styles.buttonPrimary}`}>
-              Resgatar
-            </button>
+            <RedeemRewardForm rewardId={reward.id} expectedCost={reward.pointsCost} />
           ) : null}
         </div>
       </div>

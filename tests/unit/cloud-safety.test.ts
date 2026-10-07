@@ -4,7 +4,7 @@ import {
   assertDedicatedProject,
   assertTestEnvironment,
 } from '../../infra/appwrite/safety';
-import { confirmedRoles, hasCapability } from '../../src/lib/security/memberships';
+import { confirmedRoles, hasCapability, ownTeamRoles } from '../../src/lib/security/memberships';
 it('permits shared infrastructure endpoints without inferring project identity from the hostname', () => {
   expect(() => assertAppwriteEndpoint('https://api.edocs.phiq.com.br/v1')).not.toThrow();
   expect(() => assertAppwriteEndpoint('https://fra.cloud.appwrite.io/v1')).not.toThrow();
@@ -65,4 +65,21 @@ it('does not trust unconfirmed membership, another team or payload roles', () =>
   );
   expect(roles).toEqual(['moderator']);
   expect(hasCapability(roles, 'adjust-points')).toBe(false);
+});
+it('apura papéis de sessão apenas sob o contrato do filtro por identidade', () => {
+  // Medido no staging: a listagem de sessão devolve `userId` redigido (''), então
+  // a atribuição confiável é "o filtro por identidade foi aplicado pelo servidor".
+  const redacted = { userId: '', teamId: 'nuy-admins', confirm: true, roles: ['admin'] };
+  expect(ownTeamRoles([redacted], 'user', 'nuy-admins')).toEqual(['admin']);
+  // Duas memberships do time = filtro não aplicado: nenhum papel (e não o primeiro).
+  expect(
+    ownTeamRoles([redacted, { ...redacted, roles: ['moderator'] }], 'user', 'nuy-admins'),
+  ).toEqual([]);
+  // Identidade exposta divergente é recusada, não reinterpretada.
+  expect(ownTeamRoles([{ ...redacted, userId: 'other-user' }], 'user', 'nuy-admins')).toEqual([]);
+  expect(ownTeamRoles([{ ...redacted, confirm: false }], 'user', 'nuy-admins')).toEqual([]);
+  expect(ownTeamRoles([{ ...redacted, teamId: 'outro-time' }], 'user', 'nuy-admins')).toEqual([]);
+  expect(
+    ownTeamRoles([{ ...redacted, roles: ['owner', 'invented'] }], 'user', 'nuy-admins'),
+  ).toEqual([]);
 });

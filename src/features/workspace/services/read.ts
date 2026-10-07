@@ -1,7 +1,14 @@
 import 'server-only';
-import { Databases, Query } from 'node-appwrite';
-import { sessionClient } from '@/lib/appwrite/server';
-import { getEnvironment } from '@/lib/env/server';
+import { Query } from 'node-appwrite';
+import {
+  countTableRows,
+  databaseId,
+  getTableRow,
+  listTableRows,
+  normalizeRow,
+  sessionTables,
+  type Tables,
+} from '@/lib/appwrite/data';
 
 /**
  * Leitura com a sessão da própria usuária.
@@ -14,8 +21,8 @@ import { getEnvironment } from '@/lib/env/server';
  *    "não sabemos" e "não existe" são coisas diferentes.
  *
  * Nenhuma leitura aceita `userId` vindo do cliente: o escopo é sempre o da
- * sessão (`Query.equal('userId', viewer.id)`), e o documento é lido com o
- * segredo do cookie — a coleção não tem permissão de coleção, só de documento.
+ * sessão (`Query.equal('userId', viewer.id)`), e a linha é lida com o segredo do
+ * cookie — a tabela não tem permissão própria, só a linha (`rowSecurity`).
  */
 export type Loaded<T> = { state: 'ok'; items: T[] } | { state: 'unavailable' };
 
@@ -66,32 +73,28 @@ export function flag(value: unknown): boolean {
 
 export type Document = Record<string, unknown>;
 
-export function databases(secret: string) {
-  return new Databases(sessionClient(secret));
-}
-
-function databaseId() {
-  return getEnvironment().APPWRITE_DATABASE_ID;
+export function databases(secret: string): Tables {
+  return sessionTables(secret);
 }
 
 /**
- * Log técnico no servidor. Só identificadores de coleção e código do erro —
- * nunca conteúdo de documento, e-mail, handle ou qualquer dado pessoal.
+ * Log técnico no servidor. Só identificador de tabela e código do erro — nunca
+ * conteúdo de linha, e-mail, handle ou qualquer dado pessoal.
  */
-function report(scope: string, collectionId: string, error: unknown) {
+function report(scope: string, tableId: string, error: unknown) {
   const details = error as { code?: number; type?: string };
   const code = typeof details.code === 'number' ? details.code : 0;
   console.error(
-    `[workspace:${scope}] falha ao ler ${collectionId}`,
+    `[workspace:${scope}] falha ao ler ${tableId}`,
     JSON.stringify({ code, type: details.type ?? 'unknown' }),
   );
   return code;
 }
 
 /**
- * 404 em leitura de documento ou de coleção significa "nada aqui" — perfil que
- * ainda não existe, coleção que ainda não foi provisionada. É estado vazio,
- * não erro. 401/403 significam "não podemos olhar" e viram `unavailable`.
+ * 404 em leitura de linha ou de tabela significa "nada aqui" — perfil que ainda
+ * não existe, tabela que ainda não foi provisionada. É estado vazio, não erro.
+ * 401/403 significam "não podemos olhar" e viram `unavailable`.
  */
 function isAbsent(code: number) {
   return code === 404;
@@ -100,54 +103,54 @@ function isAbsent(code: number) {
 export async function listSession<T>(
   secret: string,
   scope: string,
-  collectionId: string,
-  map: (document: Document) => T,
+  tableId: string,
+  map: (row: Document) => T,
   options: ListOptions = {},
 ): Promise<Loaded<T>> {
   const roof = Math.min(options.limit ?? ROOF, ROOF);
   const base = options.queries ?? [];
   try {
-    const db = databases(secret);
+    const tables = databases(secret);
     const items: T[] = [];
     const pages = options.paged ? Math.ceil(roof / PAGE) : 1;
     for (let page = 0; page < pages; page++) {
       const taken = page * PAGE;
-      const result = await db.listDocuments({
+      const result = await listTableRows(tables, {
         databaseId: databaseId(),
-        collectionId,
+        tableId,
         queries: [
           ...base,
           Query.limit(Math.min(PAGE, roof - taken)),
           ...(page > 0 ? [Query.offset(taken)] : []),
         ],
       });
-      items.push(...result.documents.map((document) => map(document as Document)));
-      if (result.documents.length < PAGE) break;
+      items.push(...result.rows.map((row) => map(row as Document)));
+      if (result.rows.length < PAGE) break;
     }
     return loaded(items);
   } catch (error) {
-    const code = report(scope, collectionId, error);
+    const code = report(scope, tableId, error);
     return isAbsent(code) ? loaded<T>([]) : unavailable<T>();
   }
 }
 
-/** Documento único conhecido (`/{userId}` ou id próprio). Ausente é `ok` vazio. */
+/** Linha única conhecida (`/{userId}` ou id próprio). Ausente é `ok` vazio. */
 export async function getSessionDocument<T>(
   secret: string,
   scope: string,
-  collectionId: string,
-  documentId: string,
-  map: (document: Document) => T,
+  tableId: string,
+  rowId: string,
+  map: (row: Document) => T,
 ): Promise<Loaded<T>> {
   try {
-    const document = await databases(secret).getDocument({
+    const row = await getTableRow(databases(secret), {
       databaseId: databaseId(),
-      collectionId,
-      documentId,
+      tableId,
+      rowId,
     });
-    return loaded([map(document as Document)]);
+    return loaded([map(normalizeRow(row) as Document)]);
   } catch (error) {
-    const code = report(scope, collectionId, error);
+    const code = report(scope, tableId, error);
     return isAbsent(code) ? loaded<T>([]) : unavailable<T>();
   }
 }
@@ -165,18 +168,17 @@ export function first<T>(result: Loaded<T>): T | null {
 export async function countSession(
   secret: string,
   scope: string,
-  collectionId: string,
+  tableId: string,
   queries: string[] = [],
 ): Promise<number | null> {
   try {
-    const result = await databases(secret).listDocuments({
+    return await countTableRows(databases(secret), {
       databaseId: databaseId(),
-      collectionId,
-      queries: [...queries, Query.limit(1)],
+      tableId,
+      queries,
     });
-    return typeof result.total === 'number' ? result.total : null;
   } catch (error) {
-    const code = report(scope, collectionId, error);
+    const code = report(scope, tableId, error);
     return isAbsent(code) ? 0 : null;
   }
 }

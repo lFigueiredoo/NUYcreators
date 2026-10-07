@@ -1,5 +1,6 @@
 import 'server-only';
 import { Query } from 'node-appwrite';
+import { functionsOnline } from './commands';
 import { rewardEligibility, type RewardEligibility } from '../domain/rewards';
 import {
   integer,
@@ -68,12 +69,15 @@ function mapRedemption(document: Document): Redemption {
 }
 
 /**
- * O resgate real depende da function transacional `redeem-reward`, declarada
- * como não implementada (`implemented: false` em infra/appwrite/schema.ts) e sem
- * papel de execução. Enquanto isso, a interface existe e informa exatamente
- * isso — nenhum resgate é simulado e nenhum saldo é debitado no cliente.
+ * O resgate real depende da Function `redeem-reward` publicada: o débito de
+ * saldo e a baixa de estoque são transacionais, decididos no commit pelo
+ * servidor (medido: a corrida pela última unidade deixa passar um resgate só).
+ * Sem a Function ligada, a interface informa o estado real — nenhum resgate é
+ * simulado e nenhum saldo é debitado no cliente.
  */
-export const redemptionEnabled = false;
+export function redemptionEnabled(): boolean {
+  return functionsOnline();
+}
 
 export type CatalogView = {
   /** Estado da conta de pontos: distingue "sem conta" de "não pudemos ler". */

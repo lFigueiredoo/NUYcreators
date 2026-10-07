@@ -35,7 +35,7 @@ async function ChallengeDetailBody({ slug }: { slug: string }) {
       detail={detail}
       slug={slug}
       now={new Date()}
-      participationEnabled={participationEnabled}
+      participationEnabled={participationEnabled()}
     />
   );
 }

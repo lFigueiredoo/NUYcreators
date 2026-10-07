@@ -12,6 +12,7 @@ import {
 } from '../domain/status';
 import type { ChallengeDetail, ChallengeView, Requirement } from '../services/challenges';
 import { ChallengeCard } from './challenge-card';
+import { JoinChallengeForm, SubmitContentForm } from './core-forms';
 import { Card } from './ui/card';
 import { Pill } from './ui/pill';
 import { Block, ScreenHeader } from './ui/screen';
@@ -181,6 +182,14 @@ function SubmissionPanel({
             : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa. Enquanto isso, os envios não são registrados por aqui.'}
         </p>
       )}
+      {/* Envio real: com a operação configurada, para quem já entrou e sem nada
+          em análise. Reenvio aparece quando a equipe pediu revisão — o servidor
+          confere participação, prazo e o ciclo inteiro de novo antes de gravar. */}
+      {participationEnabled &&
+      challenge.participation &&
+      (!submission || submission.status === 'revision_requested') ? (
+        <SubmitContentForm challengeId={challenge.id} />
+      ) : null}
       <Link href="/app/conteudos" className={styles.blockLink}>
         Ver meus conteúdos
       </Link>
@@ -349,6 +358,19 @@ export function ChallengeDetailScreen({
                 A entrada em desafios pela plataforma será liberada quando a integração com as redes
                 estiver ativa. Os desafios publicados e seus prazos já estão valendo.
               </p>
+            </Card>
+          ) : null}
+
+          {/* Entrada real no desafio: uma escrita transacional no servidor, com
+              limite de vagas conferido no commit — nunca no cliente. */}
+          {bucket === 'available' && participationEnabled && !challenge.participation ? (
+            <Card>
+              <h2 className={styles.blockTitle}>Como participar</h2>
+              <p className={styles.noteText}>
+                Ao entrar, você assume os requisitos deste desafio e passa a poder enviar conteúdo
+                dentro do prazo.
+              </p>
+              <JoinChallengeForm challengeId={challenge.id} />
             </Card>
           ) : null}
 

@@ -9,6 +9,9 @@ export default defineConfig([
     'test-results/**',
     'playwright-report/**',
     'next-env.d.ts',
-    'functions/complete-onboarding/src/**',
+    // Bundles gerados por `scripts/build-functions.mjs` (esbuild). O fonte é
+    // `functions/<id>/main.ts`; o `src/main.js` é saída, e lintar saída de
+    // bundler só produz ruído de import renomeado (`Query3`, `Role2`).
+    'functions/*/src/**',
   ]),
 ]);

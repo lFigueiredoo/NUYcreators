@@ -358,7 +358,11 @@ export function DashboardData({
             </p>
             <div className={styles.challengeGrid}>
               {rewards.map((reward) => (
-                <RewardCard key={reward.id} reward={reward} redemptionEnabled={redemptionEnabled} />
+                <RewardCard
+                  key={reward.id}
+                  reward={reward}
+                  redemptionEnabled={redemptionEnabled()}
+                />
               ))}
             </div>
           </>

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { ExternalLink, Info, Link2 } from 'lucide-react';
+import { brazilianStates, creatorTypes, niches } from '@/features/profiles/schemas/onboarding';
 import { longDate } from '../domain/format';
 import type { SocialAccount, Viewer } from '../services/viewer';
+import { ProfileEditForm } from './core-forms';
 import { Card } from './ui/card';
 import { Block, ScreenHeader } from './ui/screen';
 import { UnavailableState } from './ui/state';
@@ -29,14 +31,14 @@ const PLATFORM: Record<string, string> = {
  * Perfil — só o que as coleções realmente guardam.
  *
  * Os campos exibidos são exatamente os do onboarding (nenhum campo novo, nenhum
- * campo persistido inventado). A edição continua sendo o formulário de perfil,
- * cujo salvamento depende da function `complete-onboarding`: enquanto ela não
- * estiver ativa, a tela diz isso em vez de fingir um botão que grava.
+ * campo persistido inventado). A edição grava pelo servidor, com a MESMA régua
+ * do cadastro: sem a operação configurada, a tela diz isso em vez de fingir um
+ * botão que grava.
  *
  * "Não verificado" nas redes é o estado real (`verificationStatus`), nunca um
  * selo de verificação sem OAuth autorizado.
  */
-export function ProfileScreen({ viewer }: { viewer: Viewer }) {
+export function ProfileScreen({ viewer, editEnabled }: { viewer: Viewer; editEnabled: boolean }) {
   const profile = viewer.profile;
   const profileUnavailable = viewer.profileState === 'unavailable';
   const socials = viewer.socials.state === 'ok' ? viewer.socials.items : [];
@@ -49,24 +51,50 @@ export function ProfileScreen({ viewer }: { viewer: Viewer }) {
         title="Seu perfil"
         intro="Seus dados na comunidade NUY Creators — o que está guardado hoje na sua conta."
         action={
-          <Link href="/onboarding" className={`${styles.button} ${styles.buttonGhost}`}>
-            Editar meu perfil
-          </Link>
+          editEnabled ? null : (
+            <Link href="/onboarding" className={`${styles.button} ${styles.buttonGhost}`}>
+              Editar meu perfil
+            </Link>
+          )
         }
       />
 
-      <div className={styles.note} role="status">
-        <span className={styles.noteIcon} aria-hidden="true">
-          <Info size={18} />
-        </span>
-        <div className={styles.noteBody}>
-          <p className={styles.noteTitle}>Salvar alterações ainda não está disponível.</p>
-          <p className={styles.noteText}>
-            O formulário de perfil abre normalmente, mas quem grava os dados é o serviço de perfis,
-            que ainda não entrou no ar. Nada é alterado antes disso.
-          </p>
+      {editEnabled ? null : (
+        <div className={styles.note} role="status">
+          <span className={styles.noteIcon} aria-hidden="true">
+            <Info size={18} />
+          </span>
+          <div className={styles.noteBody}>
+            <p className={styles.noteTitle}>Salvar alterações ainda não está disponível.</p>
+            <p className={styles.noteText}>
+              O formulário de perfil abre normalmente, mas quem grava os dados é o servidor, e a
+              operação não está configurada neste ambiente. Nada é alterado antes disso.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+
+      {editEnabled && profile ? (
+        <Block title="Editar meus dados">
+          <Card>
+            <ProfileEditForm
+              initial={{
+                name: profile.name,
+                phone: profile.phone ?? '',
+                city: profile.city ?? '',
+                state: profile.state ?? brazilianStates[0],
+                birthDate: profile.birthDate ?? '',
+                niche: profile.niche ?? niches[0],
+                creatorType: profile.creatorType ?? creatorTypes[0],
+                publicProfile: profile.publicProfile,
+              }}
+              states={[...brazilianStates]}
+              niches={[...niches]}
+              creatorTypes={[...creatorTypes]}
+            />
+          </Card>
+        </Block>
+      ) : null}
 
       <div className={styles.profileGrid}>
         <Block title="Identidade">

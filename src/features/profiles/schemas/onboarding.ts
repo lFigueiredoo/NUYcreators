@@ -46,6 +46,13 @@ function social(domain: string) {
       }, 'Informe uma URL HTTPS da plataforma correta.'),
   ]);
 }
+/**
+ * Opções do perfil, declaradas UMA vez. O formulário de edição importa daqui:
+ * duas listas de valores para o mesmo campo é como um cadastro passa e a edição
+ * não.
+ */
+export const niches = ['casa', 'bem-estar', 'beleza', 'lifestyle', 'outro'] as const;
+export const creatorTypes = ['consumidor', 'ugc', 'influenciador'] as const;
 export const onboardingSchema = z.object({
   name: z.string().trim().min(2).max(100),
   phone: z.string().regex(/^\+?[\d\s()-]{10,20}$/, 'Informe um telefone válido.'),
@@ -57,8 +64,8 @@ export const onboardingSchema = z.object({
       (value) => value <= new Date().toISOString().slice(0, 10) && value >= '1900-01-01',
       'Data inválida.',
     ),
-  niche: z.enum(['casa', 'bem-estar', 'beleza', 'lifestyle', 'outro']),
-  creatorType: z.enum(['consumidor', 'ugc', 'influenciador']),
+  niche: z.enum(niches),
+  creatorType: z.enum(creatorTypes),
   instagram: social('instagram.com'),
   tiktok: social('tiktok.com'),
   youtube: social('youtube.com'),

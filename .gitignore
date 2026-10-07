@@ -8,7 +8,8 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 next-env.d.ts
-functions/complete-onboarding/src/
+# Bundles de function gerados por `scripts/build-functions.mjs` (o fonte é main.ts).
+functions/*/src/
 .appwrite/
 
 .pw-browsers/

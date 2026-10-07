@@ -1,7 +1,8 @@
 import 'server-only';
-import { Account, Client, Databases } from 'node-appwrite';
+import { Account, Client } from 'node-appwrite';
 import { cookies } from 'next/headers';
 import { getEnvironment } from '@/lib/env/server';
+import { databaseId, getTableRow, sessionTables } from '@/lib/appwrite/data';
 export const SESSION_COOKIE = 'nuy-session';
 export function createAccount(secret?: string) {
   const env = getEnvironment();
@@ -53,26 +54,25 @@ export function sessionClient(secret: string) {
     .setSession(secret);
 }
 /**
- * Perfil privado do próprio usuário (`profiles/{userId}`), lido com a sessão
- * dele — o documento é criado com `read(user:userId)`, então nenhuma key de
- * admin é necessária. Documento ausente é estado normal (perfil ainda não
- * criado) e devolve `null`; falha real sobe para quem chamou decidir.
+ * Perfil privado do próprio usuário (linha `profiles/{userId}`), lido com a
+ * sessão dele — a linha é criada com `read(user:userId)`, então nenhuma key de
+ * admin é necessária. Linha ausente é estado normal (perfil ainda não criado) e
+ * devolve `null`; falha real sobe para quem chamou decidir.
  */
 export async function readOwnProfile(
   secret: string,
   userId: string,
 ): Promise<{ onboardingCompletedAt?: unknown } | null> {
   try {
-    const document = await new Databases(sessionClient(secret)).getDocument({
-      databaseId: getEnvironment().APPWRITE_DATABASE_ID,
-      collectionId: 'profiles',
-      documentId: userId,
+    const row = await getTableRow(sessionTables(secret), {
+      databaseId: databaseId(),
+      tableId: 'profiles',
+      rowId: userId,
     });
-    // A coleção não tem schema no SDK: o único campo lido é o marcador de
+    // A tabela não tem schema no SDK: o único campo lido é o marcador de
     // conclusão que a função `complete-onboarding` grava por último.
     return {
-      onboardingCompletedAt: (document as { onboardingCompletedAt?: unknown })
-        .onboardingCompletedAt,
+      onboardingCompletedAt: (row as { onboardingCompletedAt?: unknown }).onboardingCompletedAt,
     };
   } catch (error) {
     if ((error as { code?: number }).code === 404) return null;

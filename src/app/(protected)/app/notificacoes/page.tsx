@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { NotificationsScreen } from '@/features/workspace/components/notifications-screen';
 import { LoadingBlock } from '@/features/workspace/components/ui/state';
 import { loadNotifications } from '@/features/workspace/services/notifications';
+import { operationsOnline } from '@/features/workspace/services/commands';
 import { workspaceSession } from '@/features/workspace/services/viewer';
 
 export const dynamic = 'force-dynamic';
@@ -18,5 +19,7 @@ export default function NotificationsPage() {
 async function NotificationsBody() {
   const { secret, viewer } = await workspaceSession();
   const notifications = await loadNotifications(secret, viewer.id);
-  return <NotificationsScreen view={notifications} />;
+  // A leitura de um aviso é escrita mediada pelo servidor: sem a chave de
+  // operação, a tela informa o estado real em vez de mostrar o controle.
+  return <NotificationsScreen view={notifications} readEnabled={operationsOnline()} />;
 }

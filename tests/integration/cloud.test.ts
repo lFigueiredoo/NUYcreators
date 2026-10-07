@@ -2,29 +2,29 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   Account,
   Client,
-  Databases,
+  Functions,
   ID,
   Permission,
+  Query,
   Role,
+  Storage,
+  TablesDB,
   Teams,
   Users,
-  Storage,
-  Query,
-  Functions,
 } from 'node-appwrite';
 import { randomBytes, createHash } from 'node:crypto';
-import { collections, buckets, team, functionDefinitions } from '../../infra/appwrite/schema';
+import { tables, buckets, team, functionDefinitions } from '../../infra/appwrite/schema';
 import { assertTestEnvironment } from '../../infra/appwrite/safety';
-import { confirmedRoles, hasCapability } from '../../src/lib/security/memberships';
+import { hasCapability, ownTeamRoles } from '../../src/lib/security/memberships';
 
 // Fixtures exist only in an explicitly confirmed dedicated dev/staging project.
 const runId = `it${Date.now().toString(36)}${randomBytes(3).toString('hex')}`;
 type Actor = { id: string; email: string; password: string; client: Client; secret: string };
 const actors: Actor[] = [];
-const ownedDocuments: { collectionId: string; documentId: string }[] = [];
+const ownedRows: { tableId: string; rowId: string }[] = [];
 const memberships: string[] = [];
 const transactions: string[] = [];
-let adminDb: Databases;
+let adminDb: TablesDB;
 let testClient: Client;
 let users: Users;
 let teams: Teams;
@@ -41,44 +41,76 @@ async function responseCode(operation: () => Promise<unknown>) {
     return (error as { code?: number }).code ?? -1;
   }
 }
-function fixtureData(collectionId: string, owner: string, key: string): Record<string, unknown> {
-  const definition = collections.find((c) => c.id === collectionId)!;
+/**
+ * Recusa medida como o Sprint 6 exige: status HTTP, `AppwriteException.code` e a
+ * mensagem — a mensagem é devolvida para ser checada, nunca impressa.
+ */
+async function rejection(operation: () => Promise<unknown>) {
+  try {
+    await operation();
+    return { status: 200, code: 200, type: '', message: '' };
+  } catch (error) {
+    const failure = error as { code?: number; type?: string; message?: string };
+    return {
+      status: failure.code ?? -1,
+      code: failure.code ?? -1,
+      type: failure.type ?? '',
+      message: failure.message ?? '',
+    };
+  }
+}
+/** Igual a `rejection`, mas preserva o corpo devolvido — diagnóstico precisa do valor, não só do status. */
+async function measured<T>(operation: () => Promise<T>) {
+  try {
+    return { status: 200, type: '', message: '', value: await operation() };
+  } catch (error) {
+    const failure = error as { code?: number; type?: string; message?: string };
+    return {
+      status: failure.code ?? -1,
+      type: failure.type ?? '',
+      message: failure.message ?? '',
+      value: undefined as T | undefined,
+    };
+  }
+}
+function fixtureData(tableId: string, owner: string, key: string): Record<string, unknown> {
+  const definition = tables.find((t) => t.id === tableId)!;
   return Object.fromEntries(
-    definition.attributes
-      .filter((attribute) => attribute.required)
-      .map((attribute) => [
-        attribute.key,
-        attribute.key === 'userId' || attribute.key === 'authUserId'
+    definition.columns
+      .filter((column) => column.required)
+      .map((column) => [
+        column.key,
+        column.key === 'userId' || column.key === 'authUserId'
           ? owner
-          : attribute.type === 'datetime'
+          : column.type === 'datetime'
             ? new Date().toISOString()
-            : attribute.type === 'boolean'
+            : column.type === 'boolean'
               ? false
-              : attribute.type === 'integer'
+              : column.type === 'integer'
                 ? 1
-                : `${key}-${attribute.key}`,
+                : `${key}-${column.key}`,
       ]),
   );
 }
 async function fixture(
-  collectionId: string,
+  tableId: string,
   owner: string,
   override: Record<string, unknown> = {},
   transactionId?: string,
 ) {
   if (owner.length > 36) owner = createHash('sha256').update(owner).digest('hex').slice(0, 36);
-  const documentId = `${runId}-${ownedDocuments.length}`;
-  const data = { ...fixtureData(collectionId, owner, documentId), ...override };
-  ownedDocuments.push({ collectionId, documentId });
-  await adminDb.createDocument({
+  const rowId = `${runId}-${ownedRows.length}`;
+  const data = { ...fixtureData(tableId, owner, rowId), ...override };
+  ownedRows.push({ tableId, rowId });
+  await adminDb.createRow({
     databaseId,
-    collectionId,
-    documentId,
+    tableId,
+    rowId,
     data,
     permissions: [Permission.read(Role.user(owner))],
     transactionId,
   });
-  return { documentId, data };
+  return { rowId, data };
 }
 async function transaction() {
   const result = await adminDb.createTransaction({ ttl: 120 });
@@ -89,7 +121,7 @@ beforeAll(async () => {
   assertTestEnvironment(process.env);
   databaseId = process.env.APPWRITE_DATABASE_ID ?? 'nuy-creators';
   testClient = clients().setKey(process.env.APPWRITE_TEST_API_KEY!);
-  adminDb = new Databases(testClient);
+  adminDb = new TablesDB(testClient);
   users = new Users(testClient);
   teams = new Teams(testClient);
   for (let index = 0; index < 5; index++) {
@@ -119,8 +151,8 @@ afterAll(async () => {
     const code = await responseCode(() => adminDb.deleteTransaction({ transactionId: id }));
     if (![200, 404].includes(code)) cleanupFailures++;
   }
-  for (const document of ownedDocuments) {
-    const code = await responseCode(() => adminDb.deleteDocument({ databaseId, ...document }));
+  for (const row of ownedRows) {
+    const code = await responseCode(() => adminDb.deleteRow({ databaseId, ...row }));
     if (![200, 404].includes(code)) cleanupFailures++;
   }
   for (const membershipId of memberships) {
@@ -140,27 +172,27 @@ afterAll(async () => {
 });
 
 describe('effective provisioned resources', () => {
-  it('matches collections, attributes, indexes and deny-by-default permissions', async () => {
-    const all = await adminDb.listCollections({ databaseId, queries: [Query.limit(100)] });
-    expect(all.total).toBe(collections.length);
-    expect(all.collections.map((c) => c.$id).sort()).toEqual(collections.map((c) => c.id).sort());
-    for (const definition of collections) {
-      const actual = await adminDb.getCollection({ databaseId, collectionId: definition.id });
+  it('matches tables, columns, indexes and deny-by-default permissions', async () => {
+    const all = await adminDb.listTables({ databaseId, queries: [Query.limit(100)] });
+    expect(all.total).toBe(tables.length);
+    expect(all.tables.map((t) => t.$id).sort()).toEqual(tables.map((t) => t.id).sort());
+    for (const definition of tables) {
+      const actual = await adminDb.getTable({ databaseId, tableId: definition.id });
       expect(actual.$permissions).toEqual([]);
-      expect(actual.documentSecurity).toBe(true);
-      const attrs = await adminDb.listAttributes({
+      expect(actual.rowSecurity).toBe(true);
+      const columns = await adminDb.listColumns({
         databaseId,
-        collectionId: definition.id,
+        tableId: definition.id,
         queries: [Query.limit(100)],
       });
-      for (const attr of definition.attributes) {
-        const match = attrs.attributes.find((a) => a.key === attr.key);
+      for (const column of definition.columns) {
+        const match = columns.columns.find((c) => c.key === column.key);
         expect(match?.status).toBe('available');
-        expect(match?.type).toBe(attr.type);
+        expect(match?.type).toBe(column.type === 'varchar' ? 'varchar' : column.type);
       }
       const indexes = await adminDb.listIndexes({
         databaseId,
-        collectionId: definition.id,
+        tableId: definition.id,
         queries: [Query.limit(100)],
       });
       expect(indexes.total).toBe(definition.unique.length + definition.indexes.length);
@@ -171,7 +203,7 @@ describe('effective provisioned resources', () => {
         for (const fields of groups) {
           const index = indexes.indexes.find(
             (i) =>
-              JSON.stringify(i.attributes) === JSON.stringify(fields) &&
+              JSON.stringify(i.columns) === JSON.stringify(fields) &&
               i.type === (unique ? 'unique' : 'key'),
           );
           expect(index?.status).toBe('available');
@@ -202,22 +234,18 @@ describe('direct SDK isolation without API keys', () => {
     'content_saves',
     'reward_redemptions',
     'shipping_addresses',
-  ])('A cannot read B in %s', async (collectionId) => {
-    const record = await fixture(collectionId, actors[1].id);
-    const a = new Databases(actors[0].client);
-    const b = new Databases(actors[1].client);
-    expect(
-      (await b.getDocument({ databaseId, collectionId, documentId: record.documentId })).$id,
-    ).toBe(record.documentId);
+  ])('A cannot read B in %s', async (tableId) => {
+    const record = await fixture(tableId, actors[1].id);
+    const a = new TablesDB(actors[0].client);
+    const b = new TablesDB(actors[1].client);
+    expect((await b.getRow({ databaseId, tableId, rowId: record.rowId })).$id).toBe(record.rowId);
     expect([401, 403, 404]).toContain(
-      await responseCode(() =>
-        a.getDocument({ databaseId, collectionId, documentId: record.documentId }),
-      ),
+      await responseCode(() => a.getRow({ databaseId, tableId, rowId: record.rowId })),
     );
-    const listing = await a.listDocuments({
+    const listing = await a.listRows({
       databaseId,
-      collectionId,
-      queries: [Query.equal('$id', record.documentId)],
+      tableId,
+      queries: [Query.equal('$id', record.rowId)],
     });
     expect(listing.total).toBe(0);
   });
@@ -231,32 +259,33 @@ describe('direct SDK isolation without API keys', () => {
     'rewards',
     'challenge_submissions',
     'reward_redemptions',
-  ])('A cannot create/update/delete protected %s', async (collectionId) => {
-    const record = await fixture(collectionId, actors[0].id);
-    const client = new Databases(actors[0].client);
-    const params = { databaseId, collectionId, documentId: record.documentId };
+  ])('A cannot create/update/delete protected %s', async (tableId) => {
+    const record = await fixture(tableId, actors[0].id);
+    const client = new TablesDB(actors[0].client);
+    const params = { databaseId, tableId, rowId: record.rowId };
     const delta =
-      collectionId === 'rewards'
+      tableId === 'rewards'
         ? { stock: 999 }
-        : ['challenge_submissions', 'reward_redemptions'].includes(collectionId)
+        : ['challenge_submissions', 'reward_redemptions'].includes(tableId)
           ? { status: 'approved' }
           : { userId: actors[1].id };
     // Valid payloads ensure a validation error cannot masquerade as authorization denial.
     const attemptedId = ID.unique();
-    ownedDocuments.push({ collectionId, documentId: attemptedId });
+    ownedRows.push({ tableId, rowId: attemptedId });
     expect([401, 403]).toContain(
       await responseCode(() =>
-        client.createDocument({
-          ...params,
-          documentId: attemptedId,
-          data: fixtureData(collectionId, actors[0].id, attemptedId),
+        client.createRow({
+          databaseId,
+          tableId,
+          rowId: attemptedId,
+          data: fixtureData(tableId, actors[0].id, attemptedId),
         }),
       ),
     );
     expect([401, 403]).toContain(
-      await responseCode(() => client.updateDocument({ ...params, data: delta })),
+      await responseCode(() => client.updateRow({ ...params, data: delta })),
     );
-    expect([401, 403]).toContain(await responseCode(() => client.deleteDocument(params)));
+    expect([401, 403]).toContain(await responseCode(() => client.deleteRow(params)));
   });
 });
 describe('real Auth and memberships (email delivery tested separately)', () => {
@@ -320,10 +349,56 @@ describe('real Auth and memberships (email delivery tested separately)', () => {
       memberships.push(created.$id);
       const response = await new Teams(actor.client).listMemberships({
         teamId: team.id,
-        queries: [Query.equal('userId', actor.id)],
+        queries: [Query.equal('userId', actor.id), Query.limit(100)],
       });
-      const roles = confirmedRoles(response.memberships, actor.id, team.id);
-      expect(roles).toEqual([role]);
+      // Medido no staging: a listagem de SESSÃO redige identidade (`userId` e
+      // `userEmail` voltam vazios) mas honra o filtro por `userId` no servidor —
+      // devolve exatamente a membership de quem pediu. Por isso o app apura via
+      // `ownTeamRoles` (contrato do filtro) e não por `confirmedRoles` (que exige
+      // a identidade na resposta e serve para listagem com chave de API).
+      const roles = ownTeamRoles(response.memberships, actor.id, team.id);
+      const mine = response.memberships.filter((membership) => membership.$id === created.$id);
+      expect({
+        criada: `${created.confirm}/${created.roles.join('+')}`,
+        apurado: roles.join('+'),
+        devolvidas: response.memberships.length,
+        minha: mine.map(
+          (membership) =>
+            `${membership.teamId}/confirm=${membership.confirm}/${membership.roles.join('+')}`,
+        ),
+        identidadeRedigida: mine.every(
+          (membership) => membership.userId === '' || membership.userId === actor.id,
+        ),
+      }).toEqual({
+        criada: `true/${role}`,
+        apurado: role,
+        devolvidas: 1,
+        minha: [`${team.id}/confirm=true/${role}`],
+        identidadeRedigida: true,
+      });
+      // Sem o filtro por identidade a mesma sessão vê o time inteiro (identidade
+      // redigida). Com mais de uma membership no time a apuração recusa em vez de
+      // atribuir o papel da primeira linha; com uma só, a linha é necessariamente
+      // a minha, então o papel apurado é o meu.
+      const unfiltered = await new Teams(actor.client).listMemberships({
+        teamId: team.id,
+        queries: [Query.limit(100)],
+      });
+      const teamSize = index + 1;
+      expect(unfiltered.memberships.length).toBe(teamSize);
+      expect(ownTeamRoles(unfiltered.memberships, actor.id, team.id)).toEqual(
+        teamSize === 1 ? [role] : [],
+      );
+      // A mesma regra com identidade exposta (listagem administrativa): a linha de
+      // outro membro nunca vira papel meu — diverge o `userId`, a apuração recusa.
+      const administrative = await teams.listMemberships({
+        teamId: team.id,
+        queries: [Query.limit(100)],
+      });
+      expect(administrative.memberships.length).toBe(teamSize);
+      expect(ownTeamRoles(administrative.memberships, actor.id, team.id)).toEqual(
+        teamSize === 1 ? [role] : [],
+      );
       expect(hasCapability(roles, 'adjust-points')).toBe(role === 'admin');
       expect(hasCapability(roles, 'moderate')).toBe(role === 'admin' || role === 'moderator');
       expect(hasCapability(roles, 'fulfill')).toBe(role === 'admin' || role === 'fulfillment');
@@ -343,7 +418,7 @@ describe('real Auth and memberships (email delivery tested separately)', () => {
     expect((await new Account(actors[0].client).get()).$id).toBe(actors[0].id);
   });
 });
-describe('real legacy Databases transaction capability — no production command implemented', () => {
+describe('real TablesDB transaction capability — no production command implemented', () => {
   const approvalParts = [
     'challenge_submissions',
     'point_transactions',
@@ -361,34 +436,87 @@ describe('real legacy Databases transaction capability — no production command
     'audit_logs',
     'outbox_events',
   ];
-  it.each([{ parts: approvalParts }, { parts: redemptionParts }])(
-    'commits all records and explicitly rolls back all records across required collections',
-    async ({ parts }) => {
+  it.each([
+    { label: 'approval', parts: approvalParts },
+    { label: 'redemption', parts: redemptionParts },
+  ])(
+    'commits all rows and explicitly rolls back all rows across required tables',
+    async ({ label, parts }) => {
+      // O dono carrega o rótulo do caso: medido, dois casos compartilhando um dono
+      // constante colidem em `point_accounts.userId` (único) e o commit volta
+      // 409 transaction_conflict — a unicidade é cobrada no commit, não no create.
       const committedTx = await transaction();
       const committed = [];
       for (const part of parts)
         committed.push({
-          collectionId: part,
-          ...(await fixture(part, `${runId}-commit-${part}`, {}, committedTx)),
+          tableId: part,
+          ...(await fixture(part, `${runId}-${label}-commit-${part}`, {}, committedTx)),
         });
       for (const record of committed)
         expect(
           await responseCode(() =>
-            adminDb.getDocument({
+            adminDb.getRow({
               databaseId,
-              collectionId: record.collectionId,
-              documentId: record.documentId,
+              tableId: record.tableId,
+              rowId: record.rowId,
             }),
           ),
         ).toBe(404);
-      await adminDb.updateTransaction({ transactionId: committedTx, commit: true });
+      const commit = await rejection(() =>
+        adminDb.updateTransaction({ transactionId: committedTx, commit: true }),
+      );
+      if (commit.status !== 200) {
+        // Sem isso, o conflict vira "alguma coisa deu errado" e ninguém sabe o quê.
+        const state = await Promise.all(
+          committed.map(async (record) => {
+            const read = await rejection(() =>
+              adminDb.getRow({ databaseId, tableId: record.tableId, rowId: record.rowId }),
+            );
+            return `${record.tableId}=${read.status}`;
+          }),
+        );
+        const transaction = await measured(() =>
+          adminDb.getTransaction({ transactionId: committedTx }),
+        );
+        // Um conflict só é diagnosticável com o estado das OUTRAS transações
+        // vivas: medido, não deduzido.
+        const live = await measured(() =>
+          adminDb.listTransactions({ queries: [Query.limit(100)] }),
+        );
+        throw new Error(
+          `commit recusado [${commit.status} ${commit.type}] ${commit.message} | ` +
+            `staged: ${state.join(' ')} | ` +
+            `transaction: ${
+              transaction.status === 200
+                ? JSON.stringify({
+                    keys: Object.keys(transaction.value as object),
+                    status: (transaction.value as { status?: unknown })?.status,
+                    operations: (transaction.value as { operations?: unknown })?.operations,
+                  })
+                : `HTTP ${transaction.status}`
+            } | ` +
+            `vivas: ${
+              live.status === 200
+                ? (
+                    (
+                      live.value as {
+                        transactions?: { $id: string; status: string; operations: number }[];
+                      }
+                    ).transactions ?? []
+                  )
+                    .map((item) => `${item.$id.slice(0, 6)}…=${item.status}/${item.operations}`)
+                    .join(' ')
+                : `HTTP ${live.status}`
+            }`,
+        );
+      }
       for (const record of committed)
         expect(
           await responseCode(() =>
-            adminDb.getDocument({
+            adminDb.getRow({
               databaseId,
-              collectionId: record.collectionId,
-              documentId: record.documentId,
+              tableId: record.tableId,
+              rowId: record.rowId,
             }),
           ),
         ).toBe(200);
@@ -396,37 +524,37 @@ describe('real legacy Databases transaction capability — no production command
       const rolledBack = [];
       for (const part of parts)
         rolledBack.push({
-          collectionId: part,
-          ...(await fixture(part, `${runId}-rollback-${part}`, {}, rolledBackTx)),
+          tableId: part,
+          ...(await fixture(part, `${runId}-${label}-rollback-${part}`, {}, rolledBackTx)),
         });
       await adminDb.updateTransaction({ transactionId: rolledBackTx, rollback: true });
       for (const record of rolledBack)
         expect(
           await responseCode(() =>
-            adminDb.getDocument({
+            adminDb.getRow({
               databaseId,
-              collectionId: record.collectionId,
-              documentId: record.documentId,
+              tableId: record.tableId,
+              rowId: record.rowId,
             }),
           ),
         ).toBe(404);
     },
   );
   it.each([
-    { collectionId: 'point_accounts', field: 'availableBalance' },
-    { collectionId: 'rewards', field: 'stock' },
+    { tableId: 'point_accounts', column: 'availableBalance' },
+    { tableId: 'rewards', column: 'stock' },
   ])(
     'prevents double commit on concurrent writes and leaves the losing outbox absent',
-    async ({ collectionId, field }) => {
-      const record = await fixture(collectionId, `${runId}-race`, { [field]: 1 });
+    async ({ tableId, column }) => {
+      const record = await fixture(tableId, `${runId}-race`, { [column]: 1 });
       const txA = await transaction(),
         txB = await transaction();
       for (const tx of [txA, txB])
-        await adminDb.updateDocument({
+        await adminDb.updateRow({
           databaseId,
-          collectionId,
-          documentId: record.documentId,
-          data: { [field]: 0 },
+          tableId,
+          rowId: record.rowId,
+          data: { [column]: 0 },
           transactionId: tx,
         });
       const events = [];
@@ -442,15 +570,55 @@ describe('real legacy Databases transaction capability — no production command
       for (const [index, event] of events.entries())
         expect(
           await responseCode(() =>
-            adminDb.getDocument({
+            adminDb.getRow({
               databaseId,
-              collectionId: 'outbox_events',
-              documentId: event.documentId,
+              tableId: 'outbox_events',
+              rowId: event.rowId,
             }),
           ),
         ).toBe(results[index] === 200 ? 200 : 404);
     },
   );
+  it('reports a staged conflict with HTTP status, error code and a message without credentials', async () => {
+    const key = `${runId}-reported-conflict`;
+    await fixture('point_transactions', `${runId}-conflict-owner`, { idempotencyKey: key });
+    const tx = await transaction();
+    const denied = await rejection(() =>
+      fixture('point_transactions', `${runId}-conflict-owner`, { idempotencyKey: key }, tx),
+    );
+    // Só 409 prova a unicidade: recusa de autorização ou validação não serve.
+    if (denied.status === 200) {
+      // A API aceitou o stage; então a colisão precisa aparecer no commit.
+      const commit = await rejection(() =>
+        adminDb.updateTransaction({ transactionId: tx, commit: true }),
+      );
+      expect(commit.status).toBe(409);
+      expect(typeof commit.code).toBe('number');
+      expect(commit.message.includes(process.env.APPWRITE_TEST_API_KEY!)).toBe(false);
+    } else {
+      expect(denied.status).toBe(409);
+      expect(denied.code).toBe(409);
+      expect(typeof denied.type).toBe('string');
+      expect(denied.message.length).toBeGreaterThan(0);
+      // A mensagem é da Appwrite, não credencial nossa: nada de chave vazando.
+      expect(denied.message.includes(process.env.APPWRITE_TEST_API_KEY!)).toBe(false);
+      await adminDb.updateTransaction({ transactionId: tx, rollback: true });
+    }
+  });
+  it('a duplicated unique key never coexists at rest', async () => {
+    const key = `${runId}-unique-rest`;
+    await fixture('point_transactions', `${runId}-unique-rest-owner`, { idempotencyKey: key });
+    const duplicate = await rejection(() =>
+      fixture('point_transactions', `${runId}-unique-rest-owner`, { idempotencyKey: key }),
+    );
+    expect(duplicate.status).toBe(409);
+    const stored = await adminDb.listRows({
+      databaseId,
+      tableId: 'point_transactions',
+      queries: [Query.equal('idempotencyKey', key)],
+    });
+    expect(stored.total).toBe(1);
+  });
   it('rolls back staged companion writes on a unique-key conflict', async () => {
     const key = `${runId}-unique`;
     await fixture('point_transactions', `${runId}-unique-owner`, { idempotencyKey: key });
@@ -468,10 +636,10 @@ describe('real legacy Databases transaction capability — no production command
       ).toBe(409);
     expect(
       await responseCode(() =>
-        adminDb.getDocument({
+        adminDb.getRow({
           databaseId,
-          collectionId: 'outbox_events',
-          documentId: companion.documentId,
+          tableId: 'outbox_events',
+          rowId: companion.rowId,
         }),
       ),
     ).toBe(404);
@@ -481,26 +649,26 @@ describe('real legacy Databases transaction capability — no production command
       availableBalance: 100,
     });
     const tx = await transaction();
-    await adminDb.updateDocument({
+    await adminDb.updateRow({
       databaseId,
-      collectionId: 'point_accounts',
-      documentId: record.documentId,
+      tableId: 'point_accounts',
+      rowId: record.rowId,
       data: { availableBalance: 90 },
       transactionId: tx,
     });
-    await adminDb.updateDocument({
+    await adminDb.updateRow({
       databaseId,
-      collectionId: 'point_accounts',
-      documentId: record.documentId,
+      tableId: 'point_accounts',
+      rowId: record.rowId,
       data: { availableBalance: 80 },
     });
     expect(
       await responseCode(() => adminDb.updateTransaction({ transactionId: tx, commit: true })),
     ).toBe(409);
-    const actual = await adminDb.getDocument({
+    const actual = await adminDb.getRow({
       databaseId,
-      collectionId: 'point_accounts',
-      documentId: record.documentId,
+      tableId: 'point_accounts',
+      rowId: record.rowId,
     });
     expect(actual.availableBalance).toBe(80);
   });
@@ -508,11 +676,11 @@ describe('real legacy Databases transaction capability — no production command
     const record = await fixture('rewards', `${runId}-bounded-stock`, { stock: 0 });
     const tx = await transaction();
     const staged = await responseCode(() =>
-      adminDb.decrementDocumentAttribute({
+      adminDb.decrementRowColumn({
         databaseId,
-        collectionId: 'rewards',
-        documentId: record.documentId,
-        attribute: 'stock',
+        tableId: 'rewards',
+        rowId: record.rowId,
+        column: 'stock',
         value: 1,
         min: 0,
         transactionId: tx,
@@ -528,29 +696,66 @@ describe('real legacy Databases transaction capability — no production command
     }
     expect(
       (
-        await adminDb.getDocument({
+        await adminDb.getRow({
           databaseId,
-          collectionId: 'rewards',
-          documentId: record.documentId,
+          tableId: 'rewards',
+          rowId: record.rowId,
         })
       ).stock,
     ).toBe(0);
+  });
+  it('a balance of one is debited exactly once under concurrent transactions', async () => {
+    const record = await fixture('point_accounts', `${runId}-balance-race`, {
+      availableBalance: 1,
+      qualifyingPoints: 1,
+    });
+    const staged = [];
+    for (let index = 0; index < 2; index++) {
+      const tx = await transaction();
+      staged.push({ tx });
+      await adminDb.decrementRowColumn({
+        databaseId,
+        tableId: 'point_accounts',
+        rowId: record.rowId,
+        column: 'availableBalance',
+        value: 1,
+        min: 0,
+        transactionId: tx,
+      });
+    }
+    const results = await Promise.all(
+      staged.map(({ tx }) =>
+        responseCode(() => adminDb.updateTransaction({ transactionId: tx, commit: true })),
+      ),
+    );
+    // Medido: o commit perdedor volta 400 `attribute_limit_exceeded` (o mínimo
+    // da coluna é conferido no commit, não no staging) — 409 fica aceito para o
+    // caso de conflito de versão. O que não se aceita é os dois passarem.
+    expect(results.filter((code) => code === 200)).toHaveLength(1);
+    expect(results.filter((code) => [400, 409].includes(code))).toHaveLength(1);
+    const actual = await adminDb.getRow({
+      databaseId,
+      tableId: 'point_accounts',
+      rowId: record.rowId,
+    });
+    expect(actual.availableBalance).toBe(0);
+    expect(actual.qualifyingPoints).toBe(1);
   });
   it('an isolated replay can return the original result without creating another ledger entry', async () => {
     const key = `${runId}-replay`,
       actorId = `${runId}-replay-actor`;
     // Test harness only. This is not a deployed points service.
     const replay = async () => {
-      const existing = await adminDb.listDocuments({
+      const existing = await adminDb.listRows({
         databaseId,
-        collectionId: 'operation_keys',
+        tableId: 'operation_keys',
         queries: [
           Query.equal('actorId', actorId),
           Query.equal('operation', 'integration_probe'),
           Query.equal('key', key),
         ],
       });
-      if (existing.total) return existing.documents[0].resultId as string;
+      if (existing.total) return existing.rows[0].resultId as string;
       const tx = await transaction();
       const credit = await fixture('point_transactions', actorId, { idempotencyKey: key }, tx);
       await fixture(
@@ -561,22 +766,51 @@ describe('real legacy Databases transaction capability — no production command
           operation: 'integration_probe',
           key,
           requestHash: key,
-          resultId: credit.documentId,
+          resultId: credit.rowId,
           status: 'completed',
         },
         tx,
       );
       await adminDb.updateTransaction({ transactionId: tx, commit: true });
-      return credit.documentId;
+      return credit.rowId;
     };
     const first = await replay();
     expect(await replay()).toBe(first);
-    const ledger = await adminDb.listDocuments({
+    const ledger = await adminDb.listRows({
       databaseId,
-      collectionId: 'point_transactions',
+      tableId: 'point_transactions',
       queries: [Query.equal('idempotencyKey', key)],
     });
     expect(ledger.total).toBe(1);
-    // Concurrent replay and business-level payload conflicts still require future command tests.
+  });
+  it('a concurrent replay with the same key produces one row, not two', async () => {
+    const key = `${runId}-replay-race`;
+    const rowId = `${runId}-idem`;
+    ownedRows.push({ tableId: 'operation_keys', rowId });
+    const create = () =>
+      adminDb.createRow({
+        databaseId,
+        tableId: 'operation_keys',
+        rowId,
+        data: {
+          ...fixtureData('operation_keys', `${runId}-replay-race-actor`, rowId),
+          actorId: `${runId}-replay-race-actor`,
+          operation: 'integration_probe',
+          key,
+          requestHash: key,
+          resultId: rowId,
+          status: 'completed',
+        },
+        permissions: [],
+      });
+    const codes = await Promise.all([responseCode(create), responseCode(create)]);
+    expect(codes.filter((code) => code === 200)).toHaveLength(1);
+    expect(codes.filter((code) => code === 409)).toHaveLength(1);
+    const stored = await adminDb.listRows({
+      databaseId,
+      tableId: 'operation_keys',
+      queries: [Query.equal('key', key)],
+    });
+    expect(stored.total).toBe(1);
   });
 });

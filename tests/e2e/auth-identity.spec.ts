@@ -5,8 +5,8 @@ import { expect, test } from '@playwright/test';
  *
  * O que se prova aqui, em ordem: (1) as telas nascem no creme da Proposta C e
  * sem nenhum resto do universo antigo; (2) o acesso e a landing são o MESMO
- * produto — mesmas medidas de tipografia, botão e régua, comparadas entre as
- * duas páginas; (3) campos, foco e leitura de senha são acessíveis; (4) o
+ * produto — mesma marca (o mesmo bitmap, no mesmo tamanho), mesmo botão e mesma
+ * régua, comparados entre as duas páginas; (3) campos, foco e leitura de senha são acessíveis; (4) o
  * desktop é editorial em duas colunas e o mobile põe o formulário cedo; (5) a
  * fiação funcional continua a mesma; e (6) nenhum bitmap servido é ampliado.
  */
@@ -25,19 +25,29 @@ test('login e cadastro nascem no creme, com o lockup da marca e sem resto do uni
     const shellBackground = await page
       .locator('main')
       .evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(shellBackground).toBe('rgb(249, 245, 239)');
+    // O creme nomeado no brief é #F8F4EC — o mesmo da landing.
+    expect(shellBackground).toBe('rgb(248, 244, 236)');
 
-    // Lockup e volta: a marca é a mesma da landing, em texto real.
+    // Lockup e volta: a marca é a mesma da landing — o mesmo arquivo, servido
+    // de verdade (bitmap com largura natural, não um `img` quebrado).
     const header = page.locator('header');
-    await expect(header.getByRole('link', { name: 'NUY Creators início' })).toBeVisible();
-    await expect(header.getByText('NUY', { exact: true })).toBeVisible();
-    await expect(header.getByText('CREATORS', { exact: true })).toBeVisible();
+    const brand = header.getByRole('link', { name: 'NUY Creators início' });
+    await expect(brand).toBeVisible();
+    await expect(brand.locator('img')).toHaveAttribute('src', /nuy-creators-logo\.png/);
+    expect(
+      await brand.locator('img').evaluate((element) => (element as HTMLImageElement).naturalWidth),
+    ).toBeGreaterThan(0);
     await expect(header.getByRole('link', { name: 'Voltar ao site' })).toHaveAttribute('href', '/');
 
-    // Fotografia da direção, com enquadramento próprio, e a frase editorial.
-    const photo = page.locator('main figure img');
-    await expect(photo).toBeVisible();
-    await expect(photo).toHaveAttribute('alt', /borrifador NUY/);
+    // O painel de marca é o bloco navy com a frase da direção — sem foto. A
+    // imagem de pessoa que existia aqui era gerada por IA, o que o brief do
+    // redesign proíbe, e a marca não forneceu nenhuma foto de lifestyle real.
+    const visual = page.locator('main figure');
+    await expect(visual).toBeVisible();
+    await expect(visual.locator('img')).toHaveCount(0);
+    expect(await visual.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+      'rgb(8, 43, 85)',
+    );
     await expect(page.getByText('Rotinas reais.')).toBeVisible();
     await expect(page.getByText('Conteúdos que inspiram.')).toBeVisible();
 
@@ -51,7 +61,7 @@ test('login e cadastro nascem no creme, com o lockup da marca e sem resto do uni
   expect(errors).toEqual([]);
 });
 
-test('acesso e landing são o mesmo produto: tipografia, botão e régua medidos nas duas', async ({
+test('acesso e landing são o mesmo produto: marca, botão e régua medidos nas duas', async ({
   page,
 }) => {
   const read = (selector: string) =>
@@ -71,22 +81,47 @@ test('acesso e landing são o mesmo produto: tipografia, botão e régua medidos
         };
       });
 
+  /**
+   * A marca deixou de ser texto e virou bitmap: o que se compara agora é o
+   * arquivo servido e o tamanho em que ele aparece. A prova continua a mesma —
+   * acesso e landing mostram a mesma marca, do mesmo jeito.
+   */
+  const readBrand = () =>
+    page.locator('header [aria-label="NUY Creators início"] img').evaluate((element) => {
+      const image = element as HTMLImageElement;
+      const box = image.getBoundingClientRect();
+      const url = new URL(image.currentSrc, location.href);
+      return {
+        // Com o otimizador ligado, o arquivo real vem no parâmetro `url`.
+        file: url.pathname === '/_next/image' ? (url.searchParams.get('url') ?? '') : url.pathname,
+        natural: image.naturalWidth,
+        height: Math.round(box.height),
+        ratio: Number((box.width / box.height).toFixed(2)),
+      };
+    });
+
   await page.goto('/');
-  const landingLockup = await read('header [aria-label="NUY Creators início"] span');
-  const landingButton = await read('a[href="/cadastro"]:has-text("Fazer parte da comunidade")');
+  const landingLockup = await readBrand();
+  // O CTA do hero é, palavra por palavra, o do brief: "FAÇA PARTE".
+  const landingButton = await read('a[href="/cadastro"]:has-text("FAÇA PARTE")');
   const landingGutter = await page
     .locator('header')
     .evaluate((element) => getComputedStyle(element).paddingLeft);
 
   await page.goto('/login');
-  const authLockup = await read('header [aria-label="NUY Creators início"] span');
+  const authLockup = await readBrand();
   const authButton = await read('button[type="submit"]');
   const authGutter = await page
     .locator('header')
     .evaluate((element) => getComputedStyle(element).paddingLeft);
 
-  // Lockup: mesma família, corpo, peso, tracking e cor nas duas páginas.
-  expect(authLockup).toEqual(landingLockup);
+  // Lockup: a MESMA marca — mesmo arquivo servido, mesma altura, mesma
+  // proporção — no acesso e na landing.
+  expect(authLockup.file).toBe(landingLockup.file);
+  expect(authLockup.height).toBe(landingLockup.height);
+  expect(authLockup.ratio).toBeCloseTo(landingLockup.ratio, 1);
+  expect(landingLockup.file).toMatch(/nuy-creators-logo\.png$/);
+  expect(landingLockup.natural).toBeGreaterThan(0);
   // Botão principal: mesmo navy, mesmo raio, mesma família e peso.
   expect(authButton.background).toBe(landingButton.background);
   expect(authButton.radius).toBe(landingButton.radius);
@@ -95,16 +130,18 @@ test('acesso e landing são o mesmo produto: tipografia, botão e régua medidos
   // Régua editorial: a mesma calha no topo das duas páginas.
   expect(authGutter).toBe(landingGutter);
 
-  // O enquadramento da foto do acesso não repete o do hero.
-  const authPosition = await page
-    .locator('main figure img')
-    .evaluate((element) => getComputedStyle(element).objectPosition);
+  // O acesso não empresta a imagem do hero: o painel de marca é bloco navy
+  // chapado, e os únicos bitmaps de produto da casa continuam no hero da
+  // landing — os packshots reais do pacote, nenhum deles no acesso.
+  expect(await page.locator('main figure img').count()).toBe(0);
   await page.goto('/');
-  const heroPosition = await page
-    .locator('main figure img')
-    .first()
-    .evaluate((element) => getComputedStyle(element).objectPosition);
-  expect(authPosition).not.toBe(heroPosition);
+  expect(
+    await page
+      .locator('[class*=heroStage] img')
+      .evaluateAll((images) =>
+        images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
+      ),
+  ).toBe(true);
 });
 
 test('campos com rótulo visível, foco discreto e leitura de senha acessível', async ({ page }) => {
@@ -123,7 +160,7 @@ test('campos com rótulo visível, foco discreto e leitura de senha acessível',
   await email.focus();
   await expect
     .poll(() => email.evaluate((element) => getComputedStyle(element).borderColor))
-    .toBe('rgb(14, 42, 68)');
+    .toBe('rgb(8, 43, 85)');
   const focused = await email.evaluate((element) => {
     const style = getComputedStyle(element);
     return { ring: style.boxShadow, outline: style.outlineStyle };
@@ -169,8 +206,8 @@ test('desktop em duas colunas editoriais e mobile com o formulário cedo', async
   const signup = await geometry();
 
   if (test.info().project.name === 'mobile') {
-    // Empilhado: a faixa de lifestyle é uma tira, não uma tela, e o primeiro
-    // campo aparece no primeiro viewport em LOGIN e CADASTRO.
+    // Empilhado: a faixa de marca é uma tira, não uma tela, e o primeiro campo
+    // aparece no primeiro viewport em LOGIN e CADASTRO.
     expect(login.ratio).toBeGreaterThan(0.98);
     expect(signup.ratio).toBeGreaterThan(0.98);
     expect(login.band).toBeGreaterThanOrEqual(160);
@@ -180,7 +217,7 @@ test('desktop em duas colunas editoriais e mobile com o formulário cedo', async
     expect(login.firstInputTop).toBeLessThan(login.viewportHeight);
     expect(signup.firstInputTop).toBeLessThan(signup.viewportHeight);
   } else {
-    // Desktop: fotografia ≈ 55% e formulário ≈ 45%.
+    // Desktop: painel de marca ≈ 55% e formulário ≈ 45%.
     expect(login.ratio).toBeGreaterThan(0.5);
     expect(login.ratio).toBeLessThan(0.58);
     expect(signup.ratio).toBeGreaterThan(0.5);
