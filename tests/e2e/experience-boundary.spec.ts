@@ -28,21 +28,11 @@ test('a landing pública contém só blocos editoriais e links de aquisição', 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  // Inventário de seções da landing: os ids são as âncoras planejadas da
-  // Proposta C (comunidade, desafios, manifesto, recompensas, conteúdos, FAQ,
-  // CTA final), em ordem de documento. Com o fechamento público as sete
-  // existem — a lista é exata, e nenhum id fora do plano pode aparecer.
-  // O bloco 06 tem id próprio (`manifesto`): o `#comunidade` do header já é a
-  // seção 04 desde o checkpoint 2 e não pode ser duplicado.
-  const planned = [
-    'comunidade',
-    'desafios',
-    'manifesto',
-    'recompensas',
-    'conteudos',
-    'faq',
-    'cta-final',
-  ];
+  // Inventário de seções da landing: o REDESIGN CLEAN reduz a página a cinco
+  // blocos editoriais, em ordem de documento — comunidade (pré-lançamento), o
+  // que é, como participar, FAQ e CTA final. A lista é exata: nenhum bloco
+  // operacional (desafios, recompensas, conteúdos, manifesto) pode voltar.
+  const planned = ['comunidade', 'o-que-e', 'como-participar', 'faq', 'cta-final'];
   const ids = await page
     .locator('main section[id]')
     .evaluateAll((elements) => elements.map((element) => element.id));
@@ -55,13 +45,16 @@ test('a landing pública contém só blocos editoriais e links de aquisição', 
   const header = page.locator('header');
   if (test.info().project.name === 'mobile')
     await header.getByRole('button', { name: 'Abrir menu' }).click();
-  for (const label of ['Início', 'Comunidade', 'Desafios', 'Recompensas', 'Conteúdos', 'FAQ']) {
+  // Três âncoras discretas, não a barra de sete itens do layout antigo.
+  for (const label of ['O que é', 'Como participar', 'FAQ']) {
     await expect(
       header.getByRole('link', { name: label, exact: true }).filter({ visible: true }).first(),
     ).toBeVisible();
   }
   await expect(header.getByRole('link', { name: 'Ir para meu painel' })).toHaveCount(0);
-  await expect(header.getByRole('link', { name: 'Entrar', exact: true }).first()).toBeVisible();
+  await expect(
+    header.getByRole('link', { name: 'CRIAR CONTA', exact: true }).first(),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -74,17 +67,16 @@ test('o rodapé fecha a página pública com rotas reais', async ({ page }) => {
     'href',
     '/',
   );
-  // As seções na ordem do documento, com o acesso no fim — deslogado, é o login.
+  // Rodapé mínimo: FAQ e as páginas legais, com o acesso no fim — deslogado,
+  // é o login.
   expect(
     await footer
       .locator('nav[aria-label="Rodapé"] a')
       .evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute('href')])),
   ).toEqual([
-    ['Comunidade', '#comunidade'],
-    ['Desafios', '#desafios'],
-    ['Recompensas', '#recompensas'],
-    ['Conteúdos', '#conteudos'],
     ['FAQ', '#faq'],
+    ['Termos', '/termos'],
+    ['Privacidade', '/privacidade'],
     ['Entrar', '/login'],
   ]);
   await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
@@ -92,10 +84,7 @@ test('o rodapé fecha a página pública com rotas reais', async ({ page }) => {
     'href',
     '/privacidade',
   );
-  await expect(footer.getByRole('link', { name: 'Termos de uso' })).toHaveAttribute(
-    'href',
-    '/termos',
-  );
+  await expect(footer.getByRole('link', { name: 'Termos' })).toHaveAttribute('href', '/termos');
 });
 
 test('nenhum link público é morto: sem "#" solto e sem destino quebrado', async ({ page }) => {
@@ -152,10 +141,7 @@ test('as páginas legais usam a chrome pública e mantêm o aviso honesto', asyn
       header.getByRole('link', { name: 'FAQ', exact: true }).filter({ visible: true }).first(),
     ).toHaveAttribute('href', '/#faq');
     const footer = page.locator('footer');
-    await expect(footer.getByRole('link', { name: 'Conteúdos' })).toHaveAttribute(
-      'href',
-      '/#conteudos',
-    );
+    await expect(footer.getByRole('link', { name: 'FAQ' })).toHaveAttribute('href', '/#faq');
     await expect(footer.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
     await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
   }

@@ -1,51 +1,42 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import {
   anchorFor,
   landingAccountLinks,
-  landingFooterNavigation,
+  landingFooterLinks,
   landingNavigation,
 } from '../../src/features/public-landing/landing-navigation';
 
 /**
- * Contrato da navegação pública da Proposta C.
- *
- * A landing inteira (header e rodapé) aponta para as próprias seções — nunca
- * para as rotas operacionais do workspace, que exigem sessão. As páginas de
- * `(public)` usam esta mesma navegação, com `anchorFor(..., true)` devolvendo
- * a âncora absoluta (`/#faq`) porque a seção vive noutra rota.
+ * Contrato da navegação da landing clean (Opção 1): poucos destinos, todos
+ * reais — âncoras da própria landing, páginas legais e o acesso por sessão.
  */
-describe('navegação pública da Proposta C', () => {
-  it('aponta cada seção do documento, sem rota operacional', () => {
+describe('navegação pública da landing clean', () => {
+  it('o header tem poucos destinos, todos âncora da própria página', () => {
     expect(landingNavigation).toEqual([
-      ['Início', '#topo'],
-      ['Comunidade', '#comunidade'],
-      ['Desafios', '#desafios'],
-      ['Recompensas', '#recompensas'],
-      ['Conteúdos', '#conteudos'],
+      ['O que é', '#o-que-e'],
+      ['Como participar', '#como-participar'],
       ['FAQ', '#faq'],
     ]);
   });
 
-  it('o rodapé repete as seções na ordem do documento', () => {
-    expect(landingFooterNavigation).toEqual([
-      ['Comunidade', '#comunidade'],
-      ['Desafios', '#desafios'],
-      ['Recompensas', '#recompensas'],
-      ['Conteúdos', '#conteudos'],
+  it('o rodapé repete FAQ e as páginas legais', () => {
+    expect(landingFooterLinks).toEqual([
       ['FAQ', '#faq'],
+      ['Termos', '/termos'],
+      ['Privacidade', '/privacidade'],
     ]);
   });
 
-  it('oferece login e cadastro ao visitante', () => {
+  it('oferece entrar e criar conta ao visitante', () => {
     expect(landingAccountLinks(false)).toEqual([
-      { label: 'Entrar', href: '/login', primary: false },
-      { label: 'Fazer parte', href: '/cadastro', primary: true },
+      { label: 'ENTRAR', href: '/login', primary: false },
+      { label: 'CRIAR CONTA', href: '/cadastro', primary: true },
     ]);
   });
 
   it('oferece só o painel a quem está autenticado', () => {
     expect(landingAccountLinks(true)).toEqual([
-      { label: 'Ir para meu painel', href: '/app', primary: true },
+      { label: 'Meu painel', href: '/app', primary: true },
     ]);
   });
 

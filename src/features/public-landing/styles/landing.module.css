@@ -1,1579 +1,1630 @@
-/*
- * Landing pública — PROPOSTA C "Entre Casa & Creators".
+﻿/**
+ * Landing pública — REDESIGN CLEAN (Opção 1 / Moça Lovers).
  *
- * Escopo: tudo vive sob `.landing`. O `globals.css` é global e serve auth,
- * área autenticada e as rotas de `(public)`; aqui só o que é da landing é
- * declarado, e os elementos que o global estiliza (h1/h2/p/em) são
- * sobrescritos por classe — que vence seletor de elemento.
- *
- * Regra de cor do brief: ~70% tons claros · ~20% navy · ~10% mauve/dourado.
+ * Creme e branco dominando, navy forte pontual, dourado só como acento.
+ * Poucas seções, muito espaço, quase nenhuma animação. Nada de glow, blur
+ * pesado, gradiente forte, folha editorial ou ornamentação.
  */
 
 .landing {
-  /* Paleta oficial da Proposta C */
-  --pl-cream: #f9f5ef;
-  --pl-cream-soft: #fdfaf5;
-  --pl-cream-deep: #f2e9dc;
-  --pl-beige: #eadcc8;
-  --pl-sand: #d8c1ad;
-  --pl-navy: #0e2a44;
-  --pl-navy-soft: #4a6076;
-  --pl-mauve: #c7a1b3;
-  --pl-mauve-ink: #9d6c85;
-  --pl-gold: #d4b98a;
-  /* Tinta do acento manuscrito: amostrada da folha da Proposta C (o texto
-     "Mais rotinas boas por aqui." tem núcleo entre #561636 e #6B2E4A — um
-     ameixa profundo, bem mais escuro que o mauve da paleta). Sobre fotografia,
-     o mauve claro da paleta simplesmente não se lê. */
-  --pl-script-ink: #6b2e4a;
-
-  /* Régua editorial: uma só para header, copy e faixa */
-  --pl-gutter: clamp(20px, 5.4vw, 104px);
-  --pl-header-h: 74px;
-
-  position: relative;
-  min-height: 100dvh;
-  background: var(--pl-cream);
-  color: var(--pl-navy);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
+  --nuy-navy: #082b55;
+  --nuy-navy-soft: rgba(8, 43, 85, 0.08);
+  --nuy-cream: #f8f4ec;
+  --nuy-white: #ffffff;
+  --nuy-gold: #c5a342;
+  /* O dourado da paleta (#c5a342) dá 2,2:1 sobre o creme — serve de acento sobre
+     navy (5,8:1), não de texto sobre claro. Este tom mais fundo mantém a família
+     dourada e passa AA (4,7:1) no creme. */
+  --nuy-gold-ink: #87691c;
+  --nuy-ink: #12253f;
+  --nuy-muted: rgba(8, 43, 85, 0.72);
+  --nuy-ruler: max(4vw, min(88px, 6vw));
+  --nuy-max: 1200px;
+  /* Ritmo do movimento — a única régua de tempo da landing. Toda transição da
+     página sai daqui: antes havia 0.2s, 0.22s, 0.24s, 0.26s e 0.28s espalhados
+     por vinte regras, que é exatamente a diferença entre "premium" e "cada um
+     por si". Três velocidades bastam: resposta ao mouse (fast), entrada de
+     bloco curto (base) e entrada de bloco grande + reveal (slow). */
+  --motion-fast: 220ms;
+  --motion-base: 520ms;
+  --motion-slow: 720ms;
+  --ease-premium: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Cascata: valores de design lidos pelo mecanismo global
+     (`landing-reveal.css`). Cada seção ajusta passo, atraso e duração no seu
+     próprio contêiner e deixa herdar, então a cascata inteira se lê daqui. */
+  --pl-rise: 18px;
+  --pl-duration: var(--motion-slow);
+  --pl-step: 80ms;
+  --pl-delay: 0ms;
+  background: var(--nuy-cream);
+  color: var(--nuy-ink);
+  font-family: var(--pl-font-body, system-ui, 'Segoe UI', sans-serif);
   font-size: 16px;
   line-height: 1.6;
-  color-scheme: light;
-  /* `clip` nos dois eixos, não só em X: o reveal nasce com translateY(14px), e
-     esse deslocamento entra no overflow do documento. Sem o clip em Y, os itens
-     da faixa (último bloco da página) empurram a altura do documento 14px além
-     da raiz e o `body` navy do global aparece como uma tarja no rodapé. */
-  overflow: clip;
+  letter-spacing: 0.005em;
 }
 
-/* O global pinta `em` de lavanda e headings de Georgia: a landing não herda. */
-.landing em {
-  color: inherit;
-  font-weight: inherit;
+.landing h1,
+.landing h2,
+.landing h3 {
+  font-family: var(--pl-font-display, Georgia, 'Times New Roman', serif);
+  font-weight: 500;
+  color: var(--nuy-navy);
+  letter-spacing: -0.02em;
+  line-height: 1.08;
 }
 
-.landing ::selection {
-  background: var(--pl-beige);
-  color: var(--pl-navy);
+/*
+ * TIPO A do reveal — os títulos de seção. Só isto: sobem 14px e aparecem. A
+ * marcação não carrega `font-size` nenhum, então nenhuma medida aprovada se
+ * move; o que a classe declara é o degrau do movimento, e o mecanismo global lê.
+ */
+.sectionTitle {
+  --pl-rise: 14px;
 }
 
-/* O reveal (estado por atributo) vive em landing-reveal.css: seletor de
-   atributo dentro de CSS Module é reprovado pela checagem de pureza do
-   Turbopack no dev — cabeçalho daquele arquivo explica. */
+/* --------------------------------------------------------------- shell */
 
-/* ---------------------------------------------------------------- header -- */
+.publicShell {
+  min-height: 100vh;
+  padding-top: 96px;
+}
+
+.publicShell main {
+  background: var(--nuy-white);
+}
+
+.ruler {
+  margin-inline: auto;
+  width: min(var(--nuy-max), calc(100% - 2 * var(--nuy-ruler)));
+}
+
+/*
+ * Foco de teclado: um anel de 2px com 3px de folga, na cor do bloco — navy
+ * sobre o claro, branco sobre o navy. Vale para link, botão e `<summary>`, e
+ * não aparece no clique (é `:focus-visible`, não `:focus`).
+ */
+.landing :focus-visible {
+  outline: 2px solid rgba(8, 43, 85, 0.55);
+  outline-offset: 3px;
+}
+
+.howTo :focus-visible,
+.faq :focus-visible {
+  outline-color: rgba(255, 255, 255, 0.75);
+}
+
+/* -------------------------------------------------------------- header */
 
 .header {
+  position: fixed;
+  inset: 18px 0 auto;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  /* Mesma régua do resto da experiência pública: a calha do header do acesso
+     (`--au-gutter`) usa esta mesma fórmula, para a marca não pular de uma tela
+     para a outra. Como o container centraliza, a calha só limita a largura. */
+  padding-inline: var(--nuy-ruler);
+  pointer-events: none;
+}
+
+.headerPill {
+  pointer-events: auto;
   position: relative;
-  z-index: 3;
   display: flex;
   align-items: center;
-  gap: clamp(16px, 3vw, 48px);
-  min-height: var(--pl-header-h);
-  padding: 16px var(--pl-gutter);
+  gap: 32px;
+  /* A pílula encolhe até o conteúdo: elemento central, não barra de largura fixa. */
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--nuy-navy-soft);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  /* Sombra mínima no topo: a pílula flutua, não se apoia. O peso vem depois. */
+  box-shadow: 0 6px 18px rgba(8, 43, 85, 0.05);
+  padding: 10px 12px 10px 26px;
+  /* Só o que o estado rolado muda — nada de animar a pílula inteira. */
+  transition:
+    padding var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+/*
+ * Estado rolado: a pílula assenta um degrau. São 4px de padding, um fio mais
+ * definido e o branco praticamente opaco — sem blur, sem vidro, sem esconder
+ * a navegação: a referência mantém o acesso sempre evidente.
+ */
+.header[data-pl-scrolled] .headerPill {
+  padding-block: 6px;
+  border-color: rgba(8, 43, 85, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 26px rgba(8, 43, 85, 0.11);
+}
+
+/*
+ * Progresso da página: 2px na base da pílula, dentro dela — parte do header,
+ * não uma barra no topo da janela. O comprimento é `scaleX` sobre a fatia já
+ * rolada do documento (compõe sem tocar no layout) e a opacidade é o acender
+ * nos primeiros 700px: no topo a linha existe, mas some no branco da pílula.
+ *
+ * Nada de `width`: animar largura refaz layout a cada quadro, e uma linha de
+ * 2px não vale um reflow.
+ */
+.headerProgress {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--nuy-gold);
+  transform: scaleX(var(--pl-progress, 0));
+  transform-origin: left center;
+  opacity: var(--pl-progress-in, 0);
+  pointer-events: none;
+}
+
+/* Entrada da pílula na primeira abertura da página: fade + 8px. A logo entra
+   junto e depois não se mexe mais — nada de escala, bounce nem reentrada. */
+@media (prefers-reduced-motion: no-preference) {
+  .headerPill {
+    animation: plHeaderIn var(--motion-base) var(--ease-premium) both;
+  }
+}
+
+@keyframes plHeaderIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .lockup {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  color: var(--pl-navy);
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
-.lockupMark,
-.lockupLabel {
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-weight: 500;
-  line-height: 1.18;
-  letter-spacing: 0.12em;
-  font-size: 15px;
+.lockupImage {
+  width: 152px;
+  height: auto;
 }
 
-.lockupLabel {
-  font-size: 12.5px;
-  letter-spacing: 0.2em;
-}
-
+/* Só onde a pílula tem largura para respirar; abaixo disso os mesmos destinos
+   vivem no painel do menu. */
 .nav {
   display: flex;
   align-items: center;
-  gap: clamp(14px, 1.9vw, 30px);
-  margin-inline: auto;
+  flex: 0 0 auto;
+  gap: 22px;
 }
 
-.navLink {
+/*
+ * Links de texto (âncoras do header, ENTRAR e os do rodapé): a linha cresce
+ * da esquerda em 220ms. `currentColor` faz o mesmo traço servir ao navy do
+ * header e ao cinza do rodapé, e `scaleX` não mexe na largura do link.
+ */
+.navLink,
+.loginLink {
   position: relative;
-  color: var(--pl-navy);
-  font-size: 14.5px;
-  font-weight: 400;
-  text-decoration: none;
-  padding: 6px 0;
-  transition: color 0.25s ease;
 }
 
-.navLink::after {
+.navLink::after,
+.loginLink::after {
   content: '';
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 2px;
+  bottom: -3px;
   height: 1px;
   background: currentColor;
   transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: left center;
+  transition: transform var(--motion-fast) var(--ease-premium);
 }
 
 .navLink:hover::after,
-.navLink:focus-visible::after {
+.navLink:focus-visible::after,
+.loginLink:hover::after,
+.loginLink:focus-visible::after {
   transform: scaleX(1);
+}
+
+.navLink {
+  color: var(--nuy-muted);
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  transition: color var(--motion-fast) ease;
+}
+
+.navLink:hover {
+  color: var(--nuy-navy);
 }
 
 .accountZone {
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.4vw, 22px);
-  margin-left: auto;
+  gap: 14px;
 }
 
 .loginLink {
-  color: var(--pl-navy);
-  font-size: 14.5px;
+  color: var(--nuy-navy);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-decoration: none;
-  padding: 8px 2px;
 }
 
 .headerCta {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 11px 22px;
+  justify-content: center;
+  min-width: 0;
+  border: 1px solid var(--nuy-navy);
   border-radius: 999px;
-  background: var(--pl-navy);
-  color: var(--pl-cream-soft);
-  font-size: 14.5px;
-  font-weight: 500;
+  background: var(--nuy-navy);
+  color: var(--nuy-white);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-decoration: none;
+  padding: 10px 20px;
   transition:
-    background 0.28s ease,
-    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+    background var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    transform var(--motion-fast) var(--ease-premium);
 }
 
-.headerCta:hover,
-.headerCta:focus-visible {
-  background: #16395a;
+.headerCta:hover {
+  background: transparent;
+  color: var(--nuy-navy);
   transform: translateY(-1px);
+}
+
+.headerCta:active {
+  transform: translateY(0);
 }
 
 .menuButton {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--nuy-navy-soft);
   border-radius: 999px;
-  background: transparent;
-  color: var(--pl-navy);
+  background: var(--nuy-white);
+  color: var(--nuy-navy);
   cursor: pointer;
 }
 
+/* ----------------------------------------------------------- mobile nav */
+
 .mobileNav {
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 4;
-  display: flex;
+  top: calc(100% + 8px);
+  left: 16px;
+  right: 16px;
+  display: none;
   flex-direction: column;
-  padding: 8px var(--pl-gutter) 22px;
-  background: var(--pl-cream-soft);
-  border-bottom: 1px solid var(--pl-beige);
+  gap: 4px;
+  margin-inline: auto;
+  max-width: 100%;
+  border: 1px solid var(--nuy-navy-soft);
+  border-radius: 20px;
+  background: var(--nuy-white);
+  box-shadow: 0 16px 36px rgba(8, 43, 85, 0.1);
+  padding: 12px;
 }
 
 .mobileNavLink {
-  padding: 13px 0;
-  color: var(--pl-navy);
-  font-size: 16px;
+  border-radius: 12px;
+  color: var(--nuy-navy);
+  font-size: 15px;
+  font-weight: 500;
   text-decoration: none;
-  border-bottom: 1px solid rgba(216, 193, 173, 0.5);
+  padding: 12px 14px;
 }
 
-.mobileNavLink:last-child {
-  border-bottom: 0;
+.mobileNavLink:hover {
+  background: var(--nuy-cream);
 }
 
-/* ------------------------------------------------------------------ hero -- */
+/* ---------------------------------------------------------------- hero */
 
+/*
+ * A medida do hero é mais estreita que a das outras seções: sem isso a
+ * fileira de frascos (pequena, limitada pela resolução dos packshots) boiava
+ * num vazio de 848px de coluna. Com 1320px de conteúdo ela ocupa ~⅔ da coluna.
+ */
 .hero {
   position: relative;
+  /* Contexto de pilha fechado: a sombra de respiro (`::after`, z-index -1)
+     fica atrás de tudo que é do hero e à frente do creme da página. */
+  isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
-  align-items: stretch;
-  min-height: clamp(500px, 66vh, 742px);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  min-height: clamp(620px, 82vh, 860px);
+  padding: 150px max(var(--nuy-ruler), calc((100% - 1320px) / 2)) 84px;
 }
 
+/*
+ * Respiro entre a cena e o conteúdo — e o plano de FUNDO da profundidade.
+ *
+ * É uma sombra vertical muito suave, sem aresta: o degradê morre nas duas
+ * pontas, então nada "começa" naquela linha. Com a rolagem ela anda 4px
+ * enquanto a luz anda 5 e os frascos andam 8 — três velocidades, um degrau de
+ * cada vez. `z-index: -1` a põe atrás dos packshots (que trazem as próprias
+ * sombras) e atrás do plano da base.
+ */
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  height: 96px;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 43, 85, 0) 0%,
+    rgba(8, 43, 85, 0.05) 62%,
+    rgba(8, 43, 85, 0) 100%
+  );
+  transform: translateY(calc(var(--pl-depth, 0) * 4px));
+  pointer-events: none;
+}
+
+/* Cascata da coluna de abertura: eyebrow, duas linhas do título, texto, CTA. */
 .heroCopy {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-  padding: clamp(24px, 3vw, 44px) clamp(8px, 2vw, 32px) clamp(32px, 3.6vw, 58px) var(--pl-gutter);
+  --pl-step: 70ms;
+  max-width: 540px;
 }
 
 .eyebrow {
-  margin: 0 0 clamp(18px, 2.2vw, 30px);
-  color: var(--pl-navy);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  line-height: 1.5;
+  color: var(--nuy-gold-ink);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
 }
 
 .headline {
-  margin: 0;
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(2.35rem, 3.55vw, 3.75rem);
-  font-weight: 500;
-  line-height: 1.09;
-  letter-spacing: -0.012em;
-  text-wrap: balance;
+  margin-top: 14px;
+  font-size: clamp(2.6rem, 4.6vw, 4.4rem);
 }
 
-.rule {
-  width: 42px;
-  height: 3px;
-  margin: clamp(20px, 2.2vw, 30px) 0 clamp(18px, 2vw, 26px);
-  border-radius: 2px;
-  background: var(--pl-mauve-ink);
+/*
+ * Título em linhas mascaradas: cada linha é uma janela e o texto sobe por
+ * dentro dela (12px + fade), em vez de o `<h1>` inteiro deslizar. Como a
+ * janela termina logo abaixo da caixa da linha, os primeiros ~7px da subida
+ * ficam cortados — é isso que dá o "levemente mascarado" editorial.
+ *
+ * O `padding`/`margin` em pares que se anulam é o que impede a máscara de
+ * decepar acento e descendente sem mexer uma linha de lugar no layout.
+ */
+.headlineLine {
+  display: block;
+  overflow: hidden;
+  padding: 0.12em 0 0.07em;
+  margin: -0.12em 0 -0.07em;
+}
+
+.headlineText {
+  display: block;
+  --pl-rise: 12px;
+  /* Cascata curta entre as duas linhas: elas são um só título. */
+  --pl-step: 40ms;
 }
 
 .body {
-  max-width: 44ch;
-  margin: 0 0 clamp(26px, 2.8vw, 38px);
-  color: var(--pl-navy-soft);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 400;
-  line-height: 1.68;
+  margin-top: 22px;
+  color: var(--nuy-muted);
+  font-size: clamp(1.02rem, 1.3vw, 1.2rem);
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-top: 34px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  padding: 15px 34px;
+  transition:
+    background var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) var(--ease-premium);
 }
 
 .primaryButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 27px;
-  border-radius: 999px;
-  background: var(--pl-navy);
-  color: var(--pl-cream-soft);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.28s ease,
-    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
+  border: 1px solid var(--nuy-navy);
+  background: var(--nuy-navy);
+  color: var(--nuy-white);
 }
 
-.primaryButton:hover,
-.primaryButton:focus-visible {
-  background: #16395a;
+/*
+ * Microinteração: o navy clareia um degrau, o botão sobe 1px e ganha uma sombra
+ * curta e baixa — o peso do clique, não um brilho. O retorno é a mesma
+ * transição ao contrário, sem escala e sem glow.
+ */
+.primaryButton:hover {
+  background: #0d3768;
+  border-color: #0d3768;
+  box-shadow: 0 4px 12px rgba(8, 43, 85, 0.12);
   transform: translateY(-1px);
 }
 
-.buttonArrow {
-  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
+.secondaryButton {
+  border: 1px solid var(--nuy-navy);
+  background: var(--nuy-white);
+  color: var(--nuy-navy);
 }
 
-.primaryButton:hover .buttonArrow,
-.primaryButton:focus-visible .buttonArrow {
-  transform: translateX(4px);
+.secondaryButton:hover {
+  background: var(--nuy-navy);
+  color: var(--nuy-white);
+  transform: translateY(-1px);
 }
 
-.socialProof {
-  margin: clamp(20px, 2.2vw, 28px) 0 0;
-  color: var(--pl-navy-soft);
-  font-family: var(--pl-font-body), system-ui, sans-serif;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  line-height: 1.5;
+/* O clique devolve o botão ao plano: `:active` depois dos `:hover`. */
+.primaryButton:active,
+.secondaryButton:active {
+  transform: translateY(0);
 }
 
-.heroMedia {
+/* hero — composição dos produtos */
+
+/*
+ * Teto de nitidez. Cada frasco é dimensionado para não passar de ~1,2× os seus
+ * pixels nativos em DPR 2 — é o limite que os packshots suportam:
+ *   Aromatizador 365×673 → 216 CSS (432 dev)   Cereja 152×401 → 90 (180 dev)
+ *   Limpador Chá Branco 170×273 → 100 (200 dev)
+ * Daí a composição menor com folga em volta, como pede o brief: melhor pequeno
+ * e nítido do que grande e borrado.
+ */
+.heroProducts {
+  margin: 0;
+  position: relative;
+}
+
+/*
+ * Palco: a luz de estúdio atrás, o grupo à frente. `--pl-depth` é o progresso
+ * da rolagem (0 → 1) que o `LandingDepth` escreve na section; os dois planos
+ * andam em sentidos opostos por 8px e 5px — o suficiente para dar profundidade,
+ * longe de virar efeito. Sem JavaScript, ou com movimento reduzido, fica 0 e
+ * nada se mexe.
+ */
+.heroStage {
+  /* A cascata dos produtos (a luz e o plano são o degrau 0) mora aqui: é o
+     ancestral comum da cena, então os dois planos e os três frascos herdam
+     o mesmo passo. */
+  --pl-step: 90ms;
+  --pl-delay: 240ms;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 430px;
+  padding-bottom: 26px;
+}
+
+/* Campo da luz: existe só para separar o reveal do posicionamento. */
+.heroLightField {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Halo de estúdio: mais claro que o creme, sem cor própria de glow. */
+.heroLight {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: min(112%, 680px);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%) translateY(calc(var(--pl-depth, 0) * 5px));
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 253, 247, 0.9),
+    rgba(255, 250, 238, 0.5) 46%,
+    rgba(250, 240, 218, 0) 76%
+  );
+  pointer-events: none;
+}
+
+/* O grupo carrega o deslocamento de profundidade — e a base anda junto, para o
+   frasco não desgrudar do chão quando a página rola. */
+.heroGroup {
   position: relative;
   z-index: 1;
-  margin: 0 0 0 -16%;
-  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  transform: translateY(calc(var(--pl-depth, 0) * -8px));
 }
 
-.heroImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 46% 42%;
-  /* A foto derrete no creme pela esquerda, como na referência — sem corte duro
-     e sem máscara agressiva (o brief proíbe as duas coisas). */
-  mask-image: linear-gradient(to right, transparent 0%, #000 22%);
-  transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.heroMedia:hover .heroImage {
-  transform: scale(1.02);
-}
-
-/* Coordenadas locais à foto: no desktop a legenda cai na faixa que derrete
-   no creme, entre a coluna de copy e a massa da imagem. */
-.script {
+/*
+ * Plano horizontal: uma bandeja baixa, quase sem contraste. Não é cenário —
+ * é só o degrau de luz que separa o grupo do creme chapado do fundo.
+ *
+ * Ele é BEM mais largo que o grupo (1,4×) e some antes de chegar nas bordas da
+ * seção: um poço de luz estreito vira mancha, e um que encoste nas bordas vira
+ * faixa com horizonte. O que assenta os frascos é a área, não a intensidade —
+ * o miolo escurece uns 15/255 do creme.
+ */
+.heroBase {
   position: absolute;
-  top: 11%;
-  left: 7%;
-  z-index: 2;
-  margin: 0;
-  color: var(--pl-script-ink);
-  font-family: var(--pl-font-script), 'Segoe Script', cursive;
-  font-size: clamp(1.45rem, 1.9vw, 2rem);
-  font-weight: 600;
-  line-height: 1.06;
-  transform: rotate(-4.5deg);
+  left: -20%;
+  right: -20%;
+  bottom: -106px;
+  z-index: 0;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(199, 186, 160, 0.4),
+    rgba(214, 203, 180, 0.22) 45%,
+    rgba(232, 224, 206, 0) 82%
+  );
   pointer-events: none;
-  text-shadow: 0 1px 16px rgba(253, 250, 245, 0.85);
 }
 
-/* -------------------------------------------------------------- benefícios -- */
-
-.benefits {
-  background: var(--pl-cream-soft);
-  border-top: 1px solid rgba(216, 193, 173, 0.55);
+/* Sombra coletiva: onde os três frascos escurecem o plano juntos. Fica bem
+   abaixo das sombras de contato — é o que une a fileira num só chão, e não
+   mais uma mancha a competir com elas. */
+.heroGroup::after {
+  content: '';
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: -18px;
+  z-index: 0;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(8, 43, 85, 0.07),
+    rgba(8, 43, 85, 0.03) 60%,
+    rgba(8, 43, 85, 0) 88%
+  );
+  filter: blur(4px);
+  pointer-events: none;
 }
 
-.benefitsList {
+/*
+ * Cada frasco é um item: o reveal mora nele (é ele que sobe e aparece) e as
+ * sombras moram nele também, para acompanharem a base. `--pl-rest-scale` é a
+ * camada de profundidade — e é para onde o reveal devolve o frasco no fim, de
+ * modo que o movimento termina exatamente onde a composição começa.
+ *
+ * `filter: drop-shadow` não entra mais: o alpha dos packshots guarda um resíduo
+ * de fundo claro e a sombra do filtro reproduzia esse retângulo como uma caixa
+ * cinza em volta da garrafa (ver artifacts/polish-final/shadow-with.png).
+ *
+ * As duas sombras se ancoram no RETÂNGULO DA BASE da garrafa, não na caixa do
+ * `<img>`: nenhum dos três packshots é centrado no próprio arquivo (as bases
+ * caem em 36%, 49% e 37% da largura), então uma elipse centrada na caixa nasce
+ * ~30px ao lado do frasco e sobra como mancha no creme. Os valores por frasco
+ * vêm do alpha do arquivo — scripts/polish-alpha-bounds.mjs mede e imprime.
+ */
+.heroItem {
+  --pl-from-scale: 0.97;
+  /* Base da garrafa dentro da caixa do arquivo (left/right em % da largura).
+     Cada frasco declara a sua — o padrão aqui é só o caso genérico. */
+  --pl-base-left: 5%;
+  --pl-base-right: 5%;
+  position: relative;
+  display: block;
+  flex: 0 0 auto;
+  z-index: 1;
+  transform-origin: bottom center;
+}
+
+.heroItem img {
+  display: block;
+  height: auto;
+}
+
+/* Sombra ambiente: larga, muito suave, um passo além da base. */
+.heroItem::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--pl-base-left) - 12%);
+  right: calc(var(--pl-base-right) - 12%);
+  bottom: -12px;
+  z-index: -1;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(8, 43, 85, 0.15), rgba(8, 43, 85, 0) 80%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+
+/* Sombra de contato: curta e escura, com o miolo em cima da linha da base —
+   encostada no chão é o que dá peso. Um degrau acima (ou atrás do frasco) ela
+   some por baixo da garrafa e não lê como contato nenhum. */
+.heroItem::after {
+  content: '';
+  position: absolute;
+  left: var(--pl-base-left);
+  right: var(--pl-base-right);
+  bottom: -6px;
+  z-index: -1;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(8, 43, 85, 0.28),
+    rgba(8, 43, 85, 0.1) 58%,
+    rgba(8, 43, 85, 0) 86%
+  );
+  filter: blur(3.5px);
+  pointer-events: none;
+}
+
+/* Os `vw` entram só nas faixas estreitas (900–1280), onde a coluna encolhe e a
+   fileira estouraria; os valores em px são o teto e continuam valendo lá em cima. */
+.heroProductMain {
+  width: min(216px, 21vw);
+}
+
+.heroProductFront {
+  width: min(90px, 8.8vw);
+}
+
+.heroProductBack {
+  width: min(100px, 9.8vw);
+}
+
+/* Aromatizador: protagonista, no plano de base, no meio do grupo. */
+.heroItemMain {
+  z-index: 2;
+  /* base 15.3%..57.3% do arquivo */
+  --pl-base-left: 10%;
+  --pl-base-right: 37%;
+}
+
+/* Sabonete: um degrau à frente, encostando na lateral do aromatizador. */
+.heroItemFront {
+  z-index: 3;
+  margin-left: -14px;
+  margin-bottom: -9px;
+  --pl-rest-scale: 0.96;
+  /* base 15.8%..82.9% do arquivo */
+  --pl-base-left: 12%;
+  --pl-base-right: 13%;
+}
+
+/* Limpador: o menor, mais baixo e deslocado à esquerda — o mais próximo da câmera. */
+.heroItemBack {
+  z-index: 1;
+  margin-bottom: -20px;
+  --pl-rest-scale: 0.92;
+  /* base 12.9%..64.1% do arquivo */
+  --pl-base-left: 8%;
+  --pl-base-right: 30%;
+}
+
+/* --------------------------------------------------------- comunidade */
+
+/*
+ * Pré-lançamento sem creators: a presença vem de uma marca abstrata — três
+ * aros concêntricos quase invisíveis —, e não de caixas vazias fingindo grade
+ * ou de gente inventada. `isolation` fecha o contexto de empilhamento para os
+ * aros ficarem atrás do texto sem sumir no creme.
+ *
+ * Sem ponto dourado no aro: um pingo de 5px no meio da copy lê como sujeira de
+ * renderização, e o brief desta rodada não pede enfeite novo.
+ */
+.community {
+  --pl-step: 80ms;
+  position: relative;
+  isolation: isolate;
+  padding: 110px var(--nuy-ruler);
+  text-align: center;
+}
+
+.communityMark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: min(72vw, 430px);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Os aros abrem de dentro para fora — escala, não subida: são um alvo, não uma
+   linha de texto. É a variante "card" do reveal, aqui sem perder o `inset`. */
+.communityRing {
+  position: absolute;
+  inset: 0;
+  --pl-rise: 0px;
+  --pl-from-scale: 0.96;
+  border: 1px solid rgba(8, 43, 85, 0.07);
+  border-radius: 50%;
+}
+
+.communityRing:nth-child(2) {
+  inset: 13%;
+  border-color: rgba(8, 43, 85, 0.055);
+}
+
+.communityRing:nth-child(3) {
+  inset: 26%;
+  border-color: rgba(8, 43, 85, 0.04);
+}
+
+.sectionBody {
+  margin-top: 18px;
+  color: var(--nuy-muted);
+  font-size: clamp(1rem, 1.2vw, 1.13rem);
+}
+
+.community h2 {
+  font-size: clamp(1.9rem, 3vw, 2.8rem);
+  margin-top: 10px;
+}
+
+/* Pré-lançamento: uma linha, sem caixas vazias fingindo grade. */
+.communityNote {
+  margin-top: 52px;
+  color: var(--nuy-muted);
+  font-size: clamp(1rem, 1.2vw, 1.13rem);
+}
+
+/* Grade real — só é renderizada quando houver creators de verdade. */
+.creatorGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  max-width: 1000px;
+  margin: 56px auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.creatorCard {
+  text-align: left;
+}
+
+.creatorPhoto {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 356 / 460;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.creatorName {
+  margin-top: 14px;
+  color: var(--nuy-navy);
+  font-weight: 600;
+}
+
+.creatorHandle {
+  margin-top: 2px;
+  color: var(--nuy-muted);
+  font-size: 0.9rem;
+}
+
+/* --------------------------------------------------------- o que é NUY */
+
+.whatIs {
+  --pl-step: 90ms;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 72px;
+  align-items: start;
+  background: var(--nuy-white);
+  padding: 130px var(--nuy-ruler);
+}
+
+/*
+ * Costura creme → branco na entrada da seção: 44px de degradê, sem linha e sem
+ * ornamento. O creme da comunidade escorre para o branco em vez de trocar de
+ * cor num corte seco. É absoluto e nasce no vazio do padding (130px), então não
+ * encosta em texto nem entra na conta de altura da seção.
+ */
+.whatIs::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 44px;
+  background: linear-gradient(180deg, var(--nuy-cream), rgba(248, 244, 236, 0));
+  pointer-events: none;
+}
+
+.whatIsCopy h2 {
+  font-size: clamp(2rem, 3.1vw, 3rem);
+}
+
+/*
+ * Rótulo de seção: caixa alta de 11px em navy com opacidade alta, e o ouro
+ * entra como fio de 28px — não como cor do texto. São QUATRO na landing
+ * inteira (este, o do CTA final e os dois que já existiam no hero e na
+ * comunidade, que seguem dourados como foram aprovados).
+ */
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: rgba(8, 43, 85, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.sectionLabel::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 28px;
+  height: 1px;
+  background: var(--nuy-gold);
+}
+
+.benefitList {
+  display: grid;
+  gap: 34px;
   margin: 0;
   padding: 0;
   list-style: none;
-  padding-inline: var(--pl-gutter);
 }
 
+/* Cascata INTERNA do benefício: ícone, título e texto em degraus de 55ms. O
+   atraso de cada item vem do `--pl-delay` que o componente declara, e como o
+   `--pl-delay` é herdado, os três filhos já nascem no compasso certo.
+   O item em si entra de lado (variante `side`) e NÃO sobe — quem sobe são os
+   filhos, 10px cada, na medida de card. */
 .benefitItem {
+  --pl-step: 55ms;
+  --pl-rise: 10px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/*
+ * O ícone tem reveal próprio (é ele que entra primeiro, um degrau antes do
+ * título) e o traço se desenha uma única vez, na chegada. O `stroke-dasharray`
+ * de 70 cobre o traço mais longo dos três ícones — 66 unidades, medido no DOM
+ * —, senão os caminhos curtos nasceriam visíveis e o desenho não aconteceria.
+ */
+.benefitIcon {
+  flex: 0 0 auto;
+  color: var(--nuy-navy);
+  margin-top: 2px;
+  --pl-rise: 6px;
+  --pl-from-scale: 0.94;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .benefitIcon[data-pl-visible] > * {
+    animation: plIconDraw 340ms var(--ease-premium) both;
+  }
+}
+
+@keyframes plIconDraw {
+  from {
+    stroke-dasharray: 70;
+    stroke-dashoffset: 70;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* A linha de benefício não responde ao mouse: ela não é clicável, e mover o que
+   não se pode usar é o jeito mais rápido de a página parecer inquieta. O 1px de
+   ícone do brief mora no card de "Como participar", onde o alvo é real. */
+
+.benefitTitle {
+  color: var(--nuy-navy);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+
+.benefitText {
+  margin-top: 8px;
+  color: var(--nuy-muted);
+  font-size: 1rem;
+}
+
+/* ------------------------------------------------------ como participar */
+
+.howTo {
+  background: var(--nuy-navy);
+  color: var(--nuy-white);
+  padding: 120px var(--nuy-ruler);
+}
+
+.howTo h2 {
+  color: var(--nuy-white);
+  font-size: clamp(2rem, 3vw, 2.9rem);
+  text-align: center;
+}
+
+.howToSub {
+  margin-top: 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.05rem;
+}
+
+/*
+ * Divisor: um fio de 120px com degradê dourado que morre nas duas pontas,
+ * centrado. Entram DOIS na landing inteira — este, abrindo "Como participar", e
+ * o outro abrindo o CTA final. É o único ornamento novo da rodada, e ele marca
+ * a passagem de um ato para o outro sem desenhar nada.
+ */
+.divider {
+  --pl-line-origin: center;
+  --pl-duration: var(--motion-slow);
+  display: block;
+  width: 120px;
+  height: 1px;
+  margin: 0 auto 36px;
+  background: linear-gradient(
+    90deg,
+    rgba(197, 163, 66, 0) 0%,
+    rgba(197, 163, 66, 0.75) 50%,
+    rgba(197, 163, 66, 0) 100%
+  );
+}
+
+/*
+ * A linha de progressão costura os cinco passos: um fio dourado quase apagado,
+ * na largura da grade, que cresce da esquerda para a direita enquanto os cards
+ * entram (o reveal cuida do crescimento — ver `data-pl-reveal='line'`). Sem
+ * tocar no layout: ela é absoluta, então nascer ou não nascer não desloca nada.
+ */
+.progressRow {
+  --pl-step: 115ms;
+  position: relative;
+  max-width: var(--nuy-max);
+  margin: 64px auto 0;
+}
+
+.progressLine {
+  /* A régua dos passos cresce no mesmo compasso do resto do reveal. */
+  --pl-duration: var(--motion-slow);
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(197, 163, 66, 0) 0%,
+    rgba(197, 163, 66, 0.42) 10%,
+    rgba(197, 163, 66, 0.42) 90%,
+    rgba(197, 163, 66, 0) 100%
+  );
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 18px;
+  max-width: var(--nuy-max);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepCard {
+  /* Variante "card" do reveal: sobe 10px e assenta de .985 — menos que um
+     título, porque um card que sobe muito lê como peça solta. */
+  --pl-rise: 10px;
+  --pl-from-scale: 0.985;
+  /* O fio nasce apagado e ganha corpo junto com o card: a borda chega de
+     40% para 100%, não de uma vez. */
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 28px 22px 30px;
+  display: grid;
+  /* Sem `align-content`, a altura esticada do card (todos iguais, ditada pelo
+     título mais longo) era distribuída ENTRE as linhas: número, ícone e título
+     abriam vãos diferentes em cada card. `start` mantém o ritmo de 18px igual
+     de 01 a 05 e deixa a folga no pé. */
+  align-content: start;
+  gap: 18px;
+  justify-items: start;
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    transform var(--motion-fast) var(--ease-premium),
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.stepCard[data-pl-visible] {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Hover: 2px de sobe, fio mais claro e ícone aceso — sem sombra pesada. O
+   `.steps` na frente vence, por especificidade, o `transform` que o reveal
+   deixa no próprio card. */
+.steps .stepCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* O ícone do card sobe 1px no hover — menos que os 2px do card, para o ícone
+   não descolar do próprio card. */
+.steps .stepCard:hover .stepIcon {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+/*
+ * O número entra com uma microescala de .92 → 1. A escala é presa ao
+ * `[data-pl-visible]` DO CARD, e não a um reveal próprio: assim a regra não
+ * disputa o `transform` com a folha global.
+ *
+ * Os cinco números ficam no MESMO ouro cheio — o card aceso que diferenciava
+ * um do outro saiu na rodada 2; sobrou a cascata, que é o que o olho lê.
+ */
+.stepNumber {
+  color: var(--nuy-gold);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  transform: scale(0.92);
+  transform-origin: left center;
+  transition: transform var(--motion-base) var(--ease-premium);
+}
+
+.stepCard[data-pl-visible] .stepNumber {
+  transform: scale(1);
+}
+
+.stepIcon {
+  color: var(--nuy-white);
+  opacity: 0.9;
+  transition:
+    opacity var(--motion-fast) ease,
+    transform var(--motion-fast) var(--ease-premium);
+}
+
+/* `.landing h3` (0,1,1) vence `.stepTitle` (0,1,0) — o escopo `.howTo` devolve a
+   especificidade e o título deixa de sumir no navy. */
+.howTo .stepTitle {
+  color: var(--nuy-white);
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+/* ----------------------------------------------------------------- faq */
+
+.faq {
+  --pl-step: 70ms;
+  background: var(--nuy-navy);
+  color: var(--nuy-white);
+  padding: 90px var(--nuy-ruler) 120px;
+}
+
+.faq h2 {
+  /* `.landing h2` (0,1,1) fixa navy; sem esta cor o título some no bloco navy. */
+  color: var(--nuy-white);
+  font-size: clamp(1.9rem, 2.8vw, 2.7rem);
+  margin-top: 0;
+  text-align: center;
+}
+
+.faqSub {
+  margin-top: 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.faqList {
+  --pl-step: 55ms;
+  max-width: 1040px;
+  margin: 48px auto 0;
+}
+
+/* `isolation` fecha o contexto de pilha para o halo de hover poder ficar atrás
+   do texto sem cair atrás do navy da seção. */
+.faqItem {
+  position: relative;
+  isolation: isolate;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  transition: border-color var(--motion-fast) ease;
+}
+
+.faqItem:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Pergunta aberta: o fio clareia um degrau e o texto ganha um peso — o
+   suficiente para saber qual está lida, sem virar título. */
+.faqItem[open] {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.faqQuestion {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: clamp(24px, 2.6vw, 34px) clamp(8px, 1.4vw, 22px);
-  color: var(--pl-navy);
-  font-size: 15px;
-  font-weight: 450;
+  justify-content: space-between;
+  gap: 18px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--nuy-white);
+  font-size: 1.08rem;
+  font-weight: 500;
+  padding: 22px 0;
+}
+
+/* O texto desliza 2px para a direita no hover — o realce de fundo já mora no
+   pseudo-elemento, então nada aqui mexe no recuo da régua do accordion. */
+.faqQuestion > span {
+  transition: transform var(--motion-fast) var(--ease-premium);
+}
+
+.faqQuestion:hover > span {
+  transform: translateX(2px);
+}
+
+/* Inter é variável (100–900), então 600 é um peso real, não negrito fingido. */
+.faqItem[open] .faqQuestion {
+  font-weight: 600;
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+/* Halo de hover em pseudo-elemento: o realce não mexe no recuo do texto nem
+   na régua do accordion. */
+.faqQuestion::before {
+  content: '';
+  position: absolute;
+  inset: 6px -16px;
+  z-index: -1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease;
+  pointer-events: none;
+}
+
+.faqQuestion:hover::before,
+.faqItem[open] .faqQuestion::before {
+  opacity: 1;
+}
+
+.faqChevron {
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.7);
+  transition:
+    transform var(--motion-fast) var(--ease-premium),
+    color var(--motion-fast) ease;
+}
+
+.faqItem:hover .faqChevron,
+.faqItem[open] .faqChevron {
+  color: var(--nuy-white);
+}
+
+.faqItem[open] .faqChevron {
+  transform: rotate(180deg);
+}
+
+/*
+ * Abertura do disclosure: `<details>` animado com `interpolate-size` +
+ * `::details-content`, que hoje só o Chromium entende. Onde não houver
+ * suporte, o accordion abre na hora — como sempre abriu. `overflow: hidden`
+ * fica no pseudo-elemento, nunca na resposta, então nenhum texto é cortado.
+ */
+@supports (interpolate-size: allow-keywords) {
+  .landing {
+    interpolate-size: allow-keywords;
+  }
+
+  .faqItem::details-content {
+    block-size: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      block-size var(--motion-fast) var(--ease-premium),
+      opacity var(--motion-fast) ease,
+      content-visibility var(--motion-fast) allow-discrete;
+  }
+
+  .faqItem[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
+
+.faqAnswer {
+  margin: 0 0 22px;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 860px;
+}
+
+/* Alinha com a coluna do accordion, não com a régua da seção. */
+.faqFoot {
+  max-width: 1040px;
+  margin: 40px auto 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.faqLink {
+  color: var(--nuy-white);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ----------------------------------------------------------- cta final */
+
+.ctaFinal {
+  --pl-step: 80ms;
+  position: relative;
+  isolation: isolate;
+  padding: 140px var(--nuy-ruler) 150px;
   text-align: center;
-  border-left: 1px solid rgba(216, 193, 173, 0.62);
+  background: var(--nuy-cream);
 }
 
-.benefitItem:first-child {
-  border-left: 0;
+/*
+ * Respiro navy → creme: 32px de degradê no topo da seção, começando no navy
+ * exato do FAQ (que termina logo acima) e desembocando no creme. A seção navy
+ * não é cortada com uma faca — ela se despede. É absoluto: 32px de transição
+ * não podem custar 32px de altura.
+ */
+.ctaFinal::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 32px;
+  background: linear-gradient(
+    180deg,
+    #082b55 0%,
+    #061f3d 32%,
+    rgba(248, 244, 236, 0) 100%
+  );
+  pointer-events: none;
 }
 
-.benefitItem svg {
-  flex: none;
-  color: var(--pl-navy);
+/*
+ * Luz do desfecho: um radial branco que cresce de .97 para 1 na chegada e
+ * depois anda no máximo 8px com a rolagem — a MESMA luz do hero, agora
+ * respondendo à seção em vez da página. Opacidade fixa, sem pulso, sem laço.
+ *
+ * O campo existe para separar o reveal do deslocamento: quem anima não pode ser
+ * quem se move, senão o reveal sobrescreve o `translateY` da luz.
+ */
+.ctaGlowField {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  --pl-rise: 0px;
+  --pl-from-scale: 0.97;
+  --pl-duration: var(--motion-slow);
+  pointer-events: none;
 }
 
-/* ------------------------------------------------------------ responsivo -- */
+.ctaGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    58% 58% at 50% 42%,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 255, 255, 0) 74%
+  );
+  transform: translateY(calc(var(--pl-depth, 0) * -8px));
+}
 
-/* Tablet largo: a navegação solta já não caibaria sem apertar o lockup. */
-@media (max-width: 1159px) {
-  .nav,
+.ctaLogo {
+  width: 200px;
+  height: auto;
+  margin-inline: auto;
+}
+
+.ctaFinal h2 {
+  font-size: clamp(2.1rem, 3.4vw, 3.2rem);
+  margin-top: 28px;
+}
+
+.ctaBody {
+  margin-top: 18px;
+  color: var(--nuy-muted);
+  font-size: clamp(1rem, 1.2vw, 1.13rem);
+}
+
+.ctaActions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 38px;
+}
+
+/* O botão do desfecho tem sombra própria em repouso: é o único elemento da
+   página que ganha peso parado. Nada de glow, nada de escala. */
+.ctaActions .primaryButton {
+  box-shadow: 0 6px 20px rgba(8, 43, 85, 0.08);
+}
+
+.ctaActions .primaryButton:hover {
+  transform: translateY(-2px);
+}
+
+/* -------------------------------------------------------------- footer */
+
+.footer {
+  --pl-step: 70ms;
+  background: var(--nuy-white);
+  border-top: 1px solid var(--nuy-navy-soft);
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 44px var(--nuy-ruler) 36px;
+}
+
+.footer .lockupImage {
+  width: 110px;
+}
+
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 22px;
+}
+
+.footerCopy {
+  margin: 0;
+  color: var(--nuy-muted);
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------------- mobile */
+
+@media (max-width: 899px) {
+  .landing {
+    --nuy-ruler: 20px;
+    /* No bolso o movimento encolhe para uns 60% do desktop: entradas mais
+       curtas, cascata mais rápida, nenhuma duração longa — a primeira interação
+       não pode esperar por animação. Parallax, etapa ativa e luz reativa nem
+       existem aqui: os três são desligados por media query no JavaScript. */
+    --pl-rise: 11px;
+    --pl-duration: var(--motion-base);
+    --pl-step: 55ms;
+  }
+
+  /* O título mascarado sobe menos que no desktop (e nenhum movimento de
+     entrada passa de 12px no empilhado). */
+  .headlineText {
+    --pl-rise: 9px;
+  }
+
+  /* Idem para os títulos de seção: 14px viram 10px. */
+  .sectionTitle {
+    --pl-rise: 10px;
+  }
+
+  /* O respiro do hero acompanha a altura menor da cena. */
+  .hero::after {
+    height: 72px;
+  }
+
+  .publicShell {
+    padding-top: 84px;
+  }
+
   .loginLink {
     display: none;
   }
 
   .menuButton {
     display: inline-flex;
+    /* Alvo de toque de 44px: o piso confortável no dedo. Cabe porque o CTA
+       encolhe junto (abaixo) e a pílula ainda sobra espaço. */
+    width: 44px;
+    height: 44px;
   }
 
-  .header {
-    padding-block: 12px;
+  .headerPill {
+    gap: 12px;
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 10px 8px 18px;
   }
-}
 
-/* Empilhado: a fotografia deixa de dividir a linha e vira faixa inteira,
-   na ordem do brief (headline → copy → CTA → imagem). */
-@media (max-width: 899px) {
+  /* Na largura de 390 o CTA do tamanho do desktop comia a pílula inteira e
+     deixava a logo espremida; aqui ele vira uma ação secundária, do tamanho
+     dos outros elementos. */
+  .headerCta {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 9px 16px;
+  }
+
+  .lockupImage {
+    width: 104px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .mobileNav {
+    position: fixed;
+    top: 76px;
+    display: flex;
+  }
+
   .hero {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 120px 20px 56px;
     min-height: 0;
-    padding-bottom: 0;
-    align-items: start;
   }
 
   .heroCopy {
-    padding-right: var(--pl-gutter);
-    padding-bottom: clamp(30px, 6vw, 46px);
+    --pl-step: 45ms;
   }
 
-  .headline {
-    font-size: clamp(2.1rem, 7.4vw, 3rem);
+  .heroStage {
+    /* Cascata mais curta que a do desktop, mas ainda em degraus. */
+    --pl-step: 60ms;
+    --pl-delay: 150ms;
+    /* Larguras em vw para a fileira caber nos 390px sem estourar — todas abaixo
+       do teto nativo, então seguem nítidas. */
+    height: 370px;
+    padding-bottom: 22px;
   }
 
-  .body {
-    max-width: 52ch;
-    font-size: 1rem;
+  .heroGroup {
+    gap: 8px;
   }
 
-  .heroMedia {
-    margin: 0;
+  /* No empilhado o grupo ocupa quase toda a largura, então a folga da luz e do
+     poço encolhe junto: os mesmos -20% do desktop empurravam a página 45px
+     para o lado, e os 112% do halo, 1px. */
+  .heroLight {
+    width: min(104%, 680px);
   }
 
-  .heroImage {
-    height: auto;
-    aspect-ratio: 4 / 3;
-    /* No empilhado a foto encosta nas laterais: o fade só faz sentido quando
-       ela divide a linha com o texto. */
-    mask-image: none;
+  .heroBase {
+    left: -6%;
+    right: -6%;
+    bottom: -74px;
+    height: 140px;
   }
 
-  /* No empilhado a foto vira faixa de 293px de altura e perde o fade: o
-     manuscrito cairia sobre as flores, sem contraste nenhum. O mock mobile da
-     Proposta C também não o mostra. Some abaixo de 900px. */
-  .script {
-    display: none;
+  .heroProductMain {
+    width: min(216px, 46vw);
   }
 
-  .benefitsList {
+  .heroProductFront {
+    width: min(90px, 19vw);
+  }
+
+  .heroProductBack {
+    width: min(100px, 21vw);
+  }
+
+  /* No empilhado os degraus encolhem: menos sobreposição, base mais rasa. */
+  .heroItemFront {
+    margin-left: -8px;
+    margin-bottom: -7px;
+  }
+
+  .heroItemBack {
+    margin-bottom: -14px;
+  }
+
+  .creatorGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 
-  .benefitItem {
-    border-left: 0;
-    border-top: 1px solid rgba(216, 193, 173, 0.62);
-    justify-content: flex-start;
-    text-align: left;
-    padding-inline: 0;
+  .whatIs {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    padding: 90px 20px;
   }
 
-  .benefitItem:nth-child(-n + 2) {
-    border-top: 0;
+  .progressRow {
+    --pl-step: 70ms;
+    margin-top: 44px;
   }
 
-  .benefitItem:nth-child(even) {
-    padding-left: clamp(10px, 3vw, 24px);
-    border-left: 1px solid rgba(216, 193, 173, 0.62);
-  }
-}
-
-/* Movimento discreto — e dispensável: sob redução de movimento o reveal não
-   anima (o elemento aparece de uma vez) e as transições de hover saem. */
-@media (prefers-reduced-motion: reduce) {
-  .heroImage,
-  .creatorImage,
-  .buttonArrow,
-  .headerCta,
-  .primaryButton,
-  .challengeCta,
-  .communityCta,
-  .rewardImage,
-  .rewardArrow,
-  .ctaFinalImage,
-  .ctaFinalPrimary,
-  .ctaFinalSecondary,
-  .faqIcon,
-  .navLink::after {
-    transition: none;
-  }
-}
-
-@media (max-width: 560px) {
-  /* No celular o header fica só com lockup + hambúrguer: o CTA principal está
-     logo abaixo na dobra, e a pill aqui em cima só disputava espaço com ele.
-     "Entrar" / "Fazer parte" continuam no painel do menu. */
-  .headerCta {
+  /* A linha costura cinco cards lado a lado; no swipe horizontal ela não teria
+     onde crescer e ainda passaria por cima do trilho. */
+  .progressLine {
     display: none;
   }
 
-  .primaryButton {
-    font-size: 14px;
-    padding: 14px 22px;
-  }
-}
-/* ---------------------------------------------------------------- creators -- */
-
-.creators {
-  padding: clamp(56px, 6.4vw, 104px) var(--pl-gutter) clamp(52px, 6vw, 96px);
-  background: var(--pl-cream);
-}
-
-.sectionHead {
-  max-width: 46rem;
-}
-
-/* Teto de 356px por card = largura nativa do retrato (356×534): em 1920 a
-   grade não amplia o bitmap — o excedente vira respiro entre os cards. */
-.creatorsGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 356px));
-  justify-content: space-between;
-  gap: clamp(14px, 1.5vw, 24px);
-  margin: clamp(30px, 3.4vw, 52px) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.creatorMedia {
-  margin: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  background: var(--pl-cream-deep);
-}
-
-.creatorImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.creatorCard:hover .creatorImage {
-  transform: scale(1.02);
-}
-
-/* A linha honesta sobre a grade: sem creator público, o retrato é campanha. */
-.gridNote {
-  margin: clamp(22px, 2.4vw, 32px) 0 0;
-  color: var(--pl-navy-soft);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-}
-
-.sectionEyebrow {
-  margin: 0 0 clamp(16px, 2vw, 26px);
-  color: var(--pl-mauve-ink);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-
-.sectionTitle {
-  margin: 0 0 clamp(18px, 2.2vw, 28px);
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(1.9rem, 2.9vw, 2.9rem);
-  font-weight: 500;
-  line-height: 1.14;
-  letter-spacing: -0.008em;
-  text-wrap: balance;
-}
-
-.sectionTitle em {
-  font-style: italic;
-  color: var(--pl-mauve-ink);
-}
-
-.sectionBody {
-  max-width: 46ch;
-  margin: 0 0 clamp(22px, 2.6vw, 34px);
-  color: var(--pl-navy-soft);
-  font-size: 1.0625rem;
-  line-height: 1.68;
-}
-/* --------------------------------------------------------------- desafio -- */
-
-.challenge {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: clamp(430px, 33vw, 520px);
-  padding: clamp(56px, 6vw, 92px) var(--pl-gutter);
-  background: var(--pl-navy);
-  color: var(--pl-cream-soft);
-  overflow: hidden;
-  isolation: isolate;
-}
-
-/* A still life sangra pela direita e some no navy pela esquerda: a copy fica
-   sobre campo sólido (contraste) e a foto aparece inteira onde não há texto. */
-.challengeMedia {
-  position: absolute;
-  inset: 0 0 0 auto;
-  z-index: 0;
-  width: min(64%, 940px);
-  margin: 0;
-}
-
-.challengeImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 58% 50%;
-}
-
-.challengeScrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    var(--pl-navy) 0%,
-    rgba(14, 42, 68, 0.94) 26%,
-    rgba(14, 42, 68, 0.55) 52%,
-    rgba(14, 42, 68, 0.14) 82%,
-    rgba(14, 42, 68, 0) 100%
-  );
-}
-
-.challengeCopy {
-  position: relative;
-  z-index: 1;
-  max-width: 33rem;
-}
-
-/* Manuscrito do banner (referência: "Pequenas rotinas, grandes sensações.").
-   Ancorado à direita da coluna de copy — nunca sobre a parte clara da foto. */
-.challengeScript {
-  margin: 0 0 clamp(16px, 1.8vw, 26px);
-  color: var(--pl-cream-soft);
-  font-family: var(--pl-font-script), 'Segoe Script', cursive;
-  font-size: clamp(1.35rem, 1.7vw, 1.85rem);
-  font-weight: 600;
-  line-height: 1.08;
-  text-align: right;
-  transform: rotate(-4.5deg);
-  transform-origin: 100% 100%;
-  pointer-events: none;
-}
-
-.challengeEyebrow {
-  margin: 0 0 clamp(16px, 1.8vw, 24px);
-  color: var(--pl-gold);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.challengeTitle {
-  margin: 0 0 clamp(18px, 2vw, 26px);
-  color: var(--pl-cream-soft);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(2.05rem, 3.1vw, 3.05rem);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-}
-
-.challengeTitle em {
-  font-style: italic;
-  color: var(--pl-beige);
-}
-
-.challengeBody {
-  max-width: 34ch;
-  margin: 0 0 clamp(26px, 2.8vw, 36px);
-  color: rgba(253, 250, 245, 0.84);
-  font-size: 1.0625rem;
-  line-height: 1.66;
-}
-
-.challengeActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Pill creme sobre navy: o botão da referência é claro, não navy. */
-.challengeCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 27px;
-  border-radius: 999px;
-  background: var(--pl-cream-soft);
-  color: var(--pl-navy);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.28s ease,
-    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.challengeCta:hover,
-.challengeCta:focus-visible {
-  background: #fff;
-  transform: translateY(-1px);
-}
-
-.challengeCta:hover .buttonArrow,
-.challengeCta:focus-visible .buttonArrow {
-  transform: translateX(4px);
-}
-
-.challengeNote {
-  margin: clamp(20px, 2.2vw, 28px) 0 0;
-  color: var(--pl-gold);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-  line-height: 1.55;
-}
-
-@media (max-width: 899px) {
-  /* A grade vira carrossel: os quatro retratos passam a rolar na horizontal,
-     sangrando nas duas bordas, com o snap no começo de cada card. */
-  .creatorsGrid {
-    display: flex;
-    gap: 14px;
-    margin-inline: calc(var(--pl-gutter) * -1);
-    padding: 0 var(--pl-gutter) 6px;
+  .steps {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(220px, 1fr);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
+    margin-inline: -20px;
+    padding-inline: 20px;
+    padding-bottom: 8px;
   }
 
-  .creatorsGrid::-webkit-scrollbar {
-    display: none;
-  }
-
-  .creatorCard {
-    /* O teto de 356px (largura nativa do retrato) vale também no carrossel:
-       em 768px, 68vw daria 522px e o bitmap seria ampliado. Abaixo do tablet
-       o 68vw é menor que o teto e a regra não muda nada. */
-    flex: 0 0 min(68vw, 356px);
+  .stepCard {
     scroll-snap-align: start;
   }
 
-  .sectionTitle {
-    font-size: clamp(1.7rem, 6.6vw, 2.4rem);
+  .faq {
+    padding: 70px 20px 90px;
   }
 
-  /* Empilhado o banner deixa de ser paisagem: foto em faixa e copy sob ela. */
-  .challenge {
-    display: block;
-    min-height: 0;
-    padding: 0 0 clamp(44px, 8vw, 62px);
-  }
-
-  .challengeMedia {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    aspect-ratio: 16 / 11;
-  }
-
-  .challengeScrim {
-    background: linear-gradient(
-      to bottom,
-      rgba(14, 42, 68, 0) 38%,
-      rgba(14, 42, 68, 0.55) 74%,
-      var(--pl-navy) 100%
-    );
-  }
-
-  .challengeCopy {
-    max-width: none;
-    padding: clamp(26px, 6vw, 40px) var(--pl-gutter) 0;
-  }
-}
-/* ------------------------------------------------------------- comunidade -- */
-
-.community {
-  display: grid;
-  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(26px, 3.4vw, 72px);
-  padding: clamp(56px, 6vw, 96px) var(--pl-gutter);
-  background: var(--pl-navy);
-  color: var(--pl-cream-soft);
-  /* Dois blocos navy em sequência (05 → 06): o corte é um fio dourado de 1px,
-     não ornamento — a copy e a foto continuam separando os blocos. */
-  border-top: 1px solid rgba(212, 185, 138, 0.3);
-}
-
-.communityCopy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.communityEyebrow {
-  margin: 0 0 clamp(16px, 1.8vw, 24px);
-  color: var(--pl-gold);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.communityTitle {
-  margin: 0 0 clamp(18px, 2vw, 26px);
-  color: var(--pl-cream-soft);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(2.05rem, 3.1vw, 3.05rem);
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  text-wrap: balance;
-}
-
-.communityTitle em {
-  font-style: italic;
-  color: var(--pl-beige);
-}
-
-.communityBody {
-  max-width: 40ch;
-  margin: 0 0 clamp(26px, 2.8vw, 36px);
-  color: rgba(253, 250, 245, 0.84);
-  font-size: 1.0625rem;
-  line-height: 1.66;
-}
-
-.communityActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.communityCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 27px;
-  border-radius: 999px;
-  background: var(--pl-cream-soft);
-  color: var(--pl-navy);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.28s ease,
-    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.communityCta:hover,
-.communityCta:focus-visible {
-  background: #fff;
-  transform: translateY(-1px);
-}
-
-.communityCta:hover .buttonArrow,
-.communityCta:focus-visible .buttonArrow {
-  transform: translateX(4px);
-}
-
-/* Índice do manifesto: o que a comunidade reúne — ícone outline e rótulo,
-   sem card e sem moldura, para não repetir a faixa de benefícios do topo. */
-.communityMarks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px clamp(20px, 2.2vw, 34px);
-  margin: clamp(26px, 3vw, 38px) 0 0;
-  padding: clamp(20px, 2.2vw, 28px) 0 0;
-  border-top: 1px solid rgba(212, 185, 138, 0.26);
-  list-style: none;
-}
-
-.communityMark {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: rgba(253, 250, 245, 0.92);
-  font-size: 0.8125rem;
-  letter-spacing: 0.06em;
-}
-
-.communityMark svg {
-  flex: none;
-  color: var(--pl-gold);
-}
-
-.communityMedia {
-  margin: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  background: rgba(253, 250, 245, 0.06);
-}
-
-.communityImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* 16:9 é o formato nativo do arquivo (1672×941): a foto entra inteira,
-     sem corte, em qualquer largura. */
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-
-/* ------------------------------------------------------------ recompensas -- */
-
-.rewards {
-  padding: clamp(56px, 6.4vw, 104px) var(--pl-gutter) clamp(52px, 6vw, 96px);
-  background: var(--pl-cream-soft);
-}
-
-.rewardsInner {
-  display: grid;
-  grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(30px, 4vw, 72px);
-}
-
-.rewardsCopy {
-  max-width: 30rem;
-}
-
-.rewardsTitle {
-  margin: 0 0 clamp(18px, 2.2vw, 28px);
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(1.9rem, 2.9vw, 2.9rem);
-  font-weight: 500;
-  line-height: 1.14;
-  letter-spacing: -0.008em;
-  text-wrap: balance;
-}
-
-.rewardsBody {
-  max-width: 34ch;
-  margin: 0 0 clamp(18px, 2vw, 24px);
-  color: var(--pl-navy-soft);
-  font-size: 1.0625rem;
-  line-height: 1.68;
-}
-
-.rewardsNote {
-  margin: 0;
-  color: var(--pl-navy-soft);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-  line-height: 1.55;
-}
-
-/* Teto de 1096px: mantém cada card em 344px e a grade encostada na régua
-   direita — a sobra vira respiro entre a copy e os cards, como no resto da
-   página. Os três recortes têm 814px nativos, muito acima do slot. */
-.rewardsCards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(16px, 1.8vw, 32px);
-  max-width: 1096px;
-  margin: 0 0 0 auto;
-  padding: 0;
-  list-style: none;
-}
-
-.rewardCard {
-  min-width: 0;
-}
-
-.rewardLink {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(12px, 1.3vw, 18px);
-  color: inherit;
-  text-decoration: none;
-}
-
-.rewardMedia {
-  margin: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  background: var(--pl-cream-deep);
-}
-
-.rewardImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-/* Hover do brief: imagem 1 → 1,015, título navy → navy (sem troca de cor) e
-   seta +3px. Nada mais se mexe. */
-.rewardLink:hover .rewardImage,
-.rewardLink:focus-visible .rewardImage {
-  transform: scale(1.015);
-}
-
-.rewardHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.rewardTitle {
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(1.05rem, 1.15vw, 1.25rem);
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.rewardArrow {
-  flex: none;
-  color: var(--pl-mauve-ink);
-  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.rewardLink:hover .rewardArrow,
-.rewardLink:focus-visible .rewardArrow {
-  transform: translateX(3px);
-}
-
-.rewardText {
-  color: var(--pl-navy-soft);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-}
-
-/* Sem largura para título e cards na mesma linha: a copy sobe e a grade
-   editorial ocupa a régua inteira (a composição alternativa do brief). */
-@media (max-width: 1099px) {
-  .rewardsInner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(28px, 4vw, 44px);
-  }
-
-  .rewardsCopy {
-    max-width: 46rem;
-  }
-
-  .rewardsCards {
-    max-width: none;
-    margin-left: 0;
-  }
-}
-
-@media (max-width: 899px) {
-  /* 06 empilha na ordem do brief: eyebrow, título, texto, CTA e a foto por
-     último — em faixa inteira, como a do hero. */
-  .community {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .communityTitle {
-    font-size: clamp(1.7rem, 6.6vw, 2.4rem);
-  }
-
-  .communityMedia {
-    margin-inline: calc(var(--pl-gutter) * -1);
-    border-radius: 0;
-  }
-
-  /* 07 no tablet: a grade segue em três colunas (cards de 203 a 256px) — a
-     fotografia continua protagonista e nenhum bitmap é ampliado. Só o vão
-     entre os cards aperta. */
-  .rewardsCards {
-    gap: clamp(12px, 2.2vw, 20px);
-  }
-}
-
-/* 07 no telefone: uma coluna, com a foto inteira e o texto abaixo. A coluna
-   para em 352px — metade dos 814px nativos dos recortes —, o que mantém o card
-   sem ampliação também em DPR 2 (352 × 2 = 704 ≤ 814). Copy e cards na mesma
-   régua, para o par não desalinhar. */
-@media (max-width: 700px) {
-  .rewardsCards {
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(26px, 6vw, 36px);
-    max-width: 352px;
-  }
-
-  .rewardsCopy {
-    max-width: 352px;
-  }
-}
-/* -------------------------------------------------------------- conteúdos -- */
-
-.contents {
-  padding: clamp(56px, 6.4vw, 104px) var(--pl-gutter) clamp(52px, 6vw, 96px);
-  background: var(--pl-cream);
-}
-
-.contentsHead {
-  max-width: 46rem;
-}
-
-.contentsActions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Três colunas tipográficas — não é um acervo (não existe um): o fio de areia
-   entre as colunas faz o papel de moldura sem virar card. */
-.contentsGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(20px, 2.4vw, 40px);
-  margin: clamp(34px, 3.6vw, 54px) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.contentItem {
-  min-width: 0;
-  padding-left: clamp(18px, 2vw, 30px);
-  border-left: 1px solid rgba(216, 193, 173, 0.62);
-}
-
-.contentItem:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.contentIcon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  margin: 0 0 16px;
-  border-radius: 999px;
-  background: var(--pl-beige);
-  color: var(--pl-navy);
-}
-
-.contentTitle {
-  margin: 0 0 8px;
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(1.15rem, 1.4vw, 1.4rem);
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.contentText {
-  max-width: 34ch;
-  margin: 0;
-  color: var(--pl-navy-soft);
-  font-size: 0.9375rem;
-  line-height: 1.62;
-}
-
-.contentsNote {
-  margin: clamp(26px, 2.8vw, 38px) 0 0;
-  color: var(--pl-navy-soft);
-  font-size: 0.8125rem;
-  letter-spacing: 0.04em;
-}
-
-/* ------------------------------------------------------------------- FAQ -- */
-
-.faq {
-  padding: clamp(56px, 6vw, 96px) var(--pl-gutter);
-  background: var(--pl-cream-soft);
-}
-
-.faqInner {
-  display: grid;
-  grid-template-columns: minmax(0, 0.68fr) minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(28px, 3.4vw, 72px);
-}
-
-.faqCopy {
-  max-width: 30rem;
-}
-
-/* Disclosure nativo: sem estado no cliente, abre pelo teclado e funciona com
-   JavaScript desligado. A lista é o próprio separador — fios de areia. */
-.faqList {
-  border-top: 1px solid rgba(216, 193, 173, 0.7);
-}
-
-.faqItem {
-  border-bottom: 1px solid rgba(216, 193, 173, 0.7);
-}
-
-.faqSummary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 18px 2px;
-  color: var(--pl-navy);
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.4;
-  cursor: pointer;
-  list-style: none;
-}
-
-.faqSummary::-webkit-details-marker {
-  display: none;
-}
-
-/* A pergunta é o que pode crescer: o ícone nunca encolhe (`flex: none`). */
-.faqQuestion {
-  min-width: 0;
-  text-wrap: pretty;
-}
-
-.faqSummary:hover .faqIcon {
-  color: var(--pl-navy);
-}
-
-.faqSummary:focus-visible {
-  outline: 2px solid var(--pl-navy);
-  outline-offset: 2px;
-}
-
-.faqIcon {
-  flex: none;
-  color: var(--pl-mauve-ink);
-  transition:
-    transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
-    color 0.25s ease;
-}
-
-.faqItem[open] .faqIcon {
-  transform: rotate(180deg);
-}
-
-.faqAnswer {
-  max-width: 62ch;
-  margin: 0;
-  padding: 0 clamp(30px, 3vw, 46px) 20px 2px;
-  color: var(--pl-navy-soft);
-  font-size: 0.9375rem;
-  line-height: 1.66;
-}
-
-/* Saídas da FAQ: os três destinos reais de quem termina de ler. A lista fecha
-   com o próprio fio — o pé não desenha um segundo. */
-.faqFoot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px clamp(18px, 2.2vw, 32px);
-  margin: clamp(34px, 3.4vw, 48px) 0 0;
-  color: var(--pl-navy-soft);
-  font-size: 0.9375rem;
-}
-
-/* Link de texto da casa (FAQ, rodapé, notas): navy, fio fino que fecha no
-   hover — o mesmo desenho do resto da página. */
-.link {
-  color: var(--pl-navy);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(14, 42, 68, 0.32);
-  padding-bottom: 2px;
-  transition: border-color 0.25s ease;
-}
-
-.link:hover,
-.link:focus-visible {
-  border-color: var(--pl-navy);
-}
-
-/* -------------------------------------------------------------- CTA final -- */
-
-.ctaFinal {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.02fr);
-  align-items: center;
-  gap: clamp(30px, 4vw, 84px);
-  padding: clamp(56px, 6vw, 96px) var(--pl-gutter);
-  background: var(--pl-navy);
-  color: var(--pl-cream-soft);
-}
-
-.ctaFinalCopy {
-  max-width: 34rem;
-  justify-self: start;
-}
-
-.ctaFinalEyebrow {
-  margin: 0 0 clamp(16px, 1.8vw, 24px);
-  color: var(--pl-gold);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-}
-
-.ctaFinalTitle {
-  margin: 0 0 clamp(18px, 2vw, 26px);
-  color: var(--pl-cream-soft);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(2.05rem, 3.2vw, 3.2rem);
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -0.012em;
-  text-wrap: balance;
-}
-
-.ctaFinalBody {
-  max-width: 36ch;
-  margin: 0 0 clamp(26px, 2.8vw, 36px);
-  color: rgba(253, 250, 245, 0.84);
-  font-size: 1.0625rem;
-  line-height: 1.66;
-}
-
-.ctaFinalActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-}
-
-/* Pill creme sobre navy, irmã do CTA do desafio. */
-.ctaFinalPrimary {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 27px;
-  border-radius: 999px;
-  background: var(--pl-cream-soft);
-  color: var(--pl-navy);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.28s ease,
-    transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.ctaFinalPrimary:hover,
-.ctaFinalPrimary:focus-visible {
-  background: #fff;
-  transform: translateY(-1px);
-}
-
-.ctaFinalPrimary:hover .buttonArrow,
-.ctaFinalPrimary:focus-visible .buttonArrow {
-  transform: translateX(4px);
-}
-
-/* Contorno creme: a segunda porta, sempre mais quieta que a primeira. */
-.ctaFinalSecondary {
-  display: inline-flex;
-  align-items: center;
-  padding: 14px 26px;
-  border: 1px solid rgba(253, 250, 245, 0.42);
-  border-radius: 999px;
-  color: var(--pl-cream-soft);
-  font-size: 15px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background 0.28s ease,
-    border-color 0.28s ease;
-}
-
-.ctaFinalSecondary:hover,
-.ctaFinalSecondary:focus-visible {
-  background: rgba(253, 250, 245, 0.1);
-  border-color: rgba(253, 250, 245, 0.72);
-}
-
-.ctaFinalMedia {
-  margin: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  background: rgba(253, 250, 245, 0.06);
-}
-
-.ctaFinalImage {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* 4:3 é o formato nativo do arquivo (1448×1086): a foto entra inteira. */
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  transition: transform 0.9s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.ctaFinalMedia:hover .ctaFinalImage {
-  transform: scale(1.015);
-}
-
-/* ---------------------------------------------------------------- rodapé -- */
-
-.footer {
-  padding: clamp(40px, 4.4vw, 64px) var(--pl-gutter) clamp(28px, 3vw, 40px);
-  background: var(--pl-cream);
-}
-
-.footerInner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 22px clamp(28px, 4vw, 60px);
-}
-
-.footerNav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px clamp(18px, 2.4vw, 34px);
-}
-
-.footerBottom {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px 28px;
-  margin: clamp(28px, 3vw, 40px) 0 0;
-  padding-top: clamp(18px, 2vw, 26px);
-  border-top: 1px solid rgba(216, 193, 173, 0.55);
-}
-
-.footerCopy {
-  margin: 0;
-  color: var(--pl-navy-soft);
-  font-size: 13px;
-}
-
-.footerLegal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px clamp(18px, 2.2vw, 30px);
-  font-size: 13.5px;
-}
-
-/* ------------------------------------------------------------ legal (rotas) -- */
-
-/* Termos e privacidade: a mesma régua da landing, sem reveal (o observador só
-   existe na landing) e sem hero — a página é o próprio documento. */
-.legal {
-  max-width: 52rem;
-  padding: clamp(44px, 5vw, 80px) var(--pl-gutter) clamp(56px, 6vw, 96px);
-}
-
-.legalTitle {
-  margin: 0 0 clamp(20px, 2.4vw, 30px);
-  color: var(--pl-navy);
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: clamp(2.2rem, 3.4vw, 3.4rem);
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -0.014em;
-}
-
-/* O aviso É o conteúdo: caixa de areia, sem alarme — a página declara um
-   estado, não um erro. */
-.legalNote {
-  max-width: 62ch;
-  margin: 0;
-  padding: clamp(20px, 2.4vw, 28px) clamp(20px, 2.6vw, 30px);
-  border: 1px solid rgba(216, 193, 173, 0.8);
-  border-radius: 12px;
-  background: var(--pl-cream-soft);
-  color: var(--pl-navy-soft);
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-/* Chrome das páginas públicas fora da landing: com pouco conteúdo, o `main`
-   come a sobra para o rodapé não flutuar no meio da página. A landing não usa
-   esta classe — lá o conteúdo sempre passa da dobra. */
-.publicShell {
-  display: flex;
-  flex-direction: column;
-}
-
-.publicShell > main {
-  flex: 1;
-}
-
-/* ------------------------------------------------- responsivo (08 → 11) -- */
-
-@media (max-width: 899px) {
-  /* Conteúdos: uma coluna; o fio passa da esquerda para o topo. */
-  .contentsGrid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    margin-top: clamp(28px, 6vw, 40px);
-  }
-
-  .contentItem {
-    padding: clamp(20px, 4.6vw, 28px) 0;
-    border-left: 0;
-    border-top: 1px solid rgba(216, 193, 173, 0.62);
-  }
-
-  .contentItem:first-child {
-    border-top: 0;
-    padding-top: 0;
-  }
-
-  /* FAQ empilhada: a copy sobe e a lista ocupa a régua inteira. */
-  .faqInner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(26px, 5vw, 40px);
-  }
-
-  .faqCopy {
-    max-width: 46rem;
-  }
-
-  /* CTA final: convite primeiro, foto em faixa inteira depois — como o
-     manifesto, para a página fechar no mesmo desenho. */
-  .ctaFinal {
-    grid-template-columns: minmax(0, 1fr);
-    gap: clamp(30px, 6vw, 46px);
-    padding-bottom: 0;
-  }
-
-  .ctaFinalCopy {
-    max-width: 46rem;
-    justify-self: stretch;
-  }
-
-  .ctaFinalMedia {
-    margin-inline: calc(var(--pl-gutter) * -1);
-    border-radius: 0;
-  }
-
-  .ctaFinalImage {
-    aspect-ratio: 16 / 11;
-  }
-
-  .footerInner,
-  .footerBottom {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 560px) {
-  .ctaFinalActions {
-    align-items: stretch;
+  .ctaActions {
     flex-direction: column;
+    align-items: stretch;
+    max-width: 340px;
+    margin-inline: auto;
   }
 
-  .ctaFinalPrimary,
-  .ctaFinalSecondary {
-    justify-content: center;
-    width: 100%;
+  .footer {
+    padding: 36px 20px 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after,
+  /* O `*` não alcança pseudo-elemento: sem esta linha a abertura do accordion
+     continuaria animando sob movimento reduzido. */
+  .landing .faqItem::details-content {
+    /* `0s`, e não o idioma `0.01ms`: este `!important` vence o `transition:none`
+     do reveal, e o contrato medido exige duração exatamente zero. Nada aqui
+     depende de `transitionend`. */
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
   }
 
-  .faqSummary {
-    padding: 16px 2px;
-  }
-
-  .faqAnswer {
-    padding-right: 2px;
+  /* Indicador de progresso é movimento puro: sob movimento reduzido ele sai de
+     cena. Nada deixa de funcionar por causa disso — a navegação é a mesma. */
+  .headerProgress {
+    display: none;
   }
 }

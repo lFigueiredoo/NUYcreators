@@ -1,12 +1,12 @@
-import { expect, test } from '@playwright/test';
+﻿import { expect, test } from '@playwright/test';
 
 /**
- * Proposta C — movimento discreto da landing.
+ * Landing clean — movimento discreto (Opção 1).
  *
- * O design anterior (GSAP + Lenis, órbita, parallax) foi aposentado: o que
- * existe agora é um reveal de fade + translateY, uma vez por elemento, e nada
- * mais. Estes testes descrevem exatamente esse contrato — inclusive a promessa
- * de que sem JS (ou com movimento reduzido) a página continua legível.
+ * Nada de GSAP cinematográfico, parallax, partículas ou glow: o que existe é
+ * um reveal de fade + translateY(8px), uma vez por elemento. Estes testes
+ * descrevem esse contrato — inclusive a promessa de que sem JS (ou com
+ * movimento reduzido) a página continua legível.
  */
 
 test('o reveal entra uma vez por elemento e nunca deixa conteúdo escondido', async ({ page }) => {
@@ -19,9 +19,10 @@ test('o reveal entra uma vez por elemento e nunca deixa conteúdo escondido', as
   await page.evaluate(() => document.fonts.ready);
 
   // Abaixo da dobra o elemento ainda não foi revelado — é assim que o fade
-  // existe. O desafio está bem além do fold em 1440×1000.
+  // existe. "Como participar" fica bem além do fold em 1440×1000.
   const before = await page.evaluate(() => {
-    const target = document.querySelector<HTMLElement>('[class*=challengeCopy] [data-pl-reveal]')!;
+    // O `data-pl-reveal` vive no PRÓPRIO card (não num filho): seletor composto.
+    const target = document.querySelector<HTMLElement>('[class*=stepCard][data-pl-reveal]')!;
     const style = getComputedStyle(target);
     return {
       visible: target.hasAttribute('data-pl-visible'),
@@ -35,35 +36,18 @@ test('o reveal entra uma vez por elemento e nunca deixa conteúdo escondido', as
   expect(before.transform).not.toBe('none');
   expect(parseFloat(before.duration)).toBeGreaterThan(0);
 
-  await page.locator('#desafios').scrollIntoViewIfNeeded();
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
-        document
-          .querySelector<HTMLElement>('[class*=challengeCopy] [data-pl-reveal]')!
-          .hasAttribute('data-pl-visible'),
-      ),
-    )
-    .toBe(true);
-
-  // O fade leva 0,72s: a leitura tem de esperar a transição terminar, não
-  // fotografar o meio dela.
+  await page.locator('#como-participar').scrollIntoViewIfNeeded();
   await expect
     .poll(() =>
       page.evaluate(() =>
         Array.from(
-          document.querySelectorAll<HTMLElement>('[class*=challenge] [data-pl-reveal]'),
-        ).every((target) => getComputedStyle(target).opacity === '1'),
+          document.querySelectorAll<HTMLElement>('[class*=stepCard][data-pl-reveal]'),
+        ).every((target) => target.hasAttribute('data-pl-visible')),
       ),
     )
     .toBe(true);
-  expect(
-    await page.evaluate(
-      () => document.querySelectorAll('[class*=challenge] [data-pl-reveal]').length,
-    ),
-  ).toBeGreaterThan(3);
 
-  // Nada de lenis/GSAP de volta: o documento é o scroll nativo.
+  // Nada de Lenis/GSAP de volta: o documento é o scroll nativo.
   expect(await page.evaluate(() => document.documentElement.classList.contains('lenis'))).toBe(
     false,
   );
@@ -88,11 +72,11 @@ test('com movimento reduzido o reveal não anima, mas o conteúdo aparece igual'
   expect(durations.every((duration) => parseFloat(duration) === 0)).toBe(true);
 
   // E o conteúdo continua aparecendo: o reveal é enfeite, não pré-requisito.
-  await page.locator('#desafios').scrollIntoViewIfNeeded();
-  await expect(page.locator('#pl-challenge-title')).toBeVisible();
+  await page.locator('#como-participar').scrollIntoViewIfNeeded();
+  await expect(page.locator('#pl-how-to-title')).toBeVisible();
   expect(
     await page.evaluate(
-      () => getComputedStyle(document.getElementById('pl-challenge-title')!).opacity,
+      () => getComputedStyle(document.getElementById('pl-how-to-title')!).opacity,
     ),
   ).toBe('1');
 });
@@ -112,9 +96,9 @@ test('sem JavaScript a página inteira nasce visível', async ({ browser, baseUR
   );
   expect(hidden).toEqual([]);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(page.locator('#pl-challenge-title')).toBeVisible();
+  await expect(page.locator('#pl-how-to-title')).toBeVisible();
   // A âncora do header continua funcionando sem JS.
-  await page.locator('header a[href="#comunidade"]').click();
-  await expect(page).toHaveURL(/#comunidade$/);
+  await page.locator('header a[href="#como-participar"]').click();
+  await expect(page).toHaveURL(/#como-participar$/);
   await context.close();
 });

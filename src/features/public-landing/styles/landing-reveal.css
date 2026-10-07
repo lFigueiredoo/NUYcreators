@@ -13,26 +13,126 @@
  *
  * Sem JavaScript nada disso esconde conteúdo: o `<noscript>` de
  * public-landing.tsx devolve opacidade e transform com `!important`.
+ *
+ * MOVIMENTO — como o polish compõe o repouso sem brigar com o reveal
+ * ---------------------------------------------------------------------------
+ * Aqui mora só o MECANISMO; os valores são design e vivem no módulo, que os
+ * declara no contêiner de cada seção e deixa herdar:
+ *   --pl-rise         quanto o elemento sobe ao entrar (padrão: 18px)
+ *   --pl-from-scale   escala de entrada, multiplicada pela de repouso
+ *   --pl-rest-scale   escala de repouso (profundidade: frasco menor = .93)
+ *   --pl-duration     duração da transição (token --motion-slow = 720ms)
+ *   --pl-step / --pl-delay   passo da cascata e atraso inicial
+ *
+ * O elemento declara só o seu DEGRAU (`data-pl-index`), e o contêiner decide o
+ * passo — a cascata inteira se ajusta num lugar só, sem que nenhuma regra de
+ * seção precise vencer esta folha por especificidade. E como o estado visível
+ * devolve `--pl-rest-scale`, um frasco que "senta" em `scale(.93)` continua
+ * assentado depois do reveal: o movimento termina onde a composição começa.
+ *
+ * VARIEDADE — três entradas, não uma repetida:
+ *   (padrão)          título: sobe 14–18px e aparece
+ *   `side`            conteúdo ao lado de outro: entra de lado, no máximo 12px
+ *   `--pl-from-scale` card e ícone: sobe 10px e assenta de .985 (e .94 no ícone)
+ *   `line`            régua: cresce da esquerda para a direita
  */
 
 .pl-landing [data-pl-reveal] {
   opacity: 0;
-  transform: translateY(14px);
+  transform: translateY(var(--pl-rise, 18px))
+    scale(calc(var(--pl-rest-scale, 1) * var(--pl-from-scale, 1)));
   transition:
-    opacity 0.72s ease,
-    transform 0.72s cubic-bezier(0.22, 0.61, 0.36, 1);
+    opacity var(--pl-duration, 0.72s) ease,
+    transform var(--pl-duration, 0.72s) var(--ease-premium, cubic-bezier(0.22, 0.61, 0.36, 1));
   transition-delay: var(--pl-stagger, 0ms);
 }
 
 .pl-landing [data-pl-visible] {
   opacity: 1;
-  transform: none;
+  transform: translateY(0) scale(var(--pl-rest-scale, 1));
 }
 
-/* Sob redução de movimento o reveal não anima: o elemento aparece de uma vez.
-   As transições de hover continuam desligadas no módulo. */
+/* Cascata: 0 entra primeiro, 5 por último. */
+.pl-landing [data-pl-reveal][data-pl-index='1'] {
+  --pl-stagger: calc(var(--pl-delay, 0ms) + var(--pl-step, 80ms) * 1);
+}
+
+.pl-landing [data-pl-reveal][data-pl-index='2'] {
+  --pl-stagger: calc(var(--pl-delay, 0ms) + var(--pl-step, 80ms) * 2);
+}
+
+.pl-landing [data-pl-reveal][data-pl-index='3'] {
+  --pl-stagger: calc(var(--pl-delay, 0ms) + var(--pl-step, 80ms) * 3);
+}
+
+.pl-landing [data-pl-reveal][data-pl-index='4'] {
+  --pl-stagger: calc(var(--pl-delay, 0ms) + var(--pl-step, 80ms) * 4);
+}
+
+.pl-landing [data-pl-reveal][data-pl-index='5'] {
+  --pl-stagger: calc(var(--pl-delay, 0ms) + var(--pl-step, 80ms) * 5);
+}
+
+/*
+ * Variante `line`: em vez de subir, a régua cresce da esquerda para a direita —
+ * é a linha de progressão que costura os cinco passos de "Como participar".
+ * Declarada depois do estado visível genérico porque tem a mesma
+ * especificidade (0,2,0) e precisa vencer por ordem.
+ */
+.pl-landing [data-pl-reveal='line'] {
+  opacity: 0;
+  transform: scaleX(0);
+  /* Um divisor centrado cresce do meio; a régua dos passos, da esquerda. */
+  transform-origin: var(--pl-line-origin, left center);
+  transition:
+    opacity var(--pl-duration, 0.9s) ease,
+    transform var(--pl-duration, 0.9s) var(--ease-premium, cubic-bezier(0.22, 0.61, 0.36, 1));
+  transition-delay: var(--pl-stagger, 0ms);
+}
+
+.pl-landing [data-pl-reveal='line'][data-pl-visible] {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/*
+ * Variante `side`: o bloco entra DE LADO — e só onde ele realmente mora ao
+ * lado de outro (a coluna de benefícios, à direita da copy). O teto é 12px; o
+ * `--pl-rest-scale` continua valendo, então a profundidade de repouso não se
+ * perde na entrada. Igual à régua, esta regra vem depois da genérica porque
+ * tem a mesma especificidade e precisa vencer por ordem.
+ */
+.pl-landing [data-pl-reveal='side'] {
+  transform: translateX(var(--pl-from-x, 12px)) scale(var(--pl-rest-scale, 1));
+}
+
+.pl-landing [data-pl-reveal='side'][data-pl-visible] {
+  transform: translateX(0) scale(var(--pl-rest-scale, 1));
+}
+
+/* No empilhado não existe "ao lado": o mesmo bloco entra de baixo, como todo o
+   resto — e mais curto, como manda a versão de bolso. */
+@media (max-width: 899px) {
+  .pl-landing [data-pl-reveal='side'] {
+    transform: translateY(var(--pl-rise, 11px)) scale(var(--pl-rest-scale, 1));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Sob redução de movimento nada nasce escondido: nem a transição, nem o
+     estado inicial. Zerar só a duração deixaria o conteúdo abaixo da dobra em
+     `opacity: 0` até a pessoa rolar — aparecendo em estalo no caminho. Aqui ele
+     já nasce no lugar de repouso (a escala de profundidade é composição, não
+     movimento) e a página inteira se apresenta de uma vez, como o brief exige.
+     A régua, declarada depois, nasce inteira em vez de encolhida. */
   .pl-landing [data-pl-reveal] {
+    opacity: 1;
+    transform: scale(var(--pl-rest-scale, 1));
     transition: none;
+  }
+
+  .pl-landing [data-pl-reveal='line'] {
+    opacity: 1;
+    transform: scaleX(1);
   }
 }

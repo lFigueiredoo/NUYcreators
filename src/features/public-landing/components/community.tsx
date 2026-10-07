@@ -1,80 +1,90 @@
 import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowRight, BookOpen, Gift, Trophy, Users } from 'lucide-react';
-import type { CSSProperties } from 'react';
 import styles from '../styles/landing.module.css';
 
 /**
- * 06 — Comunidade / manifesto (Proposta C).
+ * 03 — Comunidade / Creators.
  *
- * O segundo bloco navy da página, e o mais editorial: copy na régua à esquerda,
- * fotografia de casa real à direita. A copy é verbatim do brief — nenhum número
- * de creators, desafio ou recompensa aparece (não existe backend que os prove).
- *
- * A linha de quatro marcas é um índice do que a comunidade reúne, não uma
- * segunda faixa de benefícios: ícone outline em dourado e rótulo em creme,
- * sem card e sem moldura.
+ * REGRA CRÍTICA: não existe creator fictícia, @ inventado, número de seguidores
+ * nem foto de pessoa gerada. Enquanto o backend não tem creators reais, a seção
+ * mostra o estado de pré-lançamento — sem grade de caixas vazias, que lê como
+ * layout inacabado. A grade entra sozinha quando `creators` chegar.
  */
-const marcas = [
-  { Icone: Users, rotulo: 'Creators' },
-  { Icone: Trophy, rotulo: 'Desafios' },
-  { Icone: Gift, rotulo: 'Recompensas' },
-  { Icone: BookOpen, rotulo: 'Conteúdos' },
-] as const;
+export type CommunityCreator = {
+  id: string;
+  name: string;
+  handle: string;
+  imageUrl: string;
+};
 
-export function Community() {
+export function Community({ creators = [] }: { creators?: readonly CommunityCreator[] }) {
+  const hasCreators = creators.length > 0;
+
   return (
-    <section id="manifesto" className={styles.community} aria-labelledby="pl-community-title">
-      <div className={styles.communityCopy}>
-        <p className={styles.communityEyebrow} data-pl-reveal>
-          COMUNIDADE NUY
-        </p>
+    <section id="comunidade" className={styles.community} aria-labelledby="pl-community-title">
+      {/* Marca abstrata de comunidade: três aros concêntricos atrás do texto.
+          Sem gente inventada, sem caixa vazia — só presença. Decorativa, então
+          fora da árvore de acessibilidade.
 
-        <h2 id="pl-community-title" className={styles.communityTitle} data-pl-reveal>
-          Mais que limpeza,
-          <br />
-          <em>uma casa que acolhe.</em>
-        </h2>
+          O reveal mora em cada ARO, não no conjunto: o conjunto se centra por
+          `translate(-50%, -50%)`, e o reveal é dono do `transform` de quem
+          anima — juntos, o centro caía fora e a marca empurrava a página 86px
+          para o lado no celular. De quebra, os aros abrem em cascata. */}
+      <div className={styles.communityMark} aria-hidden="true">
+        <span className={styles.communityRing} data-pl-reveal data-pl-index="0" />
+        <span className={styles.communityRing} data-pl-reveal data-pl-index="1" />
+        <span className={styles.communityRing} data-pl-reveal data-pl-index="2" />
+      </div>
 
-        <p className={styles.communityBody} data-pl-reveal>
-          Conteúdos, desafios, experiências e pessoas reais que tornam a rotina mais leve, bonita e
-          significativa.
-        </p>
+      <p className={styles.eyebrow} data-pl-reveal data-pl-index="1">
+        COMUNIDADE
+      </p>
 
-        <div className={styles.communityActions} data-pl-reveal>
-          <Link href="/cadastro" className={styles.communityCta}>
-            Fazer parte da comunidade
-            <ArrowRight size={17} aria-hidden="true" className={styles.buttonArrow} />
-          </Link>
-        </div>
+      {/* O título descreve o que a seção é, não afirma quem já está nela: sem
+          creator real, "conheça quem já faz parte" prometeria gente que a
+          própria nota de pré-lançamento desmente. */}
+      <h2
+        id="pl-community-title"
+        className={styles.sectionTitle}
+        data-pl-reveal
+        data-pl-index="2"
+      >
+        Feito com quem
+        <br />
+        cuida da casa
+      </h2>
 
-        <ul className={styles.communityMarks}>
-          {marcas.map(({ Icone, rotulo }, indice) => (
+      <p className={styles.sectionBody} data-pl-reveal data-pl-index="3">
+        O espaço de quem gosta de dividir a rotina: o que testou, o que deu certo
+        <br />e o que deixa a casa com a sua cara.
+      </p>
+
+      {hasCreators ? (
+        <ul className={styles.creatorGrid}>
+          {creators.map((creator, index) => (
             <li
-              key={rotulo}
-              className={styles.communityMark}
+              key={creator.id}
+              className={styles.creatorCard}
               data-pl-reveal
-              style={{ '--pl-stagger': `${indice * 70}ms` } as CSSProperties}
+              data-pl-index={String(Math.min(index, 3))}
             >
-              <Icone size={17} strokeWidth={1.5} aria-hidden="true" />
-              <span>{rotulo}</span>
+              <Image
+                src={creator.imageUrl}
+                alt={`Foto de ${creator.name}`}
+                width={356}
+                height={460}
+                sizes="(max-width: 899px) 45vw, 240px"
+                className={styles.creatorPhoto}
+              />
+              <p className={styles.creatorName}>{creator.name}</p>
+              <p className={styles.creatorHandle}>{creator.handle}</p>
             </li>
           ))}
         </ul>
-      </div>
-
-      <figure className={styles.communityMedia} data-pl-reveal>
-        <Image
-          src="/brand/nuy-creators-v2/home/cozy-home.webp"
-          alt="Sala iluminada pelo sol com sofá, manta de tricô e a linha NUY sobre a mesa de mármore"
-          width={1672}
-          height={941}
-          quality={88}
-          sizes="(max-width: 899px) 100vw, min(60vw, 954px)"
-          className={styles.communityImage}
-          loading="lazy"
-        />
-      </figure>
+      ) : (
+        <p className={styles.communityNote} data-pl-reveal data-pl-index="4">
+          Em breve, você vai conhecer quem está criando com a NUY.
+        </p>
+      )}
     </section>
   );
 }
