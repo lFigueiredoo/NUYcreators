@@ -54,6 +54,59 @@ export type PlanEntry = {
   found?: string;
 };
 
+/**
+ * A postura de acesso que o manifesto exige de TODA table gerenciada: nenhuma
+ * permissão no nível da table e `rowSecurity` ligada — o acesso é por linha.
+ *
+ * Existe como valor único, e não repetido em cada chamada, porque três caminhos
+ * escrevem esse estado (CREATE, reconciliação de segurança e o UPDATE de
+ * propriedade móvel) e o plano compara contra ele. Com a expectativa duplicada,
+ * o `updateTable` do caminho UPDATE ficou sem os campos de acesso: a API
+ * reinicia booleano omitido, e um update cosmético de nome desligou a
+ * `rowSecurity` da table `users`.
+ *
+ * Uniformidade medida no staging em 2026-10-07: as 31 tables do manifesto estão
+ * com `rowSecurity=true`, `enabled=true` e sem permissão de table.
+ */
+export const tableAccess = {
+  permissions: collectionPermissions,
+  rowSecurity: true,
+} as const;
+
+export type TableWriteArgs = {
+  databaseId: string;
+  tableId: string;
+  name: string;
+  permissions: string[];
+  rowSecurity: boolean;
+};
+
+/**
+ * Os argumentos que `createTable`/`updateTable` recebem — com a MESMA postura de
+ * acesso nos dois. Como `updateTable` reinicia booleano omitido, o payload é
+ * completo por construção: corrigir o nome de exibição não tem como alterar
+ * nada além do nome. Colunas, índices e tipo não cabem aqui — mudá-los não é
+ * UPDATE, e um `UPDATE` de nome não pode nem expressá-los.
+ *
+ * `enabled` fica de fora de propósito: não é campo gerenciado pelo manifesto (o
+ * plano não o classifica), foi medido intacto quando omitido no update real de
+ * `users`, e escrevê-lo aqui reativaria em silêncio uma table desligada à mão.
+ */
+export function tableWriteArgs(
+  action: PlanAction,
+  databaseId: string,
+  tableId: string,
+): TableWriteArgs | null {
+  if (action !== 'CREATE' && action !== 'UPDATE' && action !== 'DRIFT_SECURITY') return null;
+  return {
+    databaseId,
+    tableId,
+    name: tableId,
+    permissions: [...tableAccess.permissions],
+    rowSecurity: tableAccess.rowSecurity,
+  };
+}
+
 export type Clients = {
   db: TablesDB;
   storage: Storage;
@@ -233,7 +286,7 @@ export async function buildPlan(
         continue;
       }
       const found = remote?.value;
-      const tableExpected = `permissions=[${collectionPermissions.join(', ')}], rowSecurity=true`;
+      const tableExpected = `permissions=[${tableAccess.permissions.join(', ')}], rowSecurity=${tableAccess.rowSecurity}`;
       if (!found) {
         entries.push({
           action: 'CREATE',

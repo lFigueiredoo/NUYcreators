@@ -22,7 +22,7 @@ import {
   type Column,
 } from './schema';
 import { parseEnvironment } from '../../src/lib/env/schema';
-import { collectionPermissions, bucketPermissions } from '../../src/lib/security/permissions';
+import { bucketPermissions } from '../../src/lib/security/permissions';
 import { assertDedicatedProject } from './safety';
 import {
   verifyReadOnlyIdentity,
@@ -39,6 +39,7 @@ import {
   indexKey,
   summarize,
   sortedEqual,
+  tableWriteArgs,
   TEAM_NAME,
   type PlanAction,
   type PlanKind,
@@ -163,27 +164,16 @@ try {
     for (const table of tables) {
       const tableId = table.id;
       const tableAction = actionOf('table', tableId);
-      if (tableAction === 'CREATE')
-        await db.createTable({
-          databaseId,
-          tableId,
-          name: tableId,
-          permissions: collectionPermissions,
-          rowSecurity: true,
-        });
-      else if (tableAction === 'UPDATE')
-        await db.updateTable({ databaseId, tableId, name: tableId });
-      else if (tableAction === 'DRIFT_SECURITY') {
-        // Só chega aqui com --reconcile-security. Escreve exatamente os campos de
-        // acesso do manifesto; nada de schema é tocado.
-        await db.updateTable({
-          databaseId,
-          tableId,
-          name: tableId,
-          permissions: collectionPermissions,
-          rowSecurity: true,
-        });
-        console.log(`RECONCILED_SECURITY table ${tableId}`);
+      // CREATE, UPDATE e DRIFT_SECURITY escrevem o MESMO payload: a postura de
+      // acesso não pode ficar de fora de um update que só queria corrigir o nome
+      // de exibição — `updateTable` reinicia booleano omitido.
+      const tableWrite = tableWriteArgs(tableAction, databaseId, tableId);
+      if (tableWrite && tableAction === 'CREATE') await db.createTable(tableWrite);
+      else if (tableWrite) {
+        // Só chega a DRIFT_SECURITY com --reconcile-security: o payload é o mesmo
+        // do update comum, o que muda é o plano ter autorizado mexer em acesso.
+        await db.updateTable(tableWrite);
+        if (tableAction === 'DRIFT_SECURITY') console.log(`RECONCILED_SECURITY table ${tableId}`);
       }
 
       for (const column of table.columns)

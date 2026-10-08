@@ -3,11 +3,14 @@ import {
   buildPlan,
   indexKey,
   summarize,
+  tableAccess,
+  tableWriteArgs,
   TEAM_NAME,
   type Clients,
   type PlanEntry,
   type PlanKind,
 } from '../../infra/appwrite/plan';
+import { collectionPermissions } from '../../src/lib/security/permissions';
 import {
   tables,
   buckets,
@@ -476,5 +479,135 @@ describe('plano remoto de provisionamento', () => {
     const drifted = entry(entries, 'marker', MARKER_ID);
     expect(drifted.action).toBe('DRIFT_IMMUTABLE');
     expect(drifted.found).toBe('outro valor');
+  });
+});
+
+/**
+ * A regressão que este bloco existe para impedir, medida em staging em
+ * 2026-10-07: o caminho UPDATE chamava `updateTable({ databaseId, tableId,
+ * name })` e a API reinicia booleano que não vem no corpo — o update cosmético
+ * do nome desligou a `rowSecurity` da table `users` (e a correção exigiu
+ * `--reconcile-security` à mão).
+ *
+ * O que se prova aqui é o PAYLOAD, não um objeto de conveniência: os mesmos
+ * argumentos que o provisionador entrega ao SDK, capturados no momento da
+ * chamada por um `db` falso com a forma do cliente real.
+ */
+function dbEspiao() {
+  const chamadas: { metodo: string; args: Record<string, unknown> }[] = [];
+  const anotar =
+    (metodo: string) =>
+    async (args: Record<string, unknown>): Promise<unknown> => {
+      chamadas.push({ metodo, args });
+      return {};
+    };
+  return {
+    chamadas,
+    db: { createTable: anotar('createTable'), updateTable: anotar('updateTable') },
+  };
+}
+
+/** O que a API faz com o que NÃO vem no corpo — como medido, não como suposto. */
+function servidorAplica(
+  estado: { name: string; $permissions: string[]; rowSecurity: boolean; enabled: boolean },
+  args: { name?: string; permissions?: string[]; rowSecurity?: boolean },
+) {
+  return {
+    ...estado,
+    name: args.name ?? estado.name,
+    // Documentado: "by default, the current permissions are inherited".
+    $permissions: args.permissions ?? estado.$permissions,
+    // Medido: booleano omitido volta ao padrão (false), e foi assim que a
+    // segurança por linha caiu.
+    rowSecurity: args.rowSecurity ?? false,
+    // Medido no update real de `users`: `enabled` ficou intacto quando omitido.
+    enabled: estado.enabled,
+  };
+}
+
+describe('payload do update de table: nome muda, acesso não', () => {
+  it('UPDATE carrega a postura de acesso inteira — e nada além dela', async () => {
+    const espiao = dbEspiao();
+    const args = tableWriteArgs('UPDATE', 'nuy-creators', 'users');
+    expect(args).not.toBeNull();
+    await espiao.db.updateTable(args as Record<string, unknown>);
+
+    expect(espiao.chamadas).toHaveLength(1);
+    expect(espiao.chamadas[0].metodo).toBe('updateTable');
+    expect(espiao.chamadas[0].args).toMatchObject({
+      databaseId: 'nuy-creators',
+      tableId: 'users',
+      name: 'users',
+      permissions: collectionPermissions,
+      rowSecurity: true,
+    });
+    // Nem id, nem coluna, nem índice: o payload não tem como expressá-los, então
+    // um update de nome não pode mexer em schema por descuido.
+    expect(Object.keys(espiao.chamadas[0].args).sort()).toEqual([
+      'databaseId',
+      'name',
+      'permissions',
+      'rowSecurity',
+      'tableId',
+    ]);
+  });
+
+  it('estado inicial rowSecurity=true → UPDATE só do nome → continua true', async () => {
+    const inicial = { name: 'nuy-admin', $permissions: [], rowSecurity: true, enabled: true };
+    const args = tableWriteArgs('UPDATE', 'nuy-creators', 'users')!;
+    const final = servidorAplica(inicial, args);
+
+    expect(final.name).toBe('users');
+    expect(final.rowSecurity).toBe(true);
+    expect(final.$permissions).toEqual([]);
+    expect(final.enabled).toBe(true);
+  });
+
+  it('o guarda tem dentes: o payload de antes (só nome) derrubava rowSecurity', () => {
+    const inicial = { name: 'nuy-admin', $permissions: [], rowSecurity: true, enabled: true };
+    // Como o provisionador chamava antes desta correção.
+    const antigo = { name: 'users' };
+    expect(servidorAplica(inicial, antigo).rowSecurity).toBe(false);
+    // Com o payload de agora, o mesmo update cosmético não alcança o acesso.
+    const atual = tableWriteArgs('UPDATE', 'nuy-creators', 'users')!;
+    expect(servidorAplica(inicial, atual).rowSecurity).toBe(true);
+  });
+
+  it('o payload não depende do estado lido: as 31 tables do manifesto recebem a mesma postura', () => {
+    for (const table of tables) {
+      const args = tableWriteArgs('UPDATE', 'nuy-creators', table.id)!;
+      expect(args.rowSecurity).toBe(true);
+      expect(args.permissions).toEqual(collectionPermissions);
+      expect(args.name).toBe(table.id);
+    }
+  });
+
+  it('CREATE, UPDATE e reconciliação de segurança escrevem argumentos idênticos', () => {
+    const criar = tableWriteArgs('CREATE', 'nuy-creators', 'profiles');
+    const atualizar = tableWriteArgs('UPDATE', 'nuy-creators', 'profiles');
+    const reconciliar = tableWriteArgs('DRIFT_SECURITY', 'nuy-creators', 'profiles');
+    expect(criar).toEqual(atualizar);
+    expect(atualizar).toEqual(reconciliar);
+  });
+
+  it('nenhuma outra ação do plano produz escrita de table', () => {
+    for (const action of ['NOOP', 'BLOCKED_PERMISSION', 'DRIFT_IMMUTABLE'] as const)
+      expect(tableWriteArgs(action, 'nuy-creators', 'users')).toBeNull();
+  });
+
+  it('a expectativa do plano nasce do mesmo valor que o provisionador escreve', async () => {
+    const remote = provisioned();
+    remote.tables![0].rowSecurity = false;
+    const drifted = entry(await plan(remote), 'table', tables[0].id);
+    expect(drifted.action).toBe('DRIFT_SECURITY');
+    // Uma origem só: o texto que o operador lê e os campos que o apply envia não
+    // podem divergir — foi essa divergência que desligou a segurança por linha.
+    expect(drifted.expected).toBe(
+      `permissions=[${tableAccess.permissions.join(', ')}], rowSecurity=${tableAccess.rowSecurity}`,
+    );
+    expect(tableWriteArgs('DRIFT_SECURITY', 'nuy-creators', tables[0].id)).toMatchObject({
+      permissions: tableAccess.permissions,
+      rowSecurity: tableAccess.rowSecurity,
+    });
   });
 });
