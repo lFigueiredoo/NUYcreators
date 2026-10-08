@@ -29,6 +29,13 @@ let testClient: Client;
 let users: Users;
 let teams: Teams;
 let databaseId: string;
+/**
+ * Quantas memberships `nuy-admins` já tinha ANTES de qualquer fixture desta
+ * rodada. O time ganhou gente de verdade (o operador humano é membro
+ * permanente e confirmado), então o tamanho esperado é este marco mais o que a
+ * suíte criou — o que se prova é a própria fixture, não o tamanho do time.
+ */
+let teamBaseline = 0;
 const clients = () =>
   new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT!)
@@ -124,6 +131,8 @@ beforeAll(async () => {
   adminDb = new TablesDB(testClient);
   users = new Users(testClient);
   teams = new Teams(testClient);
+  teamBaseline = (await teams.listMemberships({ teamId: team.id, queries: [Query.limit(100)] }))
+    .memberships.length;
   for (let index = 0; index < 5; index++) {
     const id = `${runId}-u${index}`;
     const email = `${id}@example.invalid`; // deliberately not a deliverable mailbox
@@ -384,7 +393,7 @@ describe('real Auth and memberships (email delivery tested separately)', () => {
         teamId: team.id,
         queries: [Query.limit(100)],
       });
-      const teamSize = index + 1;
+      const teamSize = teamBaseline + index + 1;
       expect(unfiltered.memberships.length).toBe(teamSize);
       expect(ownTeamRoles(unfiltered.memberships, actor.id, team.id)).toEqual(
         teamSize === 1 ? [role] : [],
