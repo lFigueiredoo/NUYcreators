@@ -393,7 +393,9 @@ export function buildDataset(now = new Date()) {
         slug: 'reels-de-verao-nuy',
         name: 'Reels de verão NUY',
         description: 'Crie um Reels mostrando sua rotina de verão com os produtos NUY.',
-        imageFileId: null,
+        // Este TEM capa; os outros desafios e recompensas ficam sem — assim a
+        // mesma tela prova a imagem e o fallback, e não só um dos dois.
+        imageFileId: 'zzcapa00001desafio',
         platform: 'instagram',
         startsAt: at(-5, 9),
         endsAt: at(12, 23),
@@ -706,7 +708,7 @@ export function buildDataset(now = new Date()) {
         $permissions: publicRead(),
         name: 'Kit NUY Skincare',
         type: 'product',
-        imageFileId: null,
+        imageFileId: 'zzcapa00002recompensa',
         description: 'Kit completo de cuidados com a pele da linha NUY.',
         pointsCost: 600,
         stock: 20,

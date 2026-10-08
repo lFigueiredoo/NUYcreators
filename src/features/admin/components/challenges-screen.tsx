@@ -142,10 +142,12 @@ export function ChallengeDetailScreen({
   challenge,
   choices,
   timeZone,
+  mediaEnabled,
 }: {
   challenge: AdminOutcome<{ item: CatalogChallengeDetail | null }>;
   choices: AdminOutcome<CatalogChoices>;
   timeZone: string;
+  mediaEnabled: boolean;
 }) {
   return (
     <Outcome result={challenge} what="o desafio">
@@ -164,7 +166,12 @@ export function ChallengeDetailScreen({
             }
           />
         ) : (
-          <ChallengeDetail challenge={value.item} choices={choices} timeZone={timeZone} />
+          <ChallengeDetail
+            challenge={value.item}
+            choices={choices}
+            timeZone={timeZone}
+            mediaEnabled={mediaEnabled}
+          />
         )
       }
     </Outcome>
@@ -175,10 +182,12 @@ function ChallengeDetail({
   challenge,
   choices,
   timeZone,
+  mediaEnabled,
 }: {
   challenge: CatalogChallengeDetail;
   choices: AdminOutcome<CatalogChoices>;
   timeZone: string;
+  mediaEnabled: boolean;
 }) {
   const view = catalogView(challenge.status);
   const values: ChallengeFormValues = {
@@ -232,7 +241,9 @@ function ChallengeDetail({
         <div className={styles.stack}>
           <Block title="Editar">
             <Outcome result={choices} what="os níveis, campanhas e produtos do catálogo">
-              {(options) => <ChallengeForm values={values} choices={options} />}
+              {(options) => (
+                <ChallengeForm values={values} choices={options} mediaEnabled={mediaEnabled} />
+              )}
             </Outcome>
           </Block>
         </div>
@@ -288,7 +299,13 @@ function ChallengeDetail({
 }
 
 /** Tela de criação: mesmo formulário, sem valor inicial e sem versão. */
-export function NewChallengeScreen({ choices }: { choices: AdminOutcome<CatalogChoices> }) {
+export function NewChallengeScreen({
+  choices,
+  mediaEnabled,
+}: {
+  choices: AdminOutcome<CatalogChoices>;
+  mediaEnabled: boolean;
+}) {
   return (
     <div className={styles.stack}>
       <ScreenHeader
@@ -298,7 +315,7 @@ export function NewChallengeScreen({ choices }: { choices: AdminOutcome<CatalogC
       />
       <Block title="Dados do desafio">
         <Outcome result={choices} what="os níveis, campanhas e produtos do catálogo">
-          {(options) => <ChallengeForm choices={options} />}
+          {(options) => <ChallengeForm choices={options} mediaEnabled={mediaEnabled} />}
         </Outcome>
       </Block>
       <p className={styles.counter}>

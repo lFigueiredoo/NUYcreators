@@ -1,5 +1,6 @@
 import { NewRewardScreen } from '@/features/admin/components/rewards-screen';
 import { requireStaff } from '@/lib/security/authorization';
+import { mediaConfigured } from '@/lib/appwrite/media';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Nova recompensa' };
@@ -11,5 +12,5 @@ export const metadata = { title: 'Nova recompensa' };
  */
 export default async function NewRewardPage() {
   await requireStaff('manage-catalog');
-  return <NewRewardScreen />;
+  return <NewRewardScreen mediaEnabled={mediaConfigured()} />;
 }

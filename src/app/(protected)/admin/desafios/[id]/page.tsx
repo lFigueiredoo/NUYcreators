@@ -4,6 +4,7 @@ import { loadChallenge, loadOptions } from '@/features/admin/services/console';
 import { LoadingBlock } from '@/features/workspace/components/ui/state';
 import { rankingTimeZone } from '@/features/workspace/domain/ranking';
 import { requireStaff } from '@/lib/security/authorization';
+import { mediaConfigured } from '@/lib/appwrite/media';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,11 @@ export default async function AdminChallengePage({ params }: { params: Promise<{
 async function ChallengeBody({ id }: { id: string }) {
   const [challenge, choices] = await Promise.all([loadChallenge(id), loadOptions()]);
   return (
-    <ChallengeDetailScreen challenge={challenge} choices={choices} timeZone={rankingTimeZone} />
+    <ChallengeDetailScreen
+      challenge={challenge}
+      choices={choices}
+      timeZone={rankingTimeZone}
+      mediaEnabled={mediaConfigured()}
+    />
   );
 }

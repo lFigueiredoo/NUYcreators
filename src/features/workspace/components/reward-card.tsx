@@ -4,6 +4,7 @@ import { redemptionView } from '../domain/status';
 import type { RewardView } from '../services/rewards';
 import { RedeemRewardForm } from './core-forms';
 import { Pill } from './ui/pill';
+import { CatalogMedia } from './catalog-media';
 import styles from '../styles/app.module.css';
 
 /**
@@ -34,7 +35,7 @@ export function RewardCard({
         className={`${styles.challengeMedia} ${reward.imageFileId ? '' : styles.challengeMediaEmpty}`}
         aria-hidden="true"
       >
-        {(reward.name.trim()[0] ?? 'N').toUpperCase()}
+        <CatalogMedia fileId={reward.imageFileId} name={reward.name} />
       </div>
       <div className={styles.challengeBody}>
         <div className={styles.challengeTop}>

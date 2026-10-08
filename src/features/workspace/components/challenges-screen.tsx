@@ -12,6 +12,7 @@ import {
 } from '../domain/status';
 import type { ChallengeDetail, ChallengeView, Requirement } from '../services/challenges';
 import { ChallengeCard } from './challenge-card';
+import { CatalogMedia } from './catalog-media';
 import { JoinChallengeForm, SubmitContentForm } from './core-forms';
 import { Card } from './ui/card';
 import { Pill } from './ui/pill';
@@ -265,6 +266,12 @@ export function ChallengeDetailScreen({
           <h1>{challenge.name}</h1>
           {pill ? <Pill view={pill} /> : null}
         </div>
+      </div>
+
+      {/* A capa do detalhe usa a MESMA proporção do cartão: o recorte não muda
+          entre a lista e a página, e nada aqui reserva altura que não vai usar. */}
+      <div className={styles.detailMedia} data-empty={challenge.imageFileId ? 'false' : 'true'}>
+        <CatalogMedia fileId={challenge.imageFileId} name={challenge.name} />
       </div>
 
       <div className={styles.detailGrid}>

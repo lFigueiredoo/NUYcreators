@@ -5,6 +5,7 @@ import { formatPoints } from '../domain/points';
 import { challengeBucket, participationView, submissionView } from '../domain/status';
 import type { ChallengeView } from '../services/challenges';
 import { Pill } from './ui/pill';
+import { CatalogMedia } from './catalog-media';
 import styles from '../styles/app.module.css';
 
 /**
@@ -31,8 +32,11 @@ function statePill(challenge: ChallengeView) {
 }
 
 /**
- * Miniatura determinística (inicial do nome). Sem banco de mídia público
- * definido para desafios, não inventamos imagem nem buscamos arquivo privado.
+ * Miniatura da LINHA compacta: a inicial do nome, por escolha.
+ *
+ * A linha existe para varrer vários itens de uma vez, e a inicial lê melhor nesse
+ * tamanho do que uma foto reduzida. O cartão e o detalhe, que têm espaço, mostram
+ * a imagem de verdade (`CatalogMedia`).
  */
 export function ChallengeThumb({ name }: { name: string }) {
   return (
@@ -51,7 +55,7 @@ export function ChallengeCard({ challenge, now }: { challenge: ChallengeView; no
         href={`/app/desafios/${challenge.slug}`}
         className={`${styles.challengeMedia} ${challenge.imageFileId ? '' : styles.challengeMediaEmpty}`}
       >
-        <span aria-hidden="true">{(challenge.name.trim()[0] ?? 'N').toUpperCase()}</span>
+        <CatalogMedia fileId={challenge.imageFileId} name={challenge.name} />
       </Link>
       <div className={styles.challengeBody}>
         <div className={styles.challengeTop}>

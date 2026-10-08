@@ -4,6 +4,7 @@ import { loadReward } from '@/features/admin/services/console';
 import { LoadingBlock } from '@/features/workspace/components/ui/state';
 import { rankingTimeZone } from '@/features/workspace/domain/ranking';
 import { requireStaff } from '@/lib/security/authorization';
+import { mediaConfigured } from '@/lib/appwrite/media';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,5 +25,11 @@ export default async function AdminRewardPage({ params }: { params: Promise<{ id
 
 async function RewardBody({ id }: { id: string }) {
   const reward = await loadReward(id);
-  return <RewardDetailScreen reward={reward} timeZone={rankingTimeZone} />;
+  return (
+    <RewardDetailScreen
+      reward={reward}
+      timeZone={rankingTimeZone}
+      mediaEnabled={mediaConfigured()}
+    />
+  );
 }

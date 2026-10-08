@@ -579,3 +579,108 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ------------------------------------------------------------ imagem do item */
+
+/*
+ * O widget de imagem do formulário de catálogo: preview, escolher/trocar e
+ * remover. A caixa tem proporção fixa para o formulário não pular de altura
+ * quando a imagem entra — o operador está digitando embaixo dela.
+ */
+.imageField {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.imagePreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  max-width: 320px;
+  overflow: hidden;
+  border: 1px solid var(--app-beige);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-warm);
+}
+.imagePreview[data-empty='true'] {
+  border-style: dashed;
+}
+.imagePreviewImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imagePreviewEmpty {
+  font-size: 0.86rem;
+  color: var(--app-navy-soft);
+}
+.imageActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* O input de arquivo é feio por natureza e não dá para estilizar por dentro: ele
+   fica fora do fluxo e quem recebe o clique é o rótulo, que é um botão de verdade. */
+.imageInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.imagePick {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border: 1px solid var(--app-sand);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-cream);
+  color: var(--app-navy);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.imagePick:hover {
+  border-color: var(--app-navy);
+}
+/* O input fica DEPOIS do rótulo no DOM, então `+`/`~` não voltam para estilizá-lo:
+   o estado do input é lido do container com `:has()`. */
+.imageActions:has(.imageInput:focus-visible) .imagePick {
+  outline: 2px solid var(--app-navy);
+  outline-offset: 2px;
+}
+.imageActions:has(.imageInput:disabled) .imagePick {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.imageRemove {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+  background: none;
+  color: var(--app-navy-soft);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.imageRemove:hover {
+  border-color: var(--app-sand);
+  color: var(--app-navy);
+}
+.imageRemove:focus-visible {
+  outline: 2px solid var(--app-navy);
+  outline-offset: 2px;
+}
+.imageProblem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.84rem;
+  color: #8c2f2f;
+}

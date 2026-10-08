@@ -154,10 +154,11 @@ export async function verifyReadOnlyIdentity(env: Environment): Promise<Identity
     env.APPWRITE_AUTH_API_KEY,
     env.APPWRITE_TEST_API_KEY,
     env.APPWRITE_OPS_API_KEY,
+    env.APPWRITE_MEDIA_API_KEY,
   ].filter((value): value is string => Boolean(value));
   if (new Set(configured).size !== configured.length)
     throw new IdentityError(
-      'Chaves de provisionamento, sessões, testes e operação devem ser distintas. Nenhum escopo será ampliado.',
+      'Chaves de provisionamento, sessões, testes, operação e mídia devem ser distintas. Nenhum escopo será ampliado.',
     );
   const endpoint = env.APPWRITE_ENDPOINT!,
     projectId = env.APPWRITE_PROJECT_ID!;

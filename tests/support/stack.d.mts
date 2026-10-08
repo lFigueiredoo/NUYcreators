@@ -29,4 +29,8 @@ export type StackHandle = {
 
 export const TEST_ORIGIN: string;
 
-export function startStack(options?: { startApp?: boolean }): Promise<StackHandle>;
+export function startStack(options?: {
+  startApp?: boolean;
+  /** Chave de mídia do app. Padrão: ligada com uma chave de teste; `''` desliga. */
+  mediaKey?: string;
+}): Promise<StackHandle>;

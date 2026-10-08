@@ -3,6 +3,7 @@ import { NewChallengeScreen } from '@/features/admin/components/challenges-scree
 import { loadOptions } from '@/features/admin/services/console';
 import { LoadingBlock } from '@/features/workspace/components/ui/state';
 import { requireStaff } from '@/lib/security/authorization';
+import { mediaConfigured } from '@/lib/appwrite/media';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Novo desafio' };
@@ -18,5 +19,5 @@ export default async function NewChallengePage() {
 
 async function NewChallengeBody() {
   const choices = await loadOptions();
-  return <NewChallengeScreen choices={choices} />;
+  return <NewChallengeScreen choices={choices} mediaEnabled={mediaConfigured()} />;
 }

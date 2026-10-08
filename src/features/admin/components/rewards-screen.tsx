@@ -138,9 +138,11 @@ export function RewardsScreen({
 export function RewardDetailScreen({
   reward,
   timeZone,
+  mediaEnabled,
 }: {
   reward: AdminOutcome<{ item: (CatalogReward & { history: AuditEntry[] }) | null }>;
   timeZone: string;
+  mediaEnabled: boolean;
 }) {
   return (
     <Outcome result={reward} what="a recompensa">
@@ -159,7 +161,7 @@ export function RewardDetailScreen({
             }
           />
         ) : (
-          <RewardDetail reward={value.item} timeZone={timeZone} />
+          <RewardDetail reward={value.item} timeZone={timeZone} mediaEnabled={mediaEnabled} />
         )
       }
     </Outcome>
@@ -169,9 +171,11 @@ export function RewardDetailScreen({
 function RewardDetail({
   reward,
   timeZone,
+  mediaEnabled,
 }: {
   reward: CatalogReward & { history: AuditEntry[] };
   timeZone: string;
+  mediaEnabled: boolean;
 }) {
   const view = catalogView(reward.status);
   const values: RewardFormValues = {
@@ -214,7 +218,7 @@ function RewardDetail({
       <div className={styles.cols}>
         <div className={styles.stack}>
           <Block title="Editar">
-            <RewardForm values={values} />
+            <RewardForm values={values} mediaEnabled={mediaEnabled} />
           </Block>
         </div>
 
@@ -273,7 +277,7 @@ function RewardDetail({
   );
 }
 
-export function NewRewardScreen() {
+export function NewRewardScreen({ mediaEnabled }: { mediaEnabled: boolean }) {
   return (
     <div className={styles.stack}>
       <ScreenHeader
@@ -282,7 +286,7 @@ export function NewRewardScreen() {
         intro="Salve como rascunho para revisar depois, ou ative de uma vez. O estoque inicial é o que você informar aqui; a partir daí, cada resgate baixa um no servidor."
       />
       <Block title="Dados da recompensa">
-        <RewardForm />
+        <RewardForm mediaEnabled={mediaEnabled} />
       </Block>
       <p className={styles.counter}>
         O formulário grava os campos que o schema já tem, e nada além deles. Recompensa ativa com

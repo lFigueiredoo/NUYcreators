@@ -3,6 +3,7 @@ import {
   useActionState,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -15,6 +16,7 @@ import {
   catalogStatusView,
   type CatalogStatus,
 } from '@/features/workspace/domain/catalog';
+import { mediaHref, mediaIssue } from '@/features/workspace/domain/media';
 import { requirementLabel, requirementTypes } from '@/features/workspace/domain/requirements';
 import appStyles from '@/features/workspace/styles/app.module.css';
 import { adjustPointsAction } from '@/features/workspace/services/actions';
@@ -163,6 +165,145 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
+ * A imagem do item: escolher, ver, trocar, remover.
+ *
+ * O campo técnico de id saiu da experiência do operador — quem cuida de catálogo
+ * escolhe uma imagem, não digita o id de um arquivo. O id continua existindo, mas
+ * como valor de envio (campo oculto), que é o que ele sempre foi.
+ *
+ * O preview é LOCAL: `URL.createObjectURL` sobre os bytes que serão enviados. Não
+ * é miniatura de um arquivo que já subiu — nada subiu ainda. O arquivo só vai para
+ * o bucket no salvar (ver `services/media.ts`), e é por isso que abandonar o
+ * formulário não deixa arquivo no bucket.
+ *
+ * A conferência aqui é adiantamento, não decisão: o servidor confere de novo, e é
+ * ele que decide. O operador ganha o erro antes de enviar, não depois.
+ */
+function ImageField({
+  label,
+  value,
+  enabled,
+  hint,
+}: {
+  label: string;
+  value: string;
+  enabled: boolean;
+  hint?: ReactNode;
+}) {
+  const id = useId();
+  const [chosen, setChosen] = useState<File | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [cleared, setCleared] = useState(false);
+
+  // O endereço do preview é DERIVADO do arquivo escolhido, não um estado à parte
+  // que um efeito sincroniza — a sincronia entre os dois era justamente o que
+  // podia atrasar um quadro e mostrar o preview da imagem anterior.
+  const preview = useMemo(() => (chosen ? URL.createObjectURL(chosen) : null), [chosen]);
+
+  // O endereço do blob é recurso do navegador: sem revogar, cada troca de arquivo
+  // deixaria o anterior vivo na memória até a aba fechar.
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  async function choose(file: File | null) {
+    setProblem(null);
+    if (!file) {
+      setChosen(null);
+      return;
+    }
+    const head = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const issue = mediaIssue({
+      name: file.name,
+      declaredType: file.type,
+      size: file.size,
+      head,
+    });
+    if (issue) {
+      setProblem(issue);
+      setChosen(null);
+      return;
+    }
+    setCleared(false);
+    setChosen(file);
+  }
+
+  const shown = preview ?? (!cleared && enabled ? mediaHref(value) : null);
+
+  return (
+    <Field label={label} hint={hint}>
+      {() => (
+        <div className={styles.imageField}>
+          {/* O id vai como valor de envio, e é SEMPRE o que está gravado na linha —
+              mesmo quando o operador pediu para remover. É ele que diz à action
+              qual arquivo aposentar: zerá-lo aqui fazia a remoção tirar a imagem
+              da tela, tirar o id da linha e DEIXAR o arquivo no bucket, sem
+              nenhuma linha apontando para ele. Quem manda "remover" é o campo
+              abaixo, não o silêncio deste. */}
+          <input type="hidden" name="imageFileId" value={value} />
+          <input type="hidden" name="imageClear" value={cleared ? 'true' : 'false'} />
+
+          <div className={styles.imagePreview} data-empty={shown ? 'false' : 'true'}>
+            {shown ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shown} alt="" className={styles.imagePreviewImg} />
+            ) : (
+              <span className={styles.imagePreviewEmpty}>Sem imagem</span>
+            )}
+          </div>
+
+          <div className={styles.imageActions}>
+            <label className={styles.imagePick} htmlFor={id}>
+              {shown ? 'Trocar imagem' : 'Escolher imagem'}
+            </label>
+            <input
+              id={id}
+              className={styles.imageInput}
+              type="file"
+              name="image"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={!enabled}
+              onChange={(event) => void choose(event.target.files?.[0] ?? null)}
+            />
+            {shown ? (
+              <button
+                type="button"
+                className={styles.imageRemove}
+                onClick={() => {
+                  setChosen(null);
+                  setCleared(true);
+                  setProblem(null);
+                }}
+              >
+                <Trash2 size={14} aria-hidden="true" />
+                Remover imagem
+              </button>
+            ) : null}
+          </div>
+
+          {chosen ? (
+            <p className={styles.formHint}>{chosen.name} — enviada ao salvar o formulário.</p>
+          ) : null}
+          {problem ? (
+            <p className={styles.imageProblem} role="alert">
+              <CircleAlert size={14} aria-hidden="true" />
+              {problem}
+            </p>
+          ) : null}
+          {enabled ? null : (
+            <p className={styles.formHint}>
+              Enviar imagem ainda não está ativo neste ambiente: o armazenamento não foi
+              configurado. O que já estiver gravado continua aparecendo.
+            </p>
+          )}
+        </div>
+      )}
+    </Field>
+  );
+}
+
+/**
  * Lista fechada que NUNCA perde o valor gravado: se o registro atual tem valor
  * fora da lista (nível desativado, campanha removida, plataforma antiga), ele
  * entra como opção extra. Salvar sem mexer não troca o dado, e a operação vê que
@@ -258,9 +399,11 @@ const BLANK_CHALLENGE: ChallengeFormValues = {
 export function ChallengeForm({
   values: initial,
   choices,
+  mediaEnabled,
 }: {
   values?: ChallengeFormValues;
   choices: CatalogChoices;
+  mediaEnabled: boolean;
 }) {
   const editing = Boolean(initial?.challengeId);
   const [values, setValues] = useState<ChallengeFormValues>(initial ?? BLANK_CHALLENGE);
@@ -356,21 +499,12 @@ export function ChallengeForm({
               />
             )}
           </Field>
-          <Field
-            label="Imagem (id do arquivo)"
-            hint="Id de arquivo do Appwrite Storage. Em branco, o desafio aparece sem imagem."
-          >
-            {(id) => (
-              <input
-                id={id}
-                className={appStyles.input}
-                name="imageFileId"
-                value={values.imageFileId}
-                maxLength={36}
-                onChange={(event) => set('imageFileId', event.target.value)}
-              />
-            )}
-          </Field>
+          <ImageField
+            label="Imagem do desafio"
+            value={values.imageFileId}
+            enabled={mediaEnabled}
+            hint="JPG, PNG ou WEBP até 5 MB. Em branco, o desafio aparece sem imagem."
+          />
         </div>
       </Section>
 
@@ -712,7 +846,13 @@ const BLANK_REWARD: RewardFormValues = {
   version: null,
 };
 
-export function RewardForm({ values: initial }: { values?: RewardFormValues }) {
+export function RewardForm({
+  values: initial,
+  mediaEnabled,
+}: {
+  values?: RewardFormValues;
+  mediaEnabled: boolean;
+}) {
   const editing = Boolean(initial?.rewardId);
   const [values, setValues] = useState<RewardFormValues>(initial ?? BLANK_REWARD);
   const [state, action, pending] = useActionState(rewardSaveAction, EMPTY);
@@ -764,18 +904,12 @@ export function RewardForm({ values: initial }: { values?: RewardFormValues }) {
               />
             )}
           </Field>
-          <Field label="Imagem (id do arquivo)" hint="Opcional.">
-            {(id) => (
-              <input
-                id={id}
-                className={appStyles.input}
-                name="imageFileId"
-                value={values.imageFileId}
-                maxLength={36}
-                onChange={(event) => set('imageFileId', event.target.value)}
-              />
-            )}
-          </Field>
+          <ImageField
+            label="Imagem da recompensa"
+            value={values.imageFileId}
+            enabled={mediaEnabled}
+            hint="JPG, PNG ou WEBP até 5 MB. Opcional."
+          />
         </div>
       </Section>
 

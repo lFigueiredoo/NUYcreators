@@ -11,6 +11,7 @@ import {
   updateProfileAction,
   type FormState,
 } from '../services/actions';
+import { notificationReadTarget } from '../domain/status';
 import styles from '../styles/app.module.css';
 
 /**
@@ -181,7 +182,10 @@ export function NotificationReadForm({
   return (
     <form action={action} className={styles.formInline}>
       <input type="hidden" name="notificationId" value={notificationId} />
-      <input type="hidden" name="read" value={read ? 'true' : 'false'} />
+      {/* O campo carrega o estado PEDIDO, não o atual: o rótulo do botão já diz o
+          destino. Ver `notificationReadTarget` — ali está o defeito que isto
+          conserta e o que ele fazia na tela. */}
+      <input type="hidden" name="read" value={notificationReadTarget(read)} />
       <button type="submit" className={`${styles.button} ${styles.buttonQuiet}`} disabled={pending}>
         {read ? 'Marcar como não lida' : 'Marcar como lida'}
       </button>

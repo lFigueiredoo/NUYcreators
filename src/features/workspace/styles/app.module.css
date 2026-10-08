@@ -956,6 +956,33 @@
 .challengeMediaEmpty {
   aspect-ratio: 16 / 5;
 }
+/* A capa, quando existe. `object-fit: cover` porque a origem é foto de tamanho
+   arbitrário: o corte é nosso, o enquadramento é do operador. */
+.catalogMediaImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A capa do detalhe: mesma proporção do cartão, para a imagem não mudar de
+   recorte entre a lista e a página do desafio. */
+.detailMedia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* A folga do bloco seguinte não vem dele: dentro da grade o primeiro bloco
+     zera a própria margem (`.detailMain > .block:first-child`), regra escrita
+     quando não havia capa acima. Sem isto o título da primeira seção encosta na
+     imagem — medido em 0px contra os 30px do resto da página. */
+  margin-bottom: clamp(24px, 3vw, 34px);
+  aspect-ratio: 16 / 9;
+  max-height: 280px;
+  overflow: hidden;
+  border-radius: var(--app-radius-sm);
+  background: linear-gradient(135deg, var(--app-deep), var(--app-beige));
+  color: var(--app-mauve-ink);
+  font-family: var(--pl-font-display), Georgia, serif;
+  font-size: 2.4rem;
+}
 
 .challengeBody {
   display: flex;

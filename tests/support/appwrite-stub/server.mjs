@@ -17,6 +17,10 @@ import { createServer } from 'node:https';
 import { randomUUID } from 'node:crypto';
 import { readCertificate } from '../certs.mjs';
 import { buildDataset } from './fixtures.mjs';
+import { MEDIA_FILES } from './media.mjs';
+
+/** Bucket de catálogo do manifesto: o único que o stub serve. */
+const MEDIA_BUCKET = 'community-media';
 
 /** Métodos de query implementados; o resto falha alto. */
 const SUPPORTED = new Set([
@@ -276,6 +280,41 @@ export async function startStub(options = {}) {
       }
 
       return failure(response, 405, 'stub_route_not_found', 'Método não suportado.');
+    }
+
+    // ------------------------------------------------ arquivos (Storage)
+    // GET /storage/buckets/{bucket}/files/{id}        → metadados (mimeType)
+    // GET /storage/buckets/{bucket}/files/{id}/view   → bytes
+    if (segments[0] === 'storage' && segments[1] === 'buckets' && segments[3] === 'files') {
+      // Como no Appwrite: arquivo se abre com CHAVE, não com sessão de usuária. Se
+      // o servidor do app passar a sessão no lugar da chave, isto vira 401 e o
+      // teste denuncia — em vez de o bucket parecer aberto.
+      if (!isAdmin) return failure(response, 401, 'user_unauthorized', 'Chave necessária.');
+      if (segments[2] !== MEDIA_BUCKET)
+        return failure(response, 404, 'storage_bucket_not_found', 'Bucket não provisionado.');
+      const fileId = decodeURIComponent(segments[4] ?? '');
+      const file = MEDIA_FILES.get(fileId);
+      if (!file) return failure(response, 404, 'file_not_found', 'Arquivo não encontrado.');
+      if (segments[5] === 'view') {
+        response.writeHead(200, {
+          'content-type': file.mimeType,
+          'content-length': file.bytes.length,
+        });
+        return response.end(file.bytes);
+      }
+      return json(response, 200, {
+        $id: fileId,
+        $createdAt: dataset.now.toISOString(),
+        $updatedAt: dataset.now.toISOString(),
+        $permissions: [],
+        bucketId: MEDIA_BUCKET,
+        name: `${fileId}.png`,
+        signature: '',
+        mimeType: file.mimeType,
+        sizeOriginal: file.bytes.length,
+        chunksTotal: 1,
+        chunksUploaded: 1,
+      });
     }
 
     // ----------------------------------------------------------- teams

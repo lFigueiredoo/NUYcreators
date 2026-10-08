@@ -110,6 +110,21 @@ export function notificationType(value?: string | null): StatusView {
   return NOTIFICATION[value] ?? { label: 'Aviso', tone: 'neutral' };
 }
 
+/**
+ * O que o botão do aviso PEDE, na forma em que o formulário manda.
+ *
+ * O rótulo do botão descreve a AÇÃO ("Marcar como lida" quando o aviso está não
+ * lido), e o servidor lê o campo como o estado PEDIDO. Enquanto o campo carregava
+ * o estado ATUAL, o botão "Marcar como lida" mandava "não lida": o servidor
+ * regravava `readAt = null` e o aviso não saía do lugar — enquanto o botão do
+ * aviso JÁ lido mandava "lida" e o marcava como lido, o inverso do que ele dizia.
+ * Nenhuma das duas telas parecia quebrada: as duas respondiam "Aviso marcado
+ * como…". Medido no ambiente real, com a chave de operação instalada.
+ */
+export function notificationReadTarget(read: boolean): 'true' | 'false' {
+  return read ? 'false' : 'true';
+}
+
 /** Abas de "Meus conteúdos" — a ordem é a do ciclo de vida real da submissão. */
 export const submissionTabs = [
   { id: 'all', label: 'Todos' },

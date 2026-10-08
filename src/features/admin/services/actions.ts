@@ -19,6 +19,7 @@ import {
   commandSaveChallenge,
   commandSaveReward,
 } from './console';
+import { discardUploaded, imageForForm, retireReplaced } from './media';
 
 /**
  * Server Actions da administração.
@@ -48,6 +49,12 @@ function numberField(data: FormData, key: string): number | null {
   if (!raw) return null;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Campo de arquivo do formulário. Sem arquivo escolhido, o navegador manda um vazio. */
+function fileField(data: FormData, key: string): File | null {
+  const value = data.get(key);
+  return value instanceof File && value.size > 0 ? value : null;
 }
 
 function integerField(data: FormData, key: string): number {
@@ -124,6 +131,16 @@ export async function challengeSaveAction(
   const draft = challengeDraft(data);
   const invalid = problems(challengeIssues(draft));
   if (invalid) return invalid;
+  // A imagem sobe DEPOIS da validação e ANTES da gravação: formulário inválido não
+  // cria arquivo, e arquivo criado cuja linha não gravou é desfeito logo abaixo.
+  // A política inteira (inclusive o que sobra quando algo falha) está em `media.ts`.
+  const image = await imageForForm({
+    file: fileField(data, 'image'),
+    keep: draft.imageFileId,
+    clear: field(data, 'imageClear') === 'true',
+  });
+  if (!image.ok) return { message: image.message };
+  draft.imageFileId = image.fileId;
   // "Salvar rascunho" e "Publicar" são o MESMO formulário com intenções
   // diferentes: o rascunho não aparece para ninguém até a publicação.
   const publish = field(data, 'intent') === 'publish';
@@ -137,10 +154,15 @@ export async function challengeSaveAction(
     },
     publish,
   );
-  if (!outcome.ok) return { message: outcome.message };
+  if (!outcome.ok) {
+    await discardUploaded(image.uploaded);
+    return { message: outcome.message };
+  }
+  await retireReplaced(image.replaced, image.fileId);
   revalidatePath('/admin/desafios');
   revalidatePath(`/admin/desafios/${outcome.value.challengeId}`);
   revalidatePath('/app/desafios');
+  revalidatePath('/app');
   return { message: outcome.message, success: true };
 }
 
@@ -170,6 +192,13 @@ export async function rewardSaveAction(_previous: FormState, data: FormData): Pr
   const draft = rewardDraft(data);
   const invalid = problems(rewardIssues(draft));
   if (invalid) return invalid;
+  const image = await imageForForm({
+    file: fileField(data, 'image'),
+    keep: draft.imageFileId,
+    clear: field(data, 'imageClear') === 'true',
+  });
+  if (!image.ok) return { message: image.message };
+  draft.imageFileId = image.fileId;
   const rewardId = field(data, 'rewardId');
   // A chave é sorteada pela tela no clique: repetir o envio não cria duas vezes.
   const key = field(data, 'key');
@@ -185,10 +214,15 @@ export async function rewardSaveAction(_previous: FormState, data: FormData): Pr
     },
     field(data, 'intent') === 'publish',
   );
-  if (!outcome.ok) return { message: outcome.message };
+  if (!outcome.ok) {
+    await discardUploaded(image.uploaded);
+    return { message: outcome.message };
+  }
+  await retireReplaced(image.replaced, image.fileId);
   revalidatePath('/admin/recompensas');
   revalidatePath(`/admin/recompensas/${outcome.value.rewardId}`);
   revalidatePath('/app/recompensas');
+  revalidatePath('/app');
   return { message: outcome.message, success: true };
 }
 
