@@ -13,9 +13,12 @@ import styles from '../styles/app.module.css';
 export function RewardCard({
   reward,
   redemptionEnabled,
+  returnTo,
 }: {
   reward: RewardView;
   redemptionEnabled: boolean;
+  /** Tela dona do cartão: é para ela que a confirmação do resgate volta. */
+  returnTo: string;
 }) {
   const redeemed = reward.redemption ? redemptionView(reward.redemption.status) : null;
   // Disponível no catálogo ≠ resgatável agora: sem operação de resgate ativa, o
@@ -49,7 +52,11 @@ export function RewardCard({
               fluxo que não roda. Com ela, o resgate é transacional: o custo que
               a tela mostrou viaja junto e o servidor recusa se tiver mudado. */}
           {redemptionEnabled && reward.eligibility.eligible ? (
-            <RedeemRewardForm rewardId={reward.id} expectedCost={reward.pointsCost} />
+            <RedeemRewardForm
+              rewardId={reward.id}
+              expectedCost={reward.pointsCost}
+              returnTo={returnTo}
+            />
           ) : null}
         </div>
       </div>

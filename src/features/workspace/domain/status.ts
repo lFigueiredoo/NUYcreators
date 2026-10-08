@@ -33,13 +33,61 @@ const REDEMPTION: Record<string, StatusView> = {
   refunded: { label: 'Estornado', tone: 'attention' },
 };
 
-const NOTIFICATION: Record<string, { label: string; tone: Tone }> = {
-  challenge: { label: 'Desafio', tone: 'progress' },
-  content: { label: 'Conteúdo', tone: 'neutral' },
-  points: { label: 'Pontos', tone: 'success' },
-  reward: { label: 'Recompensa', tone: 'attention' },
-  system: { label: 'Sistema', tone: 'muted' },
+/**
+ * `notifications.type` guarda o **tipo do evento** — `challenge.joined`,
+ * `submission.approved`, `points.adjusted` —, não a categoria. O mapa já esteve
+ * chaveado por categoria e a busca errava SEMPRE: o código interno virava o
+ * rótulo do chip, na cara da creator (P1-1 da revisão visual).
+ *
+ * As chaves passam a ser o tipo do evento; os VALORES continuam sendo as
+ * categorias. Chip e título dizem coisas diferentes de propósito: o chip é a
+ * família do aviso ("Conteúdo"), o título é o que aconteceu ("Conteúdo
+ * aprovado"). Pôr o título no chip repetia a mesma frase duas vezes na linha e
+ * ainda quebrava a asserção por texto de quem lê a tela (dois elementos com o
+ * mesmo texto) — medido no E2E de staging.
+ */
+const NOTIFICATION: Record<string, StatusView> = {
+  'challenge.joined': { label: 'Desafio', tone: 'progress' },
+  'submission.approved': { label: 'Conteúdo', tone: 'neutral' },
+  'submission.rejected': { label: 'Conteúdo', tone: 'neutral' },
+  'submission.revision_requested': { label: 'Conteúdo', tone: 'neutral' },
+  'reward.redeemed': { label: 'Recompensa', tone: 'attention' },
+  'points.adjusted': { label: 'Pontos', tone: 'success' },
 };
+
+/** A aba de "Meus conteúdos" em que o desfecho do evento aparece. */
+const SUBMISSION_TAB_OF_EVENT: Record<string, SubmissionTab> = {
+  'submission.approved': 'approved',
+  'submission.rejected': 'rejected',
+  'submission.revision_requested': 'revision_requested',
+};
+
+/**
+ * Para onde o aviso leva — só quando existe entidade de verdade atrás do evento.
+ *
+ * `submission.*` guarda o id da submissão em `referenceId`, e a tela de conteúdos
+ * mostra a linha com esse id (a lista traz tudo e a aba só filtra): o destino é a
+ * linha exata, não uma lista genérica. `reward.redeemed` e `points.adjusted` não
+ * têm linha própria na tela — o destino é a tela onde o fato aparece.
+ *
+ * `challenge.joined` fica SEM link: o evento guarda o id do desafio e a rota usa
+ * o slug. Sem slug confiável no dado, é melhor não ter caminho do que inventar um
+ * endereço que pode dar em "Desafio não encontrado".
+ */
+export function notificationLink(item: {
+  type: string;
+  referenceId?: string | null;
+}): { href: string; label: string } | null {
+  const tab = SUBMISSION_TAB_OF_EVENT[item.type];
+  if (tab) {
+    const anchor = item.referenceId ? `#${item.referenceId}` : '';
+    return { href: `/app/conteudos?aba=${tab}${anchor}`, label: 'Ver este conteúdo' };
+  }
+  if (item.type === 'reward.redeemed')
+    return { href: '/app/recompensas', label: 'Ver meus resgates' };
+  if (item.type === 'points.adjusted') return { href: '/app/pontos', label: 'Ver extrato' };
+  return null;
+}
 
 function view(map: Record<string, StatusView>, value: string | null | undefined): StatusView {
   if (!value) return { label: 'Sem estado', tone: 'muted' };
@@ -51,10 +99,15 @@ export const participationView = (value?: string | null) => view(PARTICIPATION, 
 export const redemptionView = (value?: string | null) => view(REDEMPTION, value);
 export const notificationView = (value?: string | null) => notificationType(value);
 
-/** Categoria da notificação; usa o rótulo cru quando o tipo é novo. */
-export function notificationType(value?: string | null): { label: string; tone: Tone } {
+/**
+ * Rótulo do aviso. Tipo de evento sem tradução (evento novo, criado depois desta
+ * versão) NÃO mostra o código interno: o chip é uma categoria, e quem diz o que
+ * aconteceu é o título e o corpo da própria notificação, escritos pelo servidor.
+ * O código cru continua no banco e na auditoria — não na tela da creator.
+ */
+export function notificationType(value?: string | null): StatusView {
   if (!value) return { label: 'Aviso', tone: 'neutral' };
-  return NOTIFICATION[value] ?? { label: value, tone: 'neutral' };
+  return NOTIFICATION[value] ?? { label: 'Aviso', tone: 'neutral' };
 }
 
 /** Abas de "Meus conteúdos" — a ordem é a do ciclo de vida real da submissão. */

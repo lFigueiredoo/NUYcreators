@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LogOut } from 'lucide-react';
@@ -9,6 +9,7 @@ import { landingFontVariables } from '@/features/public-landing/landing-fonts';
 import '@/styles/app-surface.css';
 import type { Viewer } from '../services/viewer';
 import { BottomNav, SidebarNav } from './app-nav';
+import { Flash } from './flash';
 import { Topbar } from './topbar';
 import styles from '../styles/app.module.css';
 
@@ -63,6 +64,11 @@ export function AppShell({
         <div className={styles.body}>
           <Topbar name={name} email={viewer.email} initial={initial} unread={unread} />
           <main id="main" className={styles.main}>
+            {/* Aviso da última ação, no destino dela. Fica no shell para valer
+                em qualquer tela para onde a ação mandar a creator. */}
+            <Suspense fallback={null}>
+              <Flash />
+            </Suspense>
             {children}
           </main>
         </div>

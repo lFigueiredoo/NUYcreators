@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Coins, Compass, Receipt } from 'lucide-react';
 import { shortDate } from '../domain/format';
-import { formatPoints, transactionSign } from '../domain/points';
+import { formatPoints, pointTypeLabel, transactionSign } from '../domain/points';
 import type { JourneyView } from '../services/journey';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
@@ -119,7 +119,9 @@ export function PointsScreen({ journey }: { journey: JourneyView }) {
                     </h3>
                     <span className={styles.ledgerDate}>
                       {shortDate(transaction.createdAt)}
-                      {transaction.type ? ` · ${transaction.type}` : ''}
+                      {pointTypeLabel(transaction.type)
+                        ? ` · ${pointTypeLabel(transaction.type)}`
+                        : ''}
                     </span>
                   </div>
                   <span

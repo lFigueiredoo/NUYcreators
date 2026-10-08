@@ -362,6 +362,7 @@ export function DashboardData({
                   key={reward.id}
                   reward={reward}
                   redemptionEnabled={redemptionEnabled()}
+                  returnTo="/app"
                 />
               ))}
             </div>

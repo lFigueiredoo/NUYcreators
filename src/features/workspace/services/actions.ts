@@ -1,7 +1,9 @@
 'use server';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getEnvironment } from '@/lib/env/server';
+import { flashHref, returnPath } from '../domain/flash';
 import {
   commandAdjustPoints,
   commandJoin,
@@ -22,6 +24,14 @@ import type { ModerationDecision, ProfileInput } from '../core';
  * da requisição antes de olhar o formulário — Server Function é alcançável por
  * POST direto, então a origem é conferida aqui e a identidade é sempre a da
  * sessão, nunca um campo do formulário.
+ *
+ * Duas dessas mensagens não podem voltar por `useActionState`: quando a ação dá
+ * certo, o formulário que as mostraria já desmontou como CONSEQUÊNCIA da própria
+ * gravação (o "Participar" vira "Seu envio", o "Resgatar" vira "Limite atingido").
+ * Essas três (entrar, enviar, resgatar) terminam em `redirect` para a própria
+ * tela com o aviso na URL, e quem o exibe é o `Flash` do shell. O caminho de
+ * volta vem LIGADO à action — argumento cifrado pelo Next, nunca campo do
+ * formulário — e ainda passa pelo guarda de `returnPath`.
  */
 export type FormState = { message: string; success?: boolean };
 
@@ -45,6 +55,7 @@ function numberField(data: FormData, key: string): number | null {
 }
 
 export async function joinChallengeAction(
+  returnTo: string,
   _previous: FormState,
   data: FormData,
 ): Promise<FormState> {
@@ -53,10 +64,11 @@ export async function joinChallengeAction(
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/desafios');
   revalidatePath('/app');
-  return { message: outcome.message, success: true };
+  redirect(flashHref(returnPath(returnTo, '/app/desafios'), outcome.message));
 }
 
 export async function submitContentAction(
+  returnTo: string,
   _previous: FormState,
   data: FormData,
 ): Promise<FormState> {
@@ -68,7 +80,7 @@ export async function submitContentAction(
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/desafios');
   revalidatePath('/app/conteudos');
-  return { message: outcome.message, success: true };
+  redirect(flashHref(returnPath(returnTo, '/app/conteudos'), outcome.message));
 }
 
 export async function moderateSubmissionAction(
@@ -94,7 +106,11 @@ export async function moderateSubmissionAction(
   return { message: outcome.message, success: true };
 }
 
-export async function redeemRewardAction(_previous: FormState, data: FormData): Promise<FormState> {
+export async function redeemRewardAction(
+  returnTo: string,
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
   const rewardId = field(data, 'rewardId');
   const idempotencyKey = field(data, 'idempotencyKey');
@@ -108,7 +124,7 @@ export async function redeemRewardAction(_previous: FormState, data: FormData): 
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/recompensas');
   revalidatePath('/app/pontos');
-  return { message: outcome.message, success: true };
+  redirect(flashHref(returnPath(returnTo, '/app/recompensas'), outcome.message));
 }
 
 export async function notificationReadAction(

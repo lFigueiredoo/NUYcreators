@@ -54,9 +54,20 @@ function ActionMessage({ state, pending }: { state: FormState; pending: boolean 
   );
 }
 
-/** Entrar no desafio. Idempotente no servidor: repetir devolve a mesma entrada. */
-export function JoinChallengeForm({ challengeId }: { challengeId: string }) {
-  const [state, action, pending] = useActionState(joinChallengeAction, EMPTY);
+/**
+ * Entrar no desafio. Idempotente no servidor: repetir devolve a mesma entrada.
+ *
+ * `returnTo` é a tela dona do formulário: a confirmação do servidor volta para
+ * ELA (via `Flash`), porque este botão desmonta assim que a entrada é gravada.
+ */
+export function JoinChallengeForm({
+  challengeId,
+  returnTo,
+}: {
+  challengeId: string;
+  returnTo: string;
+}) {
+  const [state, action, pending] = useActionState(joinChallengeAction.bind(null, returnTo), EMPTY);
   return (
     <form action={action} className={styles.form}>
       <input type="hidden" name="challengeId" value={challengeId} />
@@ -73,8 +84,14 @@ export function JoinChallengeForm({ challengeId }: { challengeId: string }) {
 }
 
 /** Enviar conteúdo: o link é canonizado e o fingerprint bloqueia repetição. */
-export function SubmitContentForm({ challengeId }: { challengeId: string }) {
-  const [state, action, pending] = useActionState(submitContentAction, EMPTY);
+export function SubmitContentForm({
+  challengeId,
+  returnTo,
+}: {
+  challengeId: string;
+  returnTo: string;
+}) {
+  const [state, action, pending] = useActionState(submitContentAction.bind(null, returnTo), EMPTY);
   const urlId = useId();
   return (
     <form action={action} className={styles.form}>
@@ -118,11 +135,13 @@ export function SubmitContentForm({ challengeId }: { challengeId: string }) {
 export function RedeemRewardForm({
   rewardId,
   expectedCost,
+  returnTo,
 }: {
   rewardId: string;
   expectedCost: number;
+  returnTo: string;
 }) {
-  const [state, action, pending] = useActionState(redeemRewardAction, EMPTY);
+  const [state, action, pending] = useActionState(redeemRewardAction.bind(null, returnTo), EMPTY);
   const key = useRef('');
   const field = useRef<HTMLInputElement>(null);
   return (

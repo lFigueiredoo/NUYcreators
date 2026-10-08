@@ -89,9 +89,11 @@ export function ContentsScreen({
         {entries === null ? (
           <UnavailableState what="seus conteúdos" />
         ) : items.length > 0 ? (
+          // O `id` de cada linha é o alvo do aviso que leva até este envio
+          // (`notificationLink`): o link chega na linha exata, não na lista.
           <ul className={styles.list}>
             {items.map((submission) => (
-              <li key={submission.id} className={styles.item}>
+              <li key={submission.id} id={submission.id} className={styles.item}>
                 <span className={styles.thumb} aria-hidden="true">
                   <ImageIcon size={18} />
                 </span>

@@ -44,8 +44,14 @@ function payloadOf(row: Row): Record<string, unknown> {
   }
 }
 
-/** Título e corpo da notificação por tipo de evento — só o que o evento prova. */
-function message(
+/**
+ * Título e corpo da notificação por tipo de evento — só o que o evento prova.
+ *
+ * O título é a MENSAGEM; o chip da central é a CATEGORIA do evento
+ * (`domain/status.ts` §NOTIFICATION). São registros diferentes de propósito: o
+ * chip diz de que família é o aviso, o título diz o que aconteceu.
+ */
+export function message(
   type: string,
   payload: Record<string, unknown>,
 ): { title: string; body: string } | null {
@@ -57,7 +63,13 @@ function message(
         body: points > 0 ? `Você ganhou ${points} pontos.` : 'Seu conteúdo foi aprovado.',
       };
     case 'submission.rejected':
-      return { title: 'Conteúdo recusado', body: 'Veja o motivo na sua lista de conteúdos.' };
+      // A copy antiga mandava "ver o motivo na lista de conteúdos" — e o motivo
+      // não é exibido lá: nota e quem avaliou são registro interno da equipe
+      // (`contents-screen.tsx`). O aviso diz o que a creator pode conferir.
+      return {
+        title: 'Conteúdo não aprovado',
+        body: 'Seu envio está em "Meus conteúdos", com o estado da avaliação.',
+      };
     case 'submission.revision_requested':
       return { title: 'Revisão solicitada', body: 'A equipe pediu um ajuste no seu conteúdo.' };
     case 'challenge.joined':

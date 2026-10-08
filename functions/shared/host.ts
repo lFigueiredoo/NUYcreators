@@ -25,7 +25,13 @@ import type { AdminRole } from '../../src/lib/security/permissions';
  * `@/`: só caminhos relativos, como o resto de `functions/`.
  */
 export type FunctionEvent = {
-  req: { headers: Record<string, string>; bodyJson: unknown };
+  /**
+   * `bodyJson` NÃO é um valor: é um **getter** do runtime que faz `JSON.parse`
+   * no `body` cru — ler a propriedade pode ESTOURAR, e é por isso que `body()`
+   * abaixo lê dentro de `try`. `body` é o corpo cru de onde o getter lê (string
+   * vazia na execução agendada, que não manda corpo nenhum).
+   */
+  req: { headers: Record<string, string>; body?: unknown; bodyJson: unknown };
   res: { json: (data: unknown, status?: number) => unknown };
   error: (message: string) => void;
 };
@@ -61,11 +67,40 @@ const STATUS: Record<CoreCode, number> = {
   price_changed: 409,
 };
 
-function body(event: FunctionEvent): Record<string, unknown> {
-  const value = event.req.bodyJson;
+/** Corpo cru vazio: ausente, nulo ou só espaço. É o caso da execução AGENDADA. */
+function empty(event: FunctionEvent): boolean {
+  const raw = event.req.body;
+  return raw === undefined || raw === null || (typeof raw === 'string' && raw.trim() === '');
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+/**
+ * Corpo da requisição, lido de forma TOLERANTE ao corpo ausente.
+ *
+ * `event.req.bodyJson` é um getter do runtime que faz `JSON.parse` no corpo. A
+ * execução AGENDADA chega sem corpo nenhum, e o parse de string vazia estoura
+ * `SyntaxError: Unexpected end of JSON input` **antes** de qualquer guarda —
+ * medido nesta instalação: 116 de 116 execuções agendadas em HTTP 500, enquanto
+ * as 84 por HTTP concluíam. O `process-outbox` morria ali, sem chegar a
+ * `machineAuthorized`: a fila de avisos só andava por chamada manual.
+ *
+ * Corpo ausente/vazio vale `{}` — a única leitura que o corpo vazio pode ter. Um
+ * corpo que EXISTE e não é JSON válido continua sendo erro e sobe: engolir isso
+ * faria uma requisição malformada seguir como "sem corpo", um caminho que
+ * ninguém pediu.
+ */
+function body(event: FunctionEvent): Record<string, unknown> {
+  try {
+    return asRecord(event.req.bodyJson);
+  } catch (error) {
+    if (empty(event)) return {};
+    throw error;
+  }
 }
 
 /**

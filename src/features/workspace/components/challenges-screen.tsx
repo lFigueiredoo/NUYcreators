@@ -142,9 +142,11 @@ function RequirementItem({ requirement }: { requirement: Requirement }) {
 function SubmissionPanel({
   challenge,
   participationEnabled,
+  returnTo,
 }: {
   challenge: ChallengeView;
   participationEnabled: boolean;
+  returnTo: string;
 }) {
   const submission = challenge.submission;
   return (
@@ -188,7 +190,7 @@ function SubmissionPanel({
       {participationEnabled &&
       challenge.participation &&
       (!submission || submission.status === 'revision_requested') ? (
-        <SubmitContentForm challengeId={challenge.id} />
+        <SubmitContentForm challengeId={challenge.id} returnTo={returnTo} />
       ) : null}
       <Link href="/app/conteudos" className={styles.blockLink}>
         Ver meus conteúdos
@@ -370,11 +372,15 @@ export function ChallengeDetailScreen({
                 Ao entrar, você assume os requisitos deste desafio e passa a poder enviar conteúdo
                 dentro do prazo.
               </p>
-              <JoinChallengeForm challengeId={challenge.id} />
+              <JoinChallengeForm challengeId={challenge.id} returnTo={`/app/desafios/${slug}`} />
             </Card>
           ) : null}
 
-          <SubmissionPanel challenge={challenge} participationEnabled={participationEnabled} />
+          <SubmissionPanel
+            challenge={challenge}
+            participationEnabled={participationEnabled}
+            returnTo={`/app/desafios/${slug}`}
+          />
         </aside>
       </div>
     </>

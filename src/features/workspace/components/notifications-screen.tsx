@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, Bell, Info } from 'lucide-react';
 import { longDate } from '../domain/format';
-import { notificationType } from '../domain/status';
+import { notificationLink, notificationType } from '../domain/status';
 import type { NotificationsView } from '../services/notifications';
 import { NotificationReadForm, NotificationsReadAllForm } from './core-forms';
 import { Pill } from './ui/pill';
@@ -63,6 +63,7 @@ export function NotificationsScreen({
               <ul className={styles.notifList}>
                 {items.map((item) => {
                   const category = notificationType(item.type);
+                  const destination = notificationLink(item);
                   const unread = !item.readAt;
                   return (
                     <li
@@ -77,6 +78,14 @@ export function NotificationsScreen({
                         </div>
                         <h3 className={styles.itemTitle}>{item.title}</h3>
                         <p className={styles.itemText}>{item.body}</p>
+                        {destination ? (
+                          // Só texto: o SVG é `display:block` no reset global e a
+                          // seta caía sozinha na linha de baixo. O verbo "Ver" já
+                          // diz que é caminho, e é o que os outros links da área usam.
+                          <Link href={destination.href} className={styles.blockLink}>
+                            {destination.label}
+                          </Link>
+                        ) : null}
                         {readEnabled ? (
                           <NotificationReadForm notificationId={item.id} read={!unread} />
                         ) : null}

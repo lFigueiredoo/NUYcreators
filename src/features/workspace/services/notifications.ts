@@ -9,6 +9,8 @@ export type NotificationItem = {
   type: string;
   title: string;
   body: string;
+  /** Entidade do fato (submissão ou resgate) — o que permite levar até ela. */
+  referenceId: string;
   readAt: string | null;
   createdAt: string;
 };
@@ -25,6 +27,7 @@ function mapNotification(document: Document): NotificationItem {
     type: text(document.type),
     title: text(document.title),
     body: text(document.body),
+    referenceId: text(document.referenceId),
     readAt: optionalText(document.readAt),
     createdAt: text(document.createdAt) || text((document as { $createdAt?: unknown }).$createdAt),
   };

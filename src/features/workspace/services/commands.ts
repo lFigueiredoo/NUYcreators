@@ -212,6 +212,17 @@ export async function commandJoin(challengeId: string): Promise<CommandOutcome<J
   };
 }
 
+/**
+ * Envio de conteúdo.
+ *
+ * `created: false` acontece em DUAS situações diferentes, e as duas terminam com
+ * o conteúdo EM ANÁLISE: o mesmo link reenviado enquanto já havia envio em
+ * análise (nada mudou) e o reenvio do MESMO link depois de a equipe pedir
+ * revisão — ali a revisão AVANÇA e o conteúdo volta para a fila. A copy antiga
+ * ("nada foi duplicado") só era verdade na primeira: na segunda, dizia à creator
+ * que nada tinha acontecido logo depois de registrar uma revisão nova. A frase
+ * abaixo é verdadeira nas duas.
+ */
 export async function commandSubmit(input: {
   challengeId: string;
   url: string;
@@ -227,7 +238,7 @@ export async function commandSubmit(input: {
     value: reply.value,
     message: reply.value.created
       ? 'Envio registrado. Ele entra na fila de análise da equipe NUY.'
-      : 'Este envio já estava registrado — nada foi duplicado.',
+      : 'Este conteúdo já está registrado e em análise pela equipe NUY.',
   };
 }
 
