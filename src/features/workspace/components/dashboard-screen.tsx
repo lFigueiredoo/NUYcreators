@@ -113,7 +113,7 @@ function BannerShell({
   children: ReactNode;
 }) {
   return (
-    <Card tone="navy" className={styles.banner}>
+    <Card tone="navy" className={`${styles.banner} ${styles.enter}`}>
       <div className={styles.bannerBody}>
         {children}
         {/* O próximo passo mora na faixa, não num cartão à parte: é a primeira
@@ -240,17 +240,17 @@ function StartBanner({ focus, now }: { focus: BannerFocus; now: Date }) {
 function SummaryStats({ journey, ranking }: { journey: JourneyView; ranking: RankingView }) {
   return (
     <>
-      <Card>
+      <Card className={`${styles.enter} ${styles.i1}`}>
         <p className={styles.statLabel}>Pontos disponíveis</p>
         <p className={styles.statValue}>{formatPoints(journey.summary.availableBalance)}</p>
         <p className={styles.statHint}>Para usar em recompensas.</p>
       </Card>
-      <Card>
+      <Card className={`${styles.enter} ${styles.i2}`}>
         <p className={styles.statLabel}>Pontos de jornada</p>
         <p className={styles.statValue}>{formatPoints(journey.summary.qualifyingPoints)}</p>
         <p className={styles.statHint}>Definem seu nível e não diminuem.</p>
       </Card>
-      <Card>
+      <Card className={`${styles.enter} ${styles.i3}`}>
         <p className={styles.statLabel}>No ranking</p>
         {ranking.own?.position ? (
           <>
@@ -283,7 +283,7 @@ function QuickLinks() {
     ['Ranking', '/app/ranking'],
   ] as const;
   return (
-    <nav className={styles.quickLinks} aria-label="Atalhos">
+    <nav className={`${styles.quickLinks} ${styles.enter} ${styles.i1}`} aria-label="Atalhos">
       {links.map(([label, href]) => (
         <Link key={href} href={href} className={styles.quickLink}>
           {label}
@@ -388,6 +388,7 @@ export function DashboardData({
 
       <Block
         title="Desafios em destaque"
+        className={`${styles.enter} ${styles.i4}`}
         link={
           <Link href="/app/desafios" className={styles.blockLink}>
             Ver todos
@@ -436,7 +437,7 @@ export function DashboardData({
        * reúne o que ela pode buscar: recompensas e a comunidade do ranking.
        */}
       <div className={styles.gridEditorial}>
-        <div className={styles.column}>
+        <div className={`${styles.column} ${styles.enter} ${styles.i5}`}>
           {ongoing.length > 0 ? (
             <Block
               title="Continuar participando"
@@ -536,7 +537,7 @@ export function DashboardData({
           </Block>
         </div>
 
-        <div className={styles.column}>
+        <div className={`${styles.column} ${styles.enter} ${styles.i5}`}>
           {/* Título curto: nesta coluna o cabeçalho divide a linha com o link, e
               "Recompensas em destaque" quebrava em duas linhas sozinho. */}
           <Block

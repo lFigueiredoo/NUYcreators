@@ -7,14 +7,17 @@ export function ScreenHeader({
   title,
   intro,
   action,
+  className,
 }: {
   kicker?: string;
   title: ReactNode;
   intro?: ReactNode;
   action?: ReactNode;
+  className?: string;
 }) {
+  const classes = [styles.screenHeader, className].filter(Boolean).join(' ');
   return (
-    <div className={styles.screenHeader}>
+    <div className={classes}>
       <div>
         {kicker ? <p className={styles.kicker}>{kicker}</p> : null}
         <h1>{title}</h1>

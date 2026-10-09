@@ -12,14 +12,17 @@ export function Tabs({
   current,
   href,
   label,
+  className,
 }: {
   items: readonly TabItem[];
   current: string;
   href: (id: string) => string;
   label: string;
+  className?: string;
 }) {
+  const classes = [styles.tabs, className].filter(Boolean).join(' ');
   return (
-    <nav className={styles.tabs} aria-label={label}>
+    <nav className={classes} aria-label={label}>
       {items.map((item) => {
         const active = item.id === current;
         return (

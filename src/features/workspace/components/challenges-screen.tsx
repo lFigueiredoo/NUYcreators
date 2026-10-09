@@ -122,6 +122,7 @@ export function ChallengesScreen({
         kicker="Desafios"
         title="Desafios da comunidade"
         intro="Participe, publique seu conteúdo e conquiste Pontos NUY junto com outras creators."
+        className={styles.enter}
       />
 
       <Tabs
@@ -129,9 +130,10 @@ export function ChallengesScreen({
         current={tab}
         href={(id) => `/app/desafios?aba=${id}`}
         label="Filtrar desafios"
+        className={`${styles.enter} ${styles.i1}`}
       />
 
-      <Block>
+      <Block className={`${styles.enter} ${styles.i2}`}>
         {view === null ? (
           <UnavailableState what="os desafios" />
         ) : items.length > 0 ? (
@@ -336,7 +338,7 @@ export function ChallengeDetailScreen({
       <BackLink />
       {/* O estado da participação fica colado ao título: no canto direito do
           cabeçalho ficaria solto, longe do nome que ele qualifica. */}
-      <div className={styles.detailHead}>
+      <div className={`${styles.detailHead} ${styles.enter}`}>
         <p className={styles.kicker}>Desafio</p>
         <div className={styles.detailTitleRow}>
           <h1>{challenge.name}</h1>
@@ -358,7 +360,7 @@ export function ChallengeDetailScreen({
           .join(' ')}
       />
 
-      <div className={styles.detailGrid}>
+      <div className={`${styles.detailGrid} ${styles.enter} ${styles.i1}`}>
         <div className={styles.detailMain}>
           <Block title="Sobre o desafio">
             <Card>

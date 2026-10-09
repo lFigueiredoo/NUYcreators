@@ -27,12 +27,13 @@ export function PointsScreen({ journey }: { journey: JourneyView }) {
         kicker="Pontos"
         title="Seus pontos"
         intro="Pontos disponíveis podem ser usados em recompensas. Pontos de jornada determinam seu nível e não diminuem quando você resgata."
+        className={styles.enter}
       />
 
       {accountState === 'unavailable' ? (
         <UnavailableState what="seus pontos" />
       ) : hasAccount ? (
-        <div className={styles.balanceGrid}>
+        <div className={`${styles.balanceGrid} ${styles.enter} ${styles.i1}`}>
           <Card>
             <p className={styles.statLabel}>Pontos disponíveis</p>
             <p className={styles.statValueInline}>
@@ -70,7 +71,7 @@ export function PointsScreen({ journey }: { journey: JourneyView }) {
       )}
 
       {hasAccount && progress ? (
-        <Block title="Sua jornada">
+        <Block title="Sua jornada" className={`${styles.enter} ${styles.i2}`}>
           <Card>
             <div className={styles.levelRow}>
               <div>
@@ -104,7 +105,7 @@ export function PointsScreen({ journey }: { journey: JourneyView }) {
         </Block>
       ) : null}
 
-      <Block title="Extrato">
+      <Block title="Extrato" className={`${styles.enter} ${styles.i3}`}>
         {transactions.state === 'unavailable' ? (
           <UnavailableState what="seu extrato" />
         ) : ledger.length > 0 ? (

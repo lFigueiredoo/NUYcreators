@@ -76,6 +76,7 @@ export function ContentsScreen({
         kicker="Meus conteúdos"
         title="Seus envios"
         intro="Cada conteúdo enviado nos desafios da comunidade, com o estado real da avaliação."
+        className={styles.enter}
       />
 
       <Tabs
@@ -83,9 +84,10 @@ export function ContentsScreen({
         current={tab}
         href={(id) => `/app/conteudos?aba=${id}`}
         label="Filtrar conteúdos"
+        className={`${styles.enter} ${styles.i1}`}
       />
 
-      <Block>
+      <Block className={`${styles.enter} ${styles.i2}`}>
         {entries === null ? (
           <UnavailableState what="seus conteúdos" />
         ) : items.length > 0 ? (
@@ -166,7 +168,7 @@ export function ContentsScreen({
       </Block>
 
       {entries && entries.length > 0 ? (
-        <Block title="Resumo dos seus envios">
+        <Block title="Resumo dos seus envios" className={`${styles.enter} ${styles.i3}`}>
           <Card>
             <p>
               {plural(entries.length, 'envio registrado', 'envios registrados')}

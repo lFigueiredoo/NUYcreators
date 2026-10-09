@@ -329,6 +329,16 @@
   padding: 12px;
 }
 
+/* Abertura do painel: a mesma entrada da pílula (fade + 8px do alto), no degrau
+   mais curto da régua — um menu que espera meio segundo para abrir parece
+   travado. O painel monta a cada abertura (`{open && …}`), então a animação toca
+   uma vez por abertura e nunca fica montado escondido. */
+@media (prefers-reduced-motion: no-preference) {
+  .mobileNav {
+    animation: plHeaderIn var(--motion-fast) var(--ease-premium) both;
+  }
+}
+
 .mobileNavLink {
   border-radius: 12px;
   color: var(--nuy-navy);

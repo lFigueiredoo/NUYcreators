@@ -61,6 +61,7 @@ export function NotificationsScreen({
             ? `${view.unread} ${view.unread === 1 ? 'aviso não lido' : 'avisos não lidos'} de ${items.length} nesta central.`
             : 'Avisos sobre seus desafios, conteúdos, pontos e recompensas.'
         }
+        className={styles.enter}
         action={readEnabled ? <NotificationsReadAllForm unread={view.unread ?? 0} /> : undefined}
       />
 
@@ -69,7 +70,7 @@ export function NotificationsScreen({
       ) : (
         <>
           {readEnabled ? null : (
-            <div className={styles.note} role="status">
+            <div className={`${styles.note} ${styles.enter} ${styles.i1}`} role="status">
               <span className={styles.noteIcon} aria-hidden="true">
                 <Info size={18} />
               </span>
@@ -83,7 +84,7 @@ export function NotificationsScreen({
             </div>
           )}
 
-          <Block title="Avisos">
+          <Block title="Avisos" className={`${styles.enter} ${styles.i2}`}>
             {items.length > 0 ? (
               <ul className={styles.notifList}>
                 {items.map((item) => {

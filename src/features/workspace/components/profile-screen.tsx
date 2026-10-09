@@ -64,6 +64,7 @@ export function ProfileScreen({
         kicker="Meu perfil"
         title="Seu perfil"
         intro="Seus dados na comunidade NUY Creators — o que está guardado hoje na sua conta."
+        className={styles.enter}
         action={
           editEnabled ? null : (
             <Link href="/onboarding" className={`${styles.button} ${styles.buttonGhost}`}>
@@ -75,7 +76,7 @@ export function ProfileScreen({
 
       {/* Cabeçalho: quem ela é, em uma linha. Nome, nível, e-mail e data de
           entrada vivem aqui — não se repetem campo a campo lá embaixo. */}
-      <Card className={styles.profileHead}>
+      <Card className={`${styles.profileHead} ${styles.enter} ${styles.i1}`}>
         <span className={styles.profileAvatar} aria-hidden="true">
           {initial}
         </span>
@@ -97,7 +98,7 @@ export function ProfileScreen({
       </Card>
 
       {editEnabled ? null : (
-        <div className={styles.note} role="status">
+        <div className={`${styles.note} ${styles.enter} ${styles.i2}`} role="status">
           <span className={styles.noteIcon} aria-hidden="true">
             <Info size={18} />
           </span>
@@ -111,7 +112,7 @@ export function ProfileScreen({
         </div>
       )}
 
-      <Block title="Presença na comunidade">
+      <Block title="Presença na comunidade" className={`${styles.enter} ${styles.i3}`}>
         <Card>
           <dl className={styles.fields}>
             <Field label="Nome exibido para a comunidade" value={viewer.displayName} />
@@ -124,7 +125,7 @@ export function ProfileScreen({
         </Card>
       </Block>
 
-      <Block title="Dados pessoais">
+      <Block title="Dados pessoais" className={`${styles.enter} ${styles.i4}`}>
         {profileUnavailable ? (
           <UnavailableState what="seus dados de perfil" />
         ) : (
@@ -156,7 +157,7 @@ export function ProfileScreen({
       </Block>
 
       {editEnabled && profile ? (
-        <Block title="Editar meus dados">
+        <Block title="Editar meus dados" className={`${styles.enter} ${styles.i5}`}>
           {/* Formulário fechado: a página lê primeiro, edita quando ela pedir. O
               `<summary>` é o controle nativo — teclado e leitor de tela já sabem
               operá-lo, e o rótulo diz exatamente o que vai abrir. */}
@@ -187,7 +188,7 @@ export function ProfileScreen({
         </Block>
       ) : null}
 
-      <Block title="Perfis sociais">
+      <Block title="Perfis sociais" className={`${styles.enter} ${styles.i5}`}>
         {socialsUnavailable ? (
           <UnavailableState what="seus perfis sociais" />
         ) : socials.length > 0 ? (
@@ -212,7 +213,7 @@ export function ProfileScreen({
         )}
       </Block>
 
-      <Block title="Preferências">
+      <Block title="Preferências" className={`${styles.enter} ${styles.i5}`}>
         {profileUnavailable ? (
           <UnavailableState what="suas preferências" />
         ) : (

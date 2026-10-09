@@ -38,12 +38,13 @@ export function RewardsScreen({
         kicker="Recompensas"
         title="Recompensas NUY"
         intro="Troque seus pontos disponíveis por produtos e experiências da comunidade."
+        className={styles.enter}
       />
 
       {catalog.accountState === 'unavailable' ? (
         <UnavailableState what="seu saldo" />
       ) : hasAccount ? (
-        <Card tone="navy">
+        <Card tone="navy" className={`${styles.enter} ${styles.i1}`}>
           <p className={styles.statLabel}>Seu saldo</p>
           <p className={styles.statValueInline}>
             <Gift size={20} aria-hidden="true" />
@@ -72,7 +73,7 @@ export function RewardsScreen({
       )}
 
       {hasAccount && !redemptionEnabled ? (
-        <div className={styles.note} role="status">
+        <div className={`${styles.note} ${styles.enter} ${styles.i2}`} role="status">
           <span className={styles.noteIcon} aria-hidden="true">
             <Info size={18} />
           </span>
@@ -94,6 +95,10 @@ export function RewardsScreen({
           // A vitrine é larga de propósito: duas colunas dão à foto do produto o
           // tamanho de um catálogo, não de um widget. Na grade de três o cartão
           // ficava estreito e a imagem virava detalhe do texto.
+          // A cascata da vitrine é POSICIONAL, e é a única do produto: a grade é
+          // homogênea e o cartão é a estrela, então cada um entra no seu degrau
+          // em vez de a grade inteira entrar de uma vez. Aqui o `<Block>` de fora
+          // NÃO recebe `.enter` — as amplitudes não se somam.
           <>
             <div className={styles.rewardGrid}>
               {rewards.map((reward) => (
@@ -126,7 +131,7 @@ export function RewardsScreen({
       </Block>
 
       {redemptions.length > 0 ? (
-        <Block title="Meus resgates">
+        <Block title="Meus resgates" className={`${styles.enter} ${styles.i3}`}>
           <ul className={styles.list}>
             {redemptions.map((redemption) => {
               const reward = rewards.find((entry) => entry.id === redemption.rewardId);

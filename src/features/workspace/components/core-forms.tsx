@@ -33,7 +33,12 @@ const EMPTY: FormState = { message: '' };
 function ActionMessage({ state, pending }: { state: FormState; pending: boolean }) {
   if (pending)
     return (
-      <p className={`${styles.formStatus} ${styles.formBusy}`} role="status" aria-live="polite">
+      <p
+        key="envio"
+        className={`${styles.formStatus} ${styles.formBusy}`}
+        role="status"
+        aria-live="polite"
+      >
         <LoaderCircle size={14} className={styles.spin} aria-hidden="true" />
         Enviando…
       </p>
@@ -42,6 +47,12 @@ function ActionMessage({ state, pending }: { state: FormState; pending: boolean 
   const error = !state.success;
   return (
     <p
+      /* A chave separa envio, erro e sucesso. Sem ela o React reaproveitaria o
+         mesmo `<p>` (é o mesmo tipo, na mesma posição) e a entrada só animaria na
+         primeira mensagem — a confirmação de "salvo" apareceria seca, que é
+         justamente o momento em que a §12 quer o retorno. Nada mora neste nó:
+         nenhum campo, nenhum estado, só o recado do servidor. */
+      key={error ? 'erro' : 'sucesso'}
       className={`${styles.formStatus} ${error ? styles.formError : styles.formSuccess}`}
       role={error ? 'alert' : 'status'}
       aria-live={error ? 'assertive' : 'polite'}

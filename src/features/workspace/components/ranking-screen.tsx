@@ -47,12 +47,13 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
         kicker="Ranking"
         title="Ranking da comunidade"
         intro={`Pontos ganhos no ciclo de ${ranking.periodLabel}. Resgatar recompensa usa o seu saldo e não muda a sua posição.`}
+        className={styles.enter}
       />
 
       {unavailable ? (
         <UnavailableState what="o ranking" />
       ) : (
-        <Card tone="navy">
+        <Card tone="navy" className={`${styles.enter} ${styles.i1}`}>
           <p className={styles.statLabel}>Sua posição</p>
           <p className={styles.statValueInline}>
             <Trophy size={20} aria-hidden="true" />
@@ -69,7 +70,7 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
       )}
 
       {podium.length > 0 ? (
-        <Block title="Destaques do ciclo">
+        <Block title="Destaques do ciclo" className={`${styles.enter} ${styles.i2}`}>
           {/* A grade se ajusta a quem existe: três colunas para três pessoas, duas
               para duas, e uma só — sem largura fixa deixando um buraco na terceira
               coluna. Um ciclo com pouca gente não vira uma tela pela metade. */}
@@ -104,7 +105,7 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
       ) : null}
 
       {classification.length > 0 ? (
-        <Block title="Classificação">
+        <Block title="Classificação" className={`${styles.enter} ${styles.i3}`}>
           <ol className={styles.rankList}>
             {classification.map((entry, index) => (
               <li
