@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { mediaHref } from '../domain/media';
 import styles from '../styles/app.module.css';
 
@@ -24,13 +24,28 @@ import styles from '../styles/app.module.css';
  * há listener, e o React nunca fica sabendo — medido no E2E, onde a imagem
  * continuava quebrada na tela. Por isso o `ref` também lê o DOM depois do commit:
  * `complete` com `naturalWidth` 0 é o mesmo fato, agora legível.
+ *
+ * `cover` é o desenho institucional de quando não há imagem — a composição da
+ * marca que os cartões e a capa do detalhe usam (`CoverFallback`). Ele vale para
+ * os dois casos (sem arquivo e arquivo que não pôde ser entregue), porque o olho
+ * vê a mesma coisa. Onde não é passado, o desenho continua sendo a inicial, que é
+ * o certo nas miniaturas de 56px das listas: naquele tamanho a letra lê melhor
+ * que qualquer composição.
  */
-export function CatalogMedia({ fileId, name }: { fileId: string | null; name: string }) {
+export function CatalogMedia({
+  fileId,
+  name,
+  cover,
+}: {
+  fileId: string | null;
+  name: string;
+  cover?: ReactNode;
+}) {
   const href = mediaHref(fileId);
   const [broken, setBroken] = useState(false);
   const initial = (name.trim()[0] ?? 'N').toUpperCase();
 
-  if (!href || broken) return <span aria-hidden="true">{initial}</span>;
+  if (!href || broken) return <>{cover ?? <span aria-hidden="true">{initial}</span>}</>;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img

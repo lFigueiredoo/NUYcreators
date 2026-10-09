@@ -18,12 +18,12 @@
 
 .nuy-app ::selection {
   background: #eadcc8;
-  color: #0e2a44;
+  color: #082b55;
 }
 
 /* O `body` global é navy (superfície pública). A área autenticada é clara: se
    alguma rota do app renderizar sem o shell, o fundo não pode ficar escuro. */
 .nuy-app {
-  background: #f9f5ef;
-  color: #0e2a44;
+  background: #f8f4ec;
+  color: #12253f;
 }

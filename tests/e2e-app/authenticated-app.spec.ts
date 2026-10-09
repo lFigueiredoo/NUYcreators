@@ -190,8 +190,8 @@ test('desafio: participação e envio não fingem integração', async ({ page }
   // diz sobre entrar e enviar sem que a fixture já tenha um envio real.
   await openApp(page, '/app/desafios/encontro-nuy-edicao-especial');
   const main = page.locator('main');
-  await expect(main).toContainText('Briefing');
-  await expect(main).toContainText('Requisitos');
+  await expect(main).toContainText('Sobre o desafio');
+  await expect(main).toContainText('O que enviar');
   // A entrada e o envio dependem da integração com as redes: a tela diz isso em
   // vez de fingir que funcionam.
   await expect(main).toContainText(

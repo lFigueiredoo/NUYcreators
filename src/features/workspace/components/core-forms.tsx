@@ -1,6 +1,6 @@
 'use client';
 import { useActionState, useId, useRef } from 'react';
-import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react';
+import { CircleAlert, CircleCheck, LoaderCircle, Mail, MailOpen } from 'lucide-react';
 import {
   joinChallengeAction,
   moderateSubmissionAction,
@@ -11,6 +11,7 @@ import {
   updateProfileAction,
   type FormState,
 } from '../services/actions';
+import { creatorTypeLabel, nicheLabel } from '../domain/labels';
 import { notificationReadTarget } from '../domain/status';
 import styles from '../styles/app.module.css';
 
@@ -179,6 +180,9 @@ export function NotificationReadForm({
   read: boolean;
 }) {
   const [state, action, pending] = useActionState(notificationReadAction, EMPTY);
+  // O rótulo descreve o DESTINO da ação, e continua existindo por extenso no
+  // nome acessível: o ícone é a forma, não o nome.
+  const label = read ? 'Marcar como não lida' : 'Marcar como lida';
   return (
     <form action={action} className={styles.formInline}>
       <input type="hidden" name="notificationId" value={notificationId} />
@@ -186,8 +190,17 @@ export function NotificationReadForm({
           destino. Ver `notificationReadTarget` — ali está o defeito que isto
           conserta e o que ele fazia na tela. */}
       <input type="hidden" name="read" value={notificationReadTarget(read)} />
-      <button type="submit" className={`${styles.button} ${styles.buttonQuiet}`} disabled={pending}>
-        {read ? 'Marcar como não lida' : 'Marcar como lida'}
+      {/* Ação de ícone: treze avisos na mesma central davam treze botões de texto,
+          e o botão virava o maior elemento de cada aviso. O alvo de toque continua
+          folgado (44px) — o que sai é a largura do rótulo, não a área clicável. */}
+      <button
+        type="submit"
+        className={`${styles.button} ${styles.buttonQuiet} ${styles.buttonIcon}`}
+        aria-label={label}
+        title={label}
+        disabled={pending}
+      >
+        {read ? <MailOpen size={17} aria-hidden="true" /> : <Mail size={17} aria-hidden="true" />}
       </button>
       <ActionMessage state={state} pending={pending} />
     </form>
@@ -320,7 +333,7 @@ export function ProfileEditForm({
           <select id={nicheId} className={styles.input} name="niche" defaultValue={initial.niche}>
             {niches.map((value) => (
               <option key={value} value={value}>
-                {value}
+                {nicheLabel(value)}
               </option>
             ))}
           </select>
@@ -335,9 +348,10 @@ export function ProfileEditForm({
             name="creatorType"
             defaultValue={initial.creatorType}
           >
+            {/* O `value` é o mesmo código de sempre: quem muda é a palavra lida. */}
             {creatorTypes.map((value) => (
               <option key={value} value={value}>
-                {value}
+                {creatorTypeLabel(value)}
               </option>
             ))}
           </select>
@@ -358,13 +372,17 @@ export function ProfileEditForm({
         </label>
       </div>
 
-      <button
-        type="submit"
-        className={`${styles.button} ${styles.buttonPrimary}`}
-        disabled={pending}
-      >
-        Salvar alterações
-      </button>
+      {/* A linha de ações é a mesma do resto do produto: sem ela o botão
+          atravessava o cartão inteiro (1080px) e deixava de parecer botão. */}
+      <div className={styles.formActions}>
+        <button
+          type="submit"
+          className={`${styles.button} ${styles.buttonPrimary}`}
+          disabled={pending}
+        >
+          Salvar alterações
+        </button>
+      </div>
       <ActionMessage state={state} pending={pending} />
     </form>
   );

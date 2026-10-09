@@ -61,7 +61,10 @@ const MESSAGES: Record<CoreCode, string> = {
   invalid: 'Confira os dados informados e tente de novo.',
   unavailable: 'A operação está indisponível agora. Tente novamente em instantes.',
   conflict: 'O registro mudou desde que esta tela foi aberta. Recarregue e tente de novo.',
-  window_closed: 'Este desafio não está mais no prazo de participação.',
+  // O código cobre as DUAS pontas da janela (`core/join` recusa antes do início e
+  // depois do fim): "não está mais no prazo" era falso para o desafio que ainda
+  // não começou — o caso que a tela oferecia a entrar.
+  window_closed: 'Esta ação está fora do prazo: ou ainda não começou, ou já foi encerrada.',
   not_published: 'Este desafio não está publicado.',
   level_required: 'Seu nível atual ainda não alcança o exigido por este desafio.',
   capacity_full: 'As vagas deste desafio já foram preenchidas.',

@@ -37,6 +37,29 @@ export const bottomNav: NavEntry[] = [
   { label: 'Perfil', href: '/app/perfil', icon: UserRound },
 ];
 
+/**
+ * Um destino pelo href, tirado da lista que já o declara.
+ *
+ * A folha "Mais" não pode ter a própria cópia dos rótulos: rótulo que existe em
+ * dois lugares diverge no primeiro rename. Aqui a lista original é a fonte, e um
+ * href que sumir dela falha alto no carregamento em vez de renderizar vazio.
+ */
+function pick(entries: NavEntry[], href: string): NavEntry {
+  const found = entries.find((entry) => entry.href === href);
+  if (!found) throw new Error(`Destino ausente da navegação: ${href}`);
+  return found;
+}
+
+/**
+ * O que a barra inferior não comporta, oferecido pela folha "Mais" no mobile.
+ * Nenhum destino novo: são os mesmos links que a sidebar já mostra no desktop.
+ */
+export const moreNav: NavEntry[] = [
+  pick(primaryNav, '/app/recompensas'),
+  pick(primaryNav, '/app/ranking'),
+  pick(secondaryNav, '/app/notificacoes'),
+];
+
 /** `/app` só fica ativo nele mesmo; o resto ativa também nas telas internas. */
 export function isCurrent(pathname: string, href: string) {
   if (href === '/app') return pathname === '/app';

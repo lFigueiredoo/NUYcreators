@@ -11,8 +11,8 @@ import { startStack, type StackHandle } from '../support/stack.mjs';
  *    então passar sessão no lugar dela apareceria como falha);
  *  · a creator vê a imagem no cartão do desafio, no detalhe e no cartão da
  *    recompensa;
- *  · sem imagem gravada, ou com o arquivo indisponível, ela vê a INICIAL — cartão
- *    inteiro, nunca ícone quebrado;
+ *  · sem imagem gravada, ou com o arquivo indisponível, ela vê a CAPA INSTITUCIONAL
+ *    da NUY — caixa inteira, cartão inteiro, nunca ícone de imagem quebrada;
  *  · a rota não é oráculo de leitura do bucket: id que nenhuma linha referencia
  *    não é servido, mesmo existindo no bucket e mesmo com sessão válida.
  *
@@ -45,9 +45,16 @@ async function signIn(page: Page, email: string, password: string) {
   ]);
 }
 
-/** Onde a mídia do cartão vive — a mesma classe nos dois cartões. */
+/**
+ * Onde a mídia do cartão vive — a moldura compartilhada, não a variante.
+ *
+ * Os dois cartões usam o mesmo `CardMedia`; o que muda de um para o outro é só
+ * a classe de variante (`.challengeMedia` no desafio, `.rewardMedia` na
+ * vitrine). Mirar na variante amarrava o teste a um dos dois desenhos — a
+ * moldura base é que é o contrato.
+ */
 function media(card: Locator) {
-  return card.locator('[class*="challengeMedia"]');
+  return card.locator('[class*="cardMedia"]');
 }
 
 /**
@@ -60,7 +67,7 @@ async function openChallengeList(page: Page, tab: 'available' | 'joined' | 'in_r
   await page.goto(`${stack.origin}/app/desafios?aba=${tab}`, { waitUntil: 'domcontentloaded' });
 }
 
-/** A inicial só conta depois de decodificada: `naturalWidth` é o que prova bytes vivos. */
+/** A imagem só conta depois de decodificada: `naturalWidth` é o que prova bytes vivos. */
 async function expectLoaded(image: Locator) {
   await expect
     .poll(async () => image.evaluate((node) => (node as HTMLImageElement).naturalWidth), {
@@ -127,18 +134,26 @@ test('a recompensa com capa mostra a imagem', async ({ page }) => {
   await expectLoaded(image);
 });
 
-test('sem imagem gravada, a tela mostra a inicial — e nenhum img quebrado', async ({ page }) => {
+test('sem imagem gravada, a caixa mostra a capa institucional — e nenhum img quebrado', async ({
+  page,
+}) => {
   await signIn(page, ANA.email, ANA.password);
   await openChallengeList(page, 'in_review');
 
   const card = page.locator('article', { hasText: 'Carrossel de rotina' }).first();
   await expect(card).toBeVisible();
   await expect(media(card).locator('img')).toHaveCount(0);
-  // A inicial do nome — "Carrossel" → C. Nunca um espaço vazio.
-  await expect(media(card).locator('span[aria-hidden="true"]')).toHaveText('C');
+  // A capa da marca no lugar do vazio: a linha não tem imagem e a caixa não fica
+  // em branco nem com ícone de imagem quebrada.
+  await expect(media(card).getByText('NUY Creators')).toBeVisible();
+  // E o cartão segue inteiro: título e ação continuam legíveis e clicáveis.
+  await expect(card.getByRole('heading', { name: 'Carrossel de rotina' })).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Ver envio' })).toBeVisible();
 });
 
-test('arquivo indisponível cai no MESMO desenho: inicial, não ícone quebrado', async ({ page }) => {
+test('arquivo indisponível cai no MESMO desenho: capa institucional, não ícone quebrado', async ({
+  page,
+}) => {
   await signIn(page, ANA.email, ANA.password);
   // A linha aponta para um id; o arquivo é que não vem. É o caso real de arquivo
   // removido do bucket com a linha ainda apontando para ele.
@@ -148,7 +163,11 @@ test('arquivo indisponível cai no MESMO desenho: inicial, não ícone quebrado'
   const card = page.locator('article', { hasText: 'Reels de verão NUY' }).first();
   await expect(card).toBeVisible();
   await expect(media(card).locator('img')).toHaveCount(0);
-  await expect(media(card).locator('span[aria-hidden="true"]')).toHaveText('R');
+  // O MESMO desenho do caso anterior — a falha de entrega troca a foto pela capa
+  // da marca, e o resto do cartão não sente.
+  await expect(media(card).getByText('NUY Creators')).toBeVisible();
+  await expect(card.getByRole('heading', { name: 'Reels de verão NUY' })).toBeVisible();
+  await expect(card.getByRole('link', { name: 'Ver desafio' })).toBeVisible();
 });
 
 test('a rota recusa id que o catálogo não referencia, mesmo existindo no bucket', async ({

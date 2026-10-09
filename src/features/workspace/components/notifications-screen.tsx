@@ -1,5 +1,14 @@
 import Link from 'next/link';
-import { ArrowRight, Bell, Info } from 'lucide-react';
+import {
+  ArrowRight,
+  Bell,
+  Coins,
+  Gift,
+  Info,
+  PenLine,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import { longDate } from '../domain/format';
 import { notificationLink, notificationType } from '../domain/status';
 import type { NotificationsView } from '../services/notifications';
@@ -8,6 +17,22 @@ import { Pill } from './ui/pill';
 import { Block, ScreenHeader } from './ui/screen';
 import { EmptyState, UnavailableState } from './ui/state';
 import styles from '../styles/app.module.css';
+
+/**
+ * Um ícone por CATEGORIA de aviso — as mesmas quatro categorias que o chip já
+ * nomeia (o mapa é `notificationType`, dono da tradução do evento) e os mesmos
+ * ícones da navegação, para "Desafio" querer dizer a mesma coisa nos dois
+ * lugares. A chave é o RÓTULO, não o tipo do evento: um evento novo cai no sino
+ * genérico em vez de herdar por engano o ícone de outra categoria.
+ */
+const CATEGORY_ICON: Record<string, LucideIcon> = {
+  Desafio: Sparkles,
+  Conteúdo: PenLine,
+  Recompensa: Gift,
+  Pontos: Coins,
+};
+
+const categoryIcon = (label: string): LucideIcon => CATEGORY_ICON[label] ?? Bell;
 
 /**
  * Notificações da própria usuária — os avisos que o backend registrou.
@@ -72,9 +97,17 @@ export function NotificationsScreen({
                     >
                       <div className={styles.notifMain}>
                         <div className={styles.notifTop}>
-                          <Pill view={category} />
+                          <Pill view={category} icon={categoryIcon(category.label)} />
                           <span className={styles.notifDate}>{longDate(item.createdAt)}</span>
                           {unread ? <span className={styles.unreadTag}>Não lida</span> : null}
+                          {/* A ação da linha sobe para o cabeçalho: sozinha na
+                              linha de baixo, um botão por aviso fazia da lista
+                              uma parede de botões. */}
+                          {readEnabled ? (
+                            <div className={styles.notifAction}>
+                              <NotificationReadForm notificationId={item.id} read={!unread} />
+                            </div>
+                          ) : null}
                         </div>
                         <h3 className={styles.itemTitle}>{item.title}</h3>
                         <p className={styles.itemText}>{item.body}</p>
@@ -85,9 +118,6 @@ export function NotificationsScreen({
                           <Link href={destination.href} className={styles.blockLink}>
                             {destination.label}
                           </Link>
-                        ) : null}
-                        {readEnabled ? (
-                          <NotificationReadForm notificationId={item.id} read={!unread} />
                         ) : null}
                       </div>
                     </li>

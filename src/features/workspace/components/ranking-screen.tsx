@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Trophy } from 'lucide-react';
+import { plural } from '../domain/format';
 import { formatPoints } from '../domain/points';
 import type { RankingView } from '../services/ranking';
 import { Card } from './ui/card';
@@ -69,7 +70,14 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
 
       {podium.length > 0 ? (
         <Block title="Destaques do ciclo">
-          <ol className={styles.podiumRow}>
+          {/* A grade se ajusta a quem existe: três colunas para três pessoas, duas
+              para duas, e uma só — sem largura fixa deixando um buraco na terceira
+              coluna. Um ciclo com pouca gente não vira uma tela pela metade. */}
+          <ol
+            className={
+              podium.length === 1 ? `${styles.podiumRow} ${styles.podiumSolo}` : styles.podiumRow
+            }
+          >
             {podium.map((entry, index) => (
               <li
                 key={entry.displayName + index}
@@ -86,6 +94,12 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
               </li>
             ))}
           </ol>
+          {entries.length <= 3 ? (
+            <p className={styles.footNote}>
+              Neste ciclo, {plural(entries.length, 'pessoa pontuou', 'pessoas pontuaram')} até
+              agora. A classificação cresce conforme a comunidade participa.
+            </p>
+          ) : null}
         </Block>
       ) : null}
 

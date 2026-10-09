@@ -1,9 +1,27 @@
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, CalendarClock, Coins, Compass, Inbox, Search } from 'lucide-react';
-import { deadlineLabel, longDate, plural, shortDate } from '../domain/format';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarClock,
+  Coins,
+  Compass,
+  Inbox,
+  Search,
+  Sparkles,
+} from 'lucide-react';
+import {
+  deadlineLabel,
+  longDate,
+  notStarted,
+  plural,
+  shortDate,
+  startLabel,
+} from '../domain/format';
+import { platformLabel } from '../domain/labels';
 import { formatPoints } from '../domain/points';
 import { configEntries, requirementLabel } from '../domain/requirements';
 import {
+  COMING_VIEW,
   challengeBucket,
   challengeTabs,
   participationView,
@@ -12,16 +30,17 @@ import {
 } from '../domain/status';
 import type { ChallengeDetail, ChallengeView, Requirement } from '../services/challenges';
 import { ChallengeCard } from './challenge-card';
-import { CatalogMedia } from './catalog-media';
 import { JoinChallengeForm, SubmitContentForm } from './core-forms';
-import { Card } from './ui/card';
+import { Card, CardMedia, CoverFallback } from './ui/card';
 import { Pill } from './ui/pill';
 import { Block, ScreenHeader } from './ui/screen';
 import { EmptyState, UnavailableState } from './ui/state';
-import { Tabs } from './ui/tabs';
+import { Tabs, type TabItem } from './ui/tabs';
 import styles from '../styles/app.module.css';
 
-const EMPTY: Record<ChallengeTab, { title: string; text: string; action?: string }> = {
+type EmptyCopy = { title: string; text: string; action?: { href: string; label: string } };
+
+const EMPTY: Record<ChallengeTab, EmptyCopy> = {
   available: {
     title: 'Nenhum desafio aberto agora.',
     text: 'Assim que a equipe NUY publicar um novo desafio, ele aparece aqui com prazo, requisitos e Pontos NUY.',
@@ -29,7 +48,7 @@ const EMPTY: Record<ChallengeTab, { title: string; text: string; action?: string
   joined: {
     title: 'Você ainda não está participando de um desafio.',
     text: 'Explore os desafios disponíveis e escolha o primeiro para criar e compartilhar.',
-    action: 'Ver disponíveis',
+    action: { href: '/app/desafios?aba=available', label: 'Ver disponíveis' },
   },
   in_review: {
     title: 'Nenhum envio em análise.',
@@ -40,6 +59,33 @@ const EMPTY: Record<ChallengeTab, { title: string; text: string; action?: string
     text: 'Os desafios aprovados ficam registrados nesta aba com os pontos conquistados.',
   },
 };
+
+/**
+ * O vazio de "Disponíveis" sabe o que já existe no histórico.
+ *
+ * A aba vazia não é a mesma coisa para quem nunca entrou em nada e para quem já
+ * está em TODOS os desafios publicados — e, quando ela está vazia, é exatamente
+ * este o caso: nenhum desafio visível ficou sem participação. Dizer "assim que a
+ * equipe publicar um novo" para quem tem quatro desafios nas costas soa como se
+ * a tela não soubesse dela. As contagens são as das próprias abas: nada de
+ * número novo, nada de suposição sobre o passado.
+ */
+function emptyCopy(tab: ChallengeTab, counts: Record<ChallengeTab, number>): EmptyCopy {
+  if (tab !== 'available') return EMPTY[tab];
+  const history = counts.joined + counts.in_review + counts.done;
+  if (history === 0) return EMPTY.available;
+  const parts: string[] = [];
+  if (counts.joined) parts.push(`${counts.joined} em andamento`);
+  if (counts.in_review) parts.push(`${counts.in_review} em análise`);
+  if (counts.done) parts.push(`${counts.done} ${plural(counts.done, 'concluído', 'concluídos')}`);
+  return {
+    title: 'Nenhum desafio aberto agora.',
+    text: `Você já participou dos desafios publicados pela comunidade — ${parts.join(' · ')}. Quando a equipe NUY publicar um novo desafio, ele aparece aqui com prazo, requisitos e Pontos NUY.`,
+    action: counts.in_review
+      ? { href: '/app/desafios?aba=in_review', label: 'Acompanhar o que está em análise' }
+      : { href: '/app/desafios?aba=done', label: 'Ver meus desafios' },
+  };
+}
 
 /**
  * Lista de desafios com as abas vindas da participação real. As contagens são
@@ -54,15 +100,21 @@ export function ChallengesScreen({
   tab: ChallengeTab;
   now: Date;
 }) {
-  const counts = view
-    ? challengeTabs.map((entry) => ({
-        ...entry,
-        count: view.filter((challenge) => challenge.bucket === entry.id).length,
-      }))
-    : challengeTabs;
+  // Sem leitura (`view === null`) as abas vêm sem contagem e a tela mostra
+  // "indisponível" — o vazio com histórico nunca é montado sem número real.
+  const counts: TabItem[] = challengeTabs.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    count: view ? view.filter((challenge) => challenge.bucket === entry.id).length : undefined,
+  }));
+  const total = Object.fromEntries(counts.map((entry) => [entry.id, entry.count ?? 0])) as Record<
+    ChallengeTab,
+    number
+  >;
 
   const items = view?.filter((challenge) => challenge.bucket === tab) ?? [];
   const tabLabel = challengeTabs.find((entry) => entry.id === tab)?.label ?? '';
+  const empty = emptyCopy(tab, total);
 
   return (
     <>
@@ -90,16 +142,24 @@ export function ChallengesScreen({
           </div>
         ) : (
           <EmptyState
-            icon={tab === 'done' ? <Inbox size={18} /> : <Compass size={18} />}
-            title={EMPTY[tab].title}
-            text={EMPTY[tab].text}
+            icon={
+              tab === 'done' ? (
+                <Inbox size={18} />
+              ) : tab === 'available' && total.joined + total.in_review + total.done > 0 ? (
+                <Sparkles size={18} />
+              ) : (
+                <Compass size={18} />
+              )
+            }
+            title={empty.title}
+            text={empty.text}
             action={
-              EMPTY[tab].action ? (
+              empty.action ? (
                 <Link
-                  href="/app/desafios?aba=available"
+                  href={empty.action.href}
                   className={`${styles.button} ${styles.buttonPrimary}`}
                 >
-                  {EMPTY[tab].action}
+                  {empty.action.label}
                   <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               ) : undefined
@@ -144,10 +204,13 @@ function SubmissionPanel({
   challenge,
   participationEnabled,
   returnTo,
+  coming,
 }: {
   challenge: ChallengeView;
   participationEnabled: boolean;
   returnTo: string;
+  /** Janela ainda fechada: quem não está dentro não tem envio a fazer. */
+  coming: boolean;
 }) {
   const submission = challenge.submission;
   return (
@@ -180,9 +243,19 @@ function SubmissionPanel({
         </>
       ) : (
         <p className={styles.noteText}>
-          {participationEnabled
-            ? 'Você ainda não enviou conteúdo para este desafio.'
-            : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa. Enquanto isso, os envios não são registrados por aqui.'}
+          {/* Sem participação e com a janela fechada, "você ainda não enviou" soa
+              como uma cobrança por algo que nem é possível fazer: a frase fala do
+              que vem, não do que falta. Os dois motivos aparecem quando valem os
+              dois — a data em que abre e a integração que ainda não opera. */}
+          {!challenge.participation && coming
+            ? `A participação abre em ${longDate(challenge.startsAt)}. ${
+                participationEnabled
+                  ? 'O envio de conteúdo fica disponível a partir daí.'
+                  : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa.'
+              }`
+            : participationEnabled
+              ? 'Você ainda não enviou conteúdo para este desafio.'
+              : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa. Enquanto isso, os envios não são registrados por aqui.'}
         </p>
       )}
       {/* Envio real: com a operação configurada, para quem já entrou e sem nada
@@ -243,14 +316,17 @@ export function ChallengeDetailScreen({
     );
 
   const deadline = deadlineLabel(challenge.endsAt, now);
+  const coming = notStarted(challenge.startsAt, now);
   const bucket = challengeBucket(challenge);
   const pill = challenge.submission
     ? submissionView(challenge.submission.status)
     : challenge.participation
       ? participationView(challenge.participation.status)
-      : null;
+      : coming
+        ? COMING_VIEW
+        : null;
   const rules = [
-    challenge.platform ? ['Plataforma', challenge.platform] : null,
+    challenge.platform ? ['Plataforma', platformLabel(challenge.platform)] : null,
     challenge.hashtags ? ['Hashtags', challenge.hashtags] : null,
     challenge.mentions ? ['Menções', challenge.mentions] : null,
   ].filter((entry): entry is string[] => entry !== null);
@@ -268,15 +344,23 @@ export function ChallengeDetailScreen({
         </div>
       </div>
 
-      {/* A capa do detalhe usa a MESMA proporção do cartão: o recorte não muda
-          entre a lista e a página, e nada aqui reserva altura que não vai usar. */}
-      <div className={styles.detailMedia} data-empty={challenge.imageFileId ? 'false' : 'true'}>
-        <CatalogMedia fileId={challenge.imageFileId} name={challenge.name} />
-      </div>
+      {/* A capa é a MESMA caixa de mídia dos cartões (`CardMedia`): o recorte não
+          muda entre a lista e a página. Sem imagem publicada, a caixa grande não
+          vira um retângulo com uma letra solta — a capa institucional da marca
+          assume o lugar. Com imagem, o renderizador é o de sempre, sem tocar no
+          acesso. */}
+      <CardMedia
+        fileId={challenge.imageFileId}
+        name={challenge.name}
+        cover={<CoverFallback />}
+        className={[styles.detailMedia, challenge.imageFileId ? null : styles.detailMediaEmpty]
+          .filter(Boolean)
+          .join(' ')}
+      />
 
       <div className={styles.detailGrid}>
         <div className={styles.detailMain}>
-          <Block title="Briefing">
+          <Block title="Sobre o desafio">
             <Card>
               {challenge.description ? (
                 <p>{challenge.description}</p>
@@ -292,11 +376,11 @@ export function ChallengeDetailScreen({
           </Block>
 
           {detail.requirements.state === 'unavailable' ? (
-            <Block title="Requisitos">
+            <Block title="O que enviar">
               <UnavailableState what="os requisitos deste desafio" />
             </Block>
           ) : detail.requirements.items.length > 0 ? (
-            <Block title="Requisitos">
+            <Block title="O que enviar">
               <ul className={styles.requirementList}>
                 {detail.requirements.items.map((requirement) => (
                   <RequirementItem key={requirement.id} requirement={requirement} />
@@ -342,7 +426,15 @@ export function ChallengeDetailScreen({
               <CalendarClock size={15} aria-hidden="true" /> {deadline ?? 'Sem prazo definido'}
             </p>
             {challenge.startsAt ? (
-              <p className={styles.statHint}>Aberto desde {longDate(challenge.startsAt)}.</p>
+              // "Aberto desde 01 de novembro de 2026" numa linha cuja janela ainda
+              // não abriu é uma frase falsa — e era ela que acompanhava o botão de
+              // entrar que o servidor recusa. Quem ainda não começou diz quando
+              // começa.
+              <p className={styles.statHint}>
+                {coming
+                  ? `${startLabel(challenge.startsAt)}.`
+                  : `Aberto desde ${longDate(challenge.startsAt)}.`}
+              </p>
             ) : null}
             {challenge.participantLimit !== null ? (
               <p className={styles.statHint}>
@@ -350,17 +442,44 @@ export function ChallengeDetailScreen({
               </p>
             ) : challenge.participantCount > 0 ? (
               <p className={styles.statHint}>
+                {/* "creator já participou" falava da creator na terceira pessoa,
+                    como ficha de catálogo. Quem participou é gente. */}
                 {plural(
                   challenge.participantCount,
-                  'creator já participou',
-                  'creators já participaram',
+                  'pessoa já participou',
+                  'pessoas já participaram',
                 )}
                 .
               </p>
             ) : null}
           </Card>
 
-          {bucket === 'available' && !participationEnabled ? (
+          {/* Desafio publicado cuja janela ainda não abriu: o lugar do botão de
+              entrar é ocupado pela data em que ele abre. Antes, esta tela oferecia
+              a entrada e o servidor devolvia "não está mais no prazo" — recusa por
+              um prazo que, para quem lê, ainda nem começou. */}
+          {bucket === 'available' && coming ? (
+            <Card>
+              <h2 className={styles.blockTitle}>Ainda não começou</h2>
+              <p className={styles.noteText}>
+                A participação abre em {longDate(challenge.startsAt)} — até lá, este desafio fica
+                publicado para você ler o briefing e os requisitos com antecedência.
+              </p>
+              {/* Com a operação de entrada desligada, o motivo de não haver botão
+                  aqui é duplo: a data e a integração. Os dois são ditos — e o
+                  "prazos já estão valendo" sai de cena, porque o prazo deste
+                  desafio começa quando ele começar. */}
+              {participationEnabled ? null : (
+                <p className={styles.noteText}>
+                  A entrada em desafios pela plataforma será liberada quando a integração com as
+                  redes estiver ativa. A partir da data acima, este desafio passa a valer como os
+                  demais.
+                </p>
+              )}
+            </Card>
+          ) : null}
+
+          {bucket === 'available' && !coming && !participationEnabled ? (
             <Card>
               <h2 className={styles.blockTitle}>Como participar</h2>
               <p className={styles.noteText}>
@@ -372,7 +491,7 @@ export function ChallengeDetailScreen({
 
           {/* Entrada real no desafio: uma escrita transacional no servidor, com
               limite de vagas conferido no commit — nunca no cliente. */}
-          {bucket === 'available' && participationEnabled && !challenge.participation ? (
+          {bucket === 'available' && !coming && participationEnabled && !challenge.participation ? (
             <Card>
               <h2 className={styles.blockTitle}>Como participar</h2>
               <p className={styles.noteText}>
@@ -387,6 +506,7 @@ export function ChallengeDetailScreen({
             challenge={challenge}
             participationEnabled={participationEnabled}
             returnTo={`/app/desafios/${slug}`}
+            coming={coming}
           />
         </aside>
       </div>

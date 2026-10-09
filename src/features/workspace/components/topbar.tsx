@@ -1,30 +1,34 @@
 'use client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Gift, LogOut, Trophy, UserRound } from 'lucide-react';
+import { Bell, LogOut, UserRound } from 'lucide-react';
 import { logoutAction } from '@/features/auth/services/actions';
 import { sectionLabel } from './navigation';
 import styles from '../styles/app.module.css';
 
 /**
- * Topbar do produto: contexto da seção à esquerda, notificações e conta à
+ * Header do produto: contexto da seção à esquerda, notificações e identidade à
  * direita. Sem saldo, sem posição de ranking, sem medalha — esses números
  * pertencem às telas que os explicam, não a um cromo fixo.
  *
- * O nome aparece uma vez só, no botão da conta: a saudação da Início é o `h1`
- * da tela, e repetir o nome no cromo seria eco.
+ * A identidade são duas linhas curtas, nome e nível. O nível vem lido do
+ * servidor (`loadLevelName`) e some quando não há conta ou níveis publicados:
+ * melhor um nome sozinho do que um "Sem nível" inventado.
  */
 export function Topbar({
   name,
   email,
   initial,
   unread,
+  level,
 }: {
   name: string;
   email: string;
   initial: string;
   unread: number | null;
+  level: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -56,6 +60,17 @@ export function Topbar({
   return (
     <header className={styles.topbar}>
       <div className={styles.topbarLead}>
+        {/* A marca só aparece no mobile, quando não há sidebar — mesma folha,
+            dois estados, nenhuma duplicata de conteúdo: a imagem é decorativa
+            nos dois lugares (o link da sidebar tem o rótulo acessível). */}
+        <Image
+          src="/brand/nuy-creators-clean/logo/nuy-creators-logo.png"
+          alt=""
+          width={1278}
+          height={297}
+          sizes="84px"
+          className={styles.brandTopbar}
+        />
         <p className={styles.topbarKicker}>{sectionLabel(pathname)}</p>
       </div>
       <div className={styles.topbarActions}>
@@ -79,7 +94,10 @@ export function Topbar({
             <span className={styles.avatarInitial} aria-hidden="true">
               {initial}
             </span>
-            <span className={styles.avatarLabel}>{name}</span>
+            <span className={styles.avatarText}>
+              <span className={styles.avatarLabel}>{name}</span>
+              {level ? <span className={styles.avatarLevel}>{level}</span> : null}
+            </span>
           </button>
           {open ? (
             <div className={styles.menuPanel} aria-label="Sua conta">
@@ -99,24 +117,9 @@ export function Topbar({
                 <Bell size={16} aria-hidden="true" />
                 Notificações
               </Link>
-              {/* No desktop estes dois vivem na sidebar; no mobile, a barra
-                  inferior só tem cinco destinos e eles ficam aqui. */}
-              <Link
-                href="/app/recompensas"
-                className={`${styles.menuItem} ${styles.menuExtra}`}
-                onClick={() => setOpen(false)}
-              >
-                <Gift size={16} aria-hidden="true" />
-                Recompensas
-              </Link>
-              <Link
-                href="/app/ranking"
-                className={`${styles.menuItem} ${styles.menuExtra}`}
-                onClick={() => setOpen(false)}
-              >
-                <Trophy size={16} aria-hidden="true" />
-                Ranking
-              </Link>
+              {/* Recompensas e Ranking saíram daqui: no mobile eles agora vivem
+                  na folha "Mais" da barra inferior, junto do resto que não cabe
+                  nos cinco destinos. Um destino, um lugar. */}
               <form action={logoutAction}>
                 <button type="submit" className={styles.menuItem}>
                   <LogOut size={16} aria-hidden="true" />

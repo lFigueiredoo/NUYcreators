@@ -47,6 +47,24 @@ export function deadlineLabel(iso: string | null | undefined, now: Date) {
   return `Até ${longDate(iso)}`;
 }
 
+/**
+ * O item já começou? Comparação de LEITURA entre a data da linha e o instante da
+ * tela — nenhuma regra mora aqui.
+ *
+ * Quem decide se a entrada é aceita é o servidor: `core/join.ts` recusa com
+ * `window_closed` enquanto `startsAt` está no futuro. Esta função existe para a
+ * tela não oferecer o que o servidor vai recusar.
+ */
+export function notStarted(iso: string | null | undefined, now: Date) {
+  const date = parse(iso);
+  return date !== null && date.getTime() > now.getTime();
+}
+
+/** "Começa em 03 de outubro de 2026" — o oposto de "Aberto desde". `null` sem data. */
+export function startLabel(iso: string | null | undefined) {
+  return parse(iso) ? `Começa em ${longDate(iso)}` : null;
+}
+
 export function plural(count: number, singular: string, pluralWord: string) {
   return `${count} ${count === 1 ? singular : pluralWord}`;
 }

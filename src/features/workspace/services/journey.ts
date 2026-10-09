@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { Query } from 'node-appwrite';
 import { levelProgress, type Level, type LevelProgress } from '../domain/levels';
 import {
@@ -47,6 +48,40 @@ export type JourneyView = {
   transactions: Loaded<Transaction>;
 };
 
+/*
+ * As duas leituras que o cabeçalho e o painel compartilham.
+ *
+ * O nível aparece no header em todas as telas, e o painel também precisa da
+ * conta e dos níveis: sem `cache` do React seriam quatro leituras idênticas na
+ * mesma requisição. Com ele, a segunda chamada é a mesma promessa — medido em
+ * `/app`, zero leitura a mais; nas outras telas, exatamente as duas que o nível
+ * do header exige. Nenhuma regra muda aqui: os mesmos mapeadores, as mesmas
+ * tabelas, os mesmos escopos de sessão.
+ */
+const account = cache(async (secret: string, userId: string): Promise<Loaded<PointAccount>> =>
+  listSession(secret, SCOPE, 'point_accounts', mapAccount, {
+    queries: [Query.equal('userId', userId)],
+    limit: 1,
+  }),
+);
+
+const levels = cache(async (secret: string): Promise<Level[]> => loadLevels(secret));
+
+/**
+ * Nome do nível para o cabeçalho — `null` quando não há conta ou níveis.
+ *
+ * Lê `qualifyingPoints` (jornada), nunca o saldo: é a mesma fonte da faixa do
+ * painel, e `levelId` continua tendo a palavra final quando existir.
+ */
+export const loadLevelName = cache(
+  async (secret: string, userId: string): Promise<string | null> => {
+    const [own, published] = await Promise.all([account(secret, userId), levels(secret)]);
+    const row = first(own);
+    if (!row) return null;
+    return levelProgress(row.qualifyingPoints, published, row.levelId)?.current.name ?? null;
+  },
+);
+
 /**
  * Jornada de pontos da própria usuária.
  *
@@ -56,11 +91,8 @@ export type JourneyView = {
  * — tem a palavra final sobre o nível exibido.
  */
 export async function loadJourney(secret: string, userId: string): Promise<JourneyView> {
-  const [account, transactions, levels] = await Promise.all([
-    listSession(secret, SCOPE, 'point_accounts', mapAccount, {
-      queries: [Query.equal('userId', userId)],
-      limit: 1,
-    }),
+  const [ownAccount, transactions, published] = await Promise.all([
+    account(secret, userId),
     listSession(secret, SCOPE, 'point_transactions', mapTransaction, {
       // Extrato em ordem real de lançamento; o índice userId+createdAt sustenta
       // a ordenação e a paginação.
@@ -68,15 +100,15 @@ export async function loadJourney(secret: string, userId: string): Promise<Journ
       limit: 30,
       paged: true,
     }),
-    loadLevels(secret),
+    levels(secret),
   ]);
-  const own = first(account);
+  const own = first(ownAccount);
   const summary = journeySummary(own);
   return {
-    accountState: account.state,
+    accountState: ownAccount.state,
     summary,
-    levels,
-    progress: own ? levelProgress(own.qualifyingPoints, levels, own.levelId) : null,
+    levels: published,
+    progress: own ? levelProgress(own.qualifyingPoints, published, own.levelId) : null,
     transactions,
   };
 }

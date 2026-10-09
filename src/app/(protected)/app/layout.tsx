@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/features/workspace/components/app-shell';
+import { loadLevelName } from '@/features/workspace/services/journey';
 import { loadUnreadCount } from '@/features/workspace/services/notifications';
 import { workspaceSession } from '@/features/workspace/services/viewer';
 import { sessionRoles } from '@/lib/security/authorization';
@@ -25,9 +26,14 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     if ((await sessionRoles(secret, viewer.id)).length) redirect('/admin');
     redirect('/onboarding');
   }
-  const unread = await loadUnreadCount(secret, viewer.id);
+  // Nível do cabeçalho: `loadLevelName` é `cache`ado e compartilha as duas
+  // leituras com o painel — nas telas que já leem a jornada ele não lê de novo.
+  const [unread, level] = await Promise.all([
+    loadUnreadCount(secret, viewer.id),
+    loadLevelName(secret, viewer.id),
+  ]);
   return (
-    <AppShell viewer={viewer} unread={unread}>
+    <AppShell viewer={viewer} unread={unread} level={level}>
       {children}
     </AppShell>
   );

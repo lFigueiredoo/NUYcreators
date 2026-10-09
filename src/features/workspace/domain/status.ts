@@ -23,6 +23,16 @@ const PARTICIPATION: Record<string, StatusView> = {
   joined: { label: 'Participando', tone: 'progress' },
 };
 
+/**
+ * Desafio publicado cuja janela ainda não abriu.
+ *
+ * Não é estado de participação — não há participação nenhuma. É o relógio da
+ * linha lido contra o instante da tela (`notStarted`, em `domain/format`), e
+ * existe para a tela não oferecer uma entrada que o servidor recusa: `core/join`
+ * devolve `window_closed` enquanto a janela não abre.
+ */
+export const COMING_VIEW: StatusView = { label: 'Em breve', tone: 'progress' };
+
 /** `requested -> processing -> shipped -> delivered` (docs/flows.md §Resgate). */
 const REDEMPTION: Record<string, StatusView> = {
   requested: { label: 'Solicitado', tone: 'progress' },

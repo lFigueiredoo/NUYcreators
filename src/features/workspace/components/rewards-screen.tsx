@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Gift, Info, Package } from 'lucide-react';
-import { shortDate } from '../domain/format';
+import { plural, shortDate } from '../domain/format';
 import { formatPoints } from '../domain/points';
 import { redemptionView } from '../domain/status';
 import type { CatalogView } from '../services/rewards';
@@ -91,16 +91,25 @@ export function RewardsScreen({
         {catalog.rewards.state === 'unavailable' ? (
           <UnavailableState what="o catálogo de recompensas" />
         ) : rewards.length > 0 ? (
-          <div className={styles.challengeGrid}>
-            {rewards.map((reward) => (
-              <RewardCard
-                key={reward.id}
-                reward={reward}
-                redemptionEnabled={redemptionEnabled}
-                returnTo="/app/recompensas"
-              />
-            ))}
-          </div>
+          // A vitrine é larga de propósito: duas colunas dão à foto do produto o
+          // tamanho de um catálogo, não de um widget. Na grade de três o cartão
+          // ficava estreito e a imagem virava detalhe do texto.
+          <>
+            <div className={styles.rewardGrid}>
+              {rewards.map((reward) => (
+                <RewardCard
+                  key={reward.id}
+                  reward={reward}
+                  redemptionEnabled={redemptionEnabled}
+                  returnTo="/app/recompensas"
+                />
+              ))}
+            </div>
+            <p className={styles.footNote}>
+              Mostrando {plural(rewards.length, 'recompensa publicada', 'recompensas publicadas')}{' '}
+              no catálogo.
+            </p>
+          </>
         ) : (
           <EmptyState
             icon={<Gift size={18} />}
