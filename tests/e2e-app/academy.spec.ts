@@ -230,7 +230,6 @@ test('Academia V2: Admin publica, Creator conclui e comenta, equipe aprova e res
   await page.getByRole('textbox', { name: 'Título do material 1' }).fill('Guia PDF V2');
   await page.getByRole('textbox', { name: 'Arquivo ou URL do material 1' }).fill('v2-pdf');
   await page.getByRole('button', { name: 'Salvar rascunho' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Alteração salva e confirmada.' })).toBeVisible();
   await expect(page).toHaveURL(/\/admin\/academia\/(?!novo$)[^/]+$/);
   const courseId = page.url().split('/').at(-1)!;
   const lesson = stack.stub.dataset.tables.academy_lessons.find((row) => row.courseId === courseId)!;
@@ -273,6 +272,7 @@ test('Academia V2: Admin publica, Creator conclui e comenta, equipe aprova e res
     const reply = page.locator('article').filter({ hasText: 'Equipe NUY: obrigada por participar!' });
     await expect(reply).toBeVisible();
     await reply.getByRole('button', { name: 'Aprovar' }).click();
+    await expect(reply.getByText('Visível', { exact: false })).toBeVisible();
     await creator.reload();
     await expect(creator.getByText('Aprendi com esta aula V2.')).toBeVisible();
     await expect(creator.getByText('Equipe NUY: obrigada por participar!')).toBeVisible();

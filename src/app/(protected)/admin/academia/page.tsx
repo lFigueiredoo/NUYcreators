@@ -1,6 +1,7 @@
 import { AdminAcademyHome } from '@/features/academy/components/admin';
 import { adminAcademyCatalog } from '@/features/academy/services/read';
 import { requireStaff } from '@/lib/security/authorization';
+import { academyEnabled } from '@/features/academy/domain';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Academia NUY' };
@@ -15,5 +16,5 @@ export default async function AdminAcademyPage({
   const requested = typeof params.pagina === 'string' ? Number(params.pagina) : 1;
   const page =
     Number.isSafeInteger(requested) && requested > 0 && requested <= 1000 ? requested : 1;
-  return <AdminAcademyHome courses={await adminAcademyCatalog(page)} />;
+  return <AdminAcademyHome courses={await adminAcademyCatalog(page)} enabled={academyEnabled()} />;
 }

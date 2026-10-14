@@ -30,3 +30,17 @@ export function validateMediaDescriptor(raw: unknown) {
     return { ok: false as const, reason: 'PDF fora do contrato de tipo ou tamanho.' };
   return { ok: true as const, value: file, status: 'pending' as const };
 }
+
+/** Conservative cleanup plan; the caller must recheck references before any Storage deletion. */
+export function orphanedMediaCandidates(
+  media: readonly { fileId: string; createdAt: string }[],
+  referencedFileIds: ReadonlySet<string>,
+  now: Date,
+  graceHours = 24,
+) {
+  const cutoff = now.getTime() - graceHours * 60 * 60 * 1000;
+  return media.filter((file) => {
+    const created = Date.parse(file.createdAt);
+    return Number.isFinite(created) && created < cutoff && !referencedFileIds.has(file.fileId);
+  }).map((file) => file.fileId);
+}

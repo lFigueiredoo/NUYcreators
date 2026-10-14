@@ -13,7 +13,9 @@ import {
   type Context,
 } from './operations';
 
-export type AcademyActionResult = { ok: boolean; message: string; id?: string; version?: number };
+export type AcademyActionResult = { ok: boolean; message: string; id?: string; version?: number;
+  moduleIds?: Record<string, string>; lessonIds?: Record<string, string>;
+  materialIds?: Record<string, string> };
 const unavailable = 'A Academia ainda não está ativa neste ambiente. Nada foi gravado.';
 async function context(): Promise<Context> {
   const origin = (await headers()).get('origin');
@@ -36,9 +38,12 @@ async function perform(run: (ctx: Context) => Promise<unknown>): Promise<Academy
     const value = await run(await context());
     revalidatePath('/app/academia');
     revalidatePath('/admin/academia');
-    const row = value as { $id?: string; id?: string; version?: number };
+    const row = value as { $id?: string; id?: string; version?: number;
+      moduleIds?: Record<string, string>; lessonIds?: Record<string, string>;
+      materialIds?: Record<string, string> };
     return { ok: true, message: 'Alteração salva e confirmada.',
-      id: row.id ?? row.$id, version: row.version };
+      id: row.id ?? row.$id, version: row.version,
+      moduleIds: row.moduleIds, lessonIds: row.lessonIds, materialIds: row.materialIds };
   } catch (error) {
     if (error instanceof AcademyError) return { ok: false, message: error.message };
     return { ok: false, message: 'Não foi possível confirmar a gravação. Recarregue e tente novamente.' };

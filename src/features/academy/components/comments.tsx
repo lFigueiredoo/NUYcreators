@@ -17,6 +17,8 @@ export function CommunityComments({ target, targetId, comments, viewerId }: {
   const [body, setBody] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [reporting, setReporting] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('');
   const [message, setMessage] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [pending, start] = useTransition();
@@ -62,13 +64,29 @@ export function CommunityComments({ target, targetId, comments, viewerId }: {
                       setMessage(result.message); if (result.ok) router.refresh();
                     })}>Ocultar</button>
                 </> : <button className={`${styles.button} ${styles.buttonSecondary}`}
-                  type="button" disabled={pending} onClick={() => start(async () => {
-                    const result = await reportAcademyCommentAction({
-                      commentId: comment.id, reason: 'Solicito revisão deste comentário.',
-                    });
-                    setMessage(result.ok ? 'Denúncia recebida pela equipe.' : result.message);
-                  })}>Denunciar</button>}
+                  type="button" disabled={pending}
+                  onClick={() => { setReporting(comment.id); setReportReason(''); }}>
+                  Denunciar</button>}
               </div>
+              {reporting === comment.id ? <div className={styles.stack}>
+                <label className={styles.field}>Motivo da denúncia
+                  <textarea className={styles.textarea} maxLength={1000} value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)} disabled={pending} />
+                </label>
+                <div className={styles.editorActions}>
+                  <button className={styles.button} type="button"
+                    disabled={pending || reportReason.trim().length < 5}
+                    onClick={() => start(async () => {
+                      const result = await reportAcademyCommentAction({
+                        commentId: comment.id, reason: reportReason,
+                      });
+                      setMessage(result.ok ? 'Denúncia recebida pela equipe.' : result.message);
+                      if (result.ok) setReporting(null);
+                    })}>Enviar denúncia</button>
+                  <button className={`${styles.button} ${styles.buttonSecondary}`} type="button"
+                    onClick={() => setReporting(null)}>Cancelar</button>
+                </div>
+              </div> : null}
             </article>
           )) : <p className={styles.muted}>
             {comments.state === 'unavailable'

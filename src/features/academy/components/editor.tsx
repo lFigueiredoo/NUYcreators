@@ -72,6 +72,19 @@ export function AcademyEditor({
     if (result.ok && result.id && result.version) {
       setSavedId(result.id);
       setSavedVersion(result.version);
+      setModules((current) => current.map((module) => ({
+        ...module, id: result.moduleIds?.[module.id] ?? module.id,
+        courseId: result.id!, lessons: module.lessons.map((lesson) => ({
+          ...lesson, id: result.lessonIds?.[lesson.id] ?? lesson.id,
+          moduleId: result.moduleIds?.[module.id] ?? module.id,
+          courseId: result.id!,
+        })),
+      })));
+      setMaterials((current) => current.map((material) => ({ ...material,
+        id: result.materialIds?.[material.id] ?? material.id,
+        courseId: result.id!,
+        lessonId: result.lessonIds?.[material.lessonId ?? ''] ?? material.lessonId,
+      })));
       if (!savedId) router.replace(`/admin/academia/${encodeURIComponent(result.id)}`);
       router.refresh();
     }

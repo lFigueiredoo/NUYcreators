@@ -22,7 +22,9 @@ const moderationStatusLabel: Record<AcademyCommentStatus, string> = {
   unknown: 'Status desconhecido',
 };
 
-export function AdminAcademyHome({ courses }: { courses: AcademyPage<AcademyCourse> }) {
+export function AdminAcademyHome({ courses, enabled = false }: {
+  courses: AcademyPage<AcademyCourse>; enabled?: boolean;
+}) {
   const counts = { draft: 0, published: 0, archived: 0 };
   for (const course of courses.items) counts[course.status]++;
   return (
@@ -45,7 +47,7 @@ export function AdminAcademyHome({ courses }: { courses: AcademyPage<AcademyCour
           </Link>
         </div>
       </div>
-      <AcademyNotice text="A gestão já pode ser revisada localmente. Salvar, publicar, enviar mídia e moderar exigem a migração aprovada e os controles de acesso." />
+      {!enabled ? <AcademyNotice text="A gestão será ativada após a migração aprovada e os controles de acesso." /> : null}
       <div className={styles.grid} aria-label="Estados dos treinamentos">
         <div className={styles.panel}>
           <span className={styles.muted}>Rascunhos nesta página</span>
@@ -107,8 +109,8 @@ export function AdminAcademyHome({ courses }: { courses: AcademyPage<AcademyCour
                 : 'Nenhum treinamento cadastrado'}
             </h2>
             <p>
-              Abra o editor para revisar campos, módulos, aulas e a prévia. Nenhum dado será salvo
-              antes da ativação segura.
+              {enabled ? 'Abra o editor para criar o primeiro treinamento.'
+                : 'Abra o editor para revisar campos, módulos, aulas e a prévia. Nenhum dado será salvo antes da ativação segura.'}
             </p>
             <Link className={styles.button} href="/admin/academia/novo">
               Abrir editor
@@ -248,7 +250,7 @@ export function AdminAcademyComments({
           Voltar à Academia
         </Link>
       </div>
-      <AcademyNotice text="Responder, ocultar, excluir e resolver denúncias exigem os controles de autoria e moderação da migração." />
+      {!enabled ? <AcademyNotice text="A moderação será ativada após a migração aprovada e os controles de acesso." /> : null}
       <h2>Fila de comentários</h2>
       {comments.items.length ? (
         <div className={styles.stack}>

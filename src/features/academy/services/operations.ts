@@ -139,6 +139,11 @@ async function setLessonCommentReads(ctx: Context, lessonId: string, published: 
     await update(ctx, 'community_comments', comment.$id, {},
       published && comment.status === 'visible' ? usersRead : ownRead(String(comment.authorId)), tx);
 }
+async function revokeLessonMaterialReads(ctx: Context, lessonId: string, tx: string) {
+  const materials = await rows(ctx, 'academy_materials', [Query.equal('lessonId', lessonId)], tx);
+  for (const material of materials)
+    await update(ctx, 'academy_materials', material.$id, {}, [], tx);
+}
 
 export async function saveCourse(ctx: Context, raw: unknown) {
   requireManage(ctx);
@@ -244,11 +249,15 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
           await update(ctx, 'academy_lessons', lesson.id,
             { ...lessonData, ...(changedVideo ? { status: 'draft' } : {}) },
             changedVideo ? [] : undefined, tx);
-          if (changedVideo) await setLessonCommentReads(ctx, lesson.id, false, tx);
+          if (changedVideo) {
+            await setLessonCommentReads(ctx, lesson.id, false, tx);
+            await revokeLessonMaterialReads(ctx, lesson.id, tx);
+          }
           lessonIds.set(lesson.id, lesson.id);
         }
       }
     }
+    const materialIds = new Map<string, string>();
     for (const material of input.materials) {
       const lessonId = lessonIds.get(material.lessonId);
       if (!lessonId) throw new AcademyError('invalid', 'Material sem aula vinculada.');
@@ -258,16 +267,21 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
         throw new AcademyError('invalid', 'Material precisa de PDF privado ou link HTTPS.');
       const materialData = { courseId, lessonId, title: material.title, kind: material.kind,
         fileId: material.fileId, url: material.url, order: material.order };
-      if (material.id.startsWith('local-') || !material.id)
-        await create(ctx, 'academy_materials', materialData, [], undefined, tx);
+      if (material.id.startsWith('local-') || !material.id) {
+        const created = await create(ctx, 'academy_materials', materialData, [], undefined, tx);
+        materialIds.set(material.id, created.$id);
+      }
       else {
         const existing = await get(ctx, 'academy_materials', material.id, tx);
         if (existing.courseId !== courseId) throw new AcademyError('invalid', 'Material de outro curso.');
         await update(ctx, 'academy_materials', material.id, materialData,
-          existing.fileId !== material.fileId ? [] : undefined, tx);
+          existing.fileId !== material.fileId || existing.lessonId !== lessonId ? [] : undefined, tx);
+        materialIds.set(material.id, material.id);
       }
     }
-    return { id: courseId, version: Number(saved.version) };
+    return { id: courseId, version: Number(saved.version),
+      moduleIds: Object.fromEntries(moduleIds), lessonIds: Object.fromEntries(lessonIds),
+      materialIds: Object.fromEntries(materialIds) };
   });
 }
 
@@ -309,7 +323,10 @@ export async function saveLesson(ctx: Context, raw: unknown) {
       const changedVideo = existing.videoFileId !== input.videoFileId;
       saved = await update(ctx, 'academy_lessons', input.id,
         { ...data, ...(changedVideo ? { status: 'draft' } : {}) }, changedVideo ? [] : undefined, tx);
-      if (changedVideo) await setLessonCommentReads(ctx, input.id, false, tx);
+      if (changedVideo) {
+        await setLessonCommentReads(ctx, input.id, false, tx);
+        await revokeLessonMaterialReads(ctx, input.id, tx);
+      }
     } else saved = await create(ctx, 'academy_lessons', { ...data, status: 'draft' }, [], undefined, tx);
     await bump(ctx, parent, tx);
     return saved;
@@ -337,7 +354,7 @@ export async function saveMaterial(ctx: Context, raw: unknown) {
       const existing = await get(ctx, 'academy_materials', input.id, tx);
       if (existing.courseId !== input.courseId) throw new AcademyError('invalid', 'Material de outro curso.');
       saved = await update(ctx, 'academy_materials', input.id, data,
-        existing.fileId !== input.fileId ? [] : undefined, tx);
+        existing.fileId !== input.fileId || existing.lessonId !== input.lessonId ? [] : undefined, tx);
     } else saved = await create(ctx, 'academy_materials', data, [], undefined, tx);
     await bump(ctx, parent, tx);
     return saved;
@@ -404,14 +421,14 @@ export async function setCourseStatus(ctx: Context, courseId: string, expectedVe
   });
 }
 
-async function publishedTarget(ctx: Context, type: 'lesson' | 'challenge', targetId: string) {
+async function publishedTarget(ctx: Context, type: 'lesson' | 'challenge', targetId: string, tx?: string) {
   if (type === 'lesson') {
-    const lesson = await get(ctx, 'academy_lessons', targetId);
+    const lesson = await get(ctx, 'academy_lessons', targetId, tx);
     assertEnabled(lesson.status);
-    const parent = await course(ctx, String(lesson.courseId));
+    const parent = await course(ctx, String(lesson.courseId), tx);
     assertEnabled(parent.status);
   } else {
-    const challenge = await get(ctx, 'challenges', targetId);
+    const challenge = await get(ctx, 'challenges', targetId, tx);
     assertEnabled(challenge.status);
   }
 }
@@ -512,6 +529,11 @@ export async function moderateComment(ctx: Context, raw: unknown) {
       throw new AcademyError('conflict', 'O comentário mudou. Recarregue a fila.');
     if (!canModerateComment(current.status as AcademyCommentStatus, input.to))
       throw new AcademyError('invalid', 'Transição de moderação inválida.');
+    if (input.to === 'visible') {
+      if (current.targetType !== 'lesson' && current.targetType !== 'challenge')
+        throw new AcademyError('invalid', 'Alvo desconhecido.');
+      await publishedTarget(ctx, current.targetType, String(current.targetId), tx);
+    }
     const now = new Date().toISOString();
     const updated = await update(ctx, 'community_comments', input.commentId, {
       status: input.to, moderatedBy: ctx.actor.id, moderatedAt: now,
@@ -539,6 +561,6 @@ export async function moderateComment(ctx: Context, raw: unknown) {
 export async function staffReply(ctx: Context, targetType: 'lesson' | 'challenge',
   targetId: string, parentId: string, body: string, idempotencyKey: string) {
   requireModerate(ctx);
-  // Team replies still enter the moderation queue; another moderator must approve.
+  // Team replies still enter the moderation queue before becoming visible.
   return createComment(ctx, { targetType, targetId, parentId, body, idempotencyKey });
 }
