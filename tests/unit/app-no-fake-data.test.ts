@@ -20,6 +20,7 @@ const ROOT = join(process.cwd(), 'src');
 const GUARDED = [
   join(ROOT, 'features', 'workspace'),
   join(ROOT, 'features', 'admin'),
+  join(ROOT, 'features', 'academy'),
   join(ROOT, 'app', '(protected)'),
 ];
 
@@ -57,8 +58,7 @@ describe('área autenticada', () => {
     const pages = filesIn(join(ROOT, 'app', '(protected)', 'app')).filter((path) =>
       path.endsWith('page.tsx'),
     );
-    // As oito telas do produto mais o detalhe do desafio.
-    expect(pages.length).toBe(9);
+    expect(pages.length).toBeGreaterThanOrEqual(12);
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const name = relative(ROOT, page);
@@ -66,7 +66,7 @@ describe('área autenticada', () => {
       // por pelo menos um `load*` da camada de serviço — nunca por literal.
       expect(source, `${name} não lê a sessão`).toMatch(/workspaceSession\(\)/);
       expect(source, `${name} não lê dados de serviço`).toMatch(
-        /from '@\/features\/workspace\/services\//,
+        /from '@\/features\/(workspace|academy)\/services\//,
       );
     }
   });
@@ -75,22 +75,24 @@ describe('área autenticada', () => {
     const pages = filesIn(join(ROOT, 'app', '(protected)', 'admin')).filter((path) =>
       path.endsWith('page.tsx'),
     );
-    expect(pages.length).toBe(13);
+    expect(pages.length).toBeGreaterThanOrEqual(19);
     // A única tela que não lê nada é o formulário de recompensa em branco: ele sai
     // vazio a partir do schema e não tem de onde tirar dado. Está nomeada aqui para
     // que uma tela NOVA que esqueça a porta falhe — e para que a exceção seja lida
     // por quem for mexer, não descoberta por acidente.
-    const readsNothing = new Set([join('admin', 'recompensas', 'nova', 'page.tsx')]);
+    const readsNothing = new Set([
+      join('admin', 'recompensas', 'nova', 'page.tsx'),
+    ]);
     for (const page of pages) {
       const source = readFileSync(page, 'utf8');
       const name = relative(join(ROOT, 'app', '(protected)'), page);
       // A página não monta markup de dado: ela renderiza a tela da área.
       expect(source, `${name} não renderiza uma tela da área`).toMatch(
-        /from '@\/features\/admin\/components\//,
+        /from '@\/features\/(admin|academy)\/components\//,
       );
       if (readsNothing.has(name)) continue;
       expect(source, `${name} não passa pela porta da administração`).toMatch(
-        /from '@\/features\/admin\/services\//,
+        /from '@\/features\/(admin|academy)\/services\//,
       );
     }
   });

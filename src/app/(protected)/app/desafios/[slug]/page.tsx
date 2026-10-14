@@ -6,6 +6,7 @@ import {
   participationEnabled,
 } from '@/features/workspace/services/challenges';
 import { workspaceSession } from '@/features/workspace/services/viewer';
+import { challengeComments } from '@/features/academy/services/read';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,12 +31,18 @@ export default async function ChallengeDetailPage({
 async function ChallengeDetailBody({ slug }: { slug: string }) {
   const { secret, viewer } = await workspaceSession();
   const detail = await loadChallengeDetail(secret, viewer.id, slug);
+  const challengeId = detail.challenge.state === 'ok' ? detail.challenge.items[0]?.id : null;
+  const comments = challengeId
+    ? await challengeComments(secret, challengeId)
+    : { state: 'pending' as const, items: [] };
   return (
     <ChallengeDetailScreen
       detail={detail}
       slug={slug}
       now={new Date()}
       participationEnabled={participationEnabled()}
+      comments={comments}
+      viewerId={viewer.id}
     />
   );
 }

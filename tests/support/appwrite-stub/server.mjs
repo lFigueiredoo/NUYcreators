@@ -17,6 +17,7 @@ import { createServer } from 'node:https';
 import { randomUUID } from 'node:crypto';
 import { readCertificate } from '../certs.mjs';
 import { buildDataset } from './fixtures.mjs';
+import { academyAdmin, academyFixtureTables } from './academy-fixtures.mjs';
 import { MEDIA_FILES } from './media.mjs';
 
 /** Bucket de catálogo do manifesto: o único que o stub serve. */
@@ -32,6 +33,7 @@ const SUPPORTED = new Set([
   'orderDesc',
   'limit',
   'offset',
+  'search',
 ]);
 
 function value(doc, attribute) {
@@ -54,6 +56,17 @@ function matches(doc, query) {
       return current === null || current === undefined;
     case 'isNotNull':
       return current !== null && current !== undefined;
+    case 'search': {
+      const term = String(query.values?.[0] ?? '')
+        .trim()
+        .toLocaleLowerCase('pt-BR');
+      return (
+        term.length >= 3 &&
+        String(current ?? '')
+          .toLocaleLowerCase('pt-BR')
+          .includes(term)
+      );
+    }
     default:
       return true;
   }
@@ -106,6 +119,16 @@ function withSystemFields(row, dataset, index, tableId) {
  */
 export async function startStub(options = {}) {
   const dataset = buildDataset(options.now ?? new Date());
+  if (options.academyFixture) {
+    dataset.users.push(academyAdmin);
+    Object.assign(dataset.tables, academyFixtureTables);
+    dataset.tables.public_creator_profiles.push({
+      $id: 'academy-public-ana',
+      $permissions: [],
+      userId: 'viewer-ana',
+      displayName: 'Ana Beatriz',
+    });
+  }
   const sessions = new Map();
   const journal = [];
 
@@ -321,8 +344,21 @@ export async function startStub(options = {}) {
     if (segments[0] === 'teams' && segments[2] === 'memberships') {
       if (!session && !isAdmin)
         return failure(response, 401, 'user_unauthorized', 'Sessão necessária.');
-      // Nenhuma membership de equipe nas fixtures: o acesso administrativo é
-      // Sprint 6 e não deve existir para quem entra pela área de creators.
+      if (options.academyFixture && session?.userId === academyAdmin.id) {
+        return json(response, 200, {
+          total: 1,
+          memberships: [
+            {
+              $id: 'academy-admin-membership',
+              userId: '',
+              teamId: 'nuy-admins',
+              confirm: true,
+              roles: ['admin'],
+            },
+          ],
+        });
+      }
+      // Creators não recebem membership administrativa.
       return json(response, 200, { total: 0, memberships: [] });
     }
 

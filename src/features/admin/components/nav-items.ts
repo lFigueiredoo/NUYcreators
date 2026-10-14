@@ -1,4 +1,6 @@
 import {
+  BookOpen,
+  MessagesSquare,
   BarChart3,
   Gift,
   Inbox,
@@ -22,7 +24,15 @@ import {
  * papel: esconder o link nunca foi barreira, e não é tratado como uma.
  */
 export type AdminDestination =
-  'overview' | 'challenges' | 'submissions' | 'creators' | 'rewards' | 'campaigns' | 'reports';
+  | 'overview'
+  | 'challenges'
+  | 'academy'
+  | 'academy-comments'
+  | 'submissions'
+  | 'creators'
+  | 'rewards'
+  | 'campaigns'
+  | 'reports';
 
 export type AdminNavEntry = {
   id: AdminDestination;
@@ -46,6 +56,20 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/desafios',
     icon: Sparkles,
     capability: 'manage-catalog',
+  },
+  {
+    id: 'academy',
+    label: 'Academia NUY',
+    href: '/admin/academia',
+    icon: BookOpen,
+    capability: 'manage-catalog',
+  },
+  {
+    id: 'academy-comments',
+    label: 'Comentários',
+    href: '/admin/academia/comentarios',
+    icon: MessagesSquare,
+    capability: 'moderate',
   },
   {
     id: 'submissions',

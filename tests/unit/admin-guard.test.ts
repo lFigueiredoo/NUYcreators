@@ -70,10 +70,12 @@ describe('rotas /admin', () => {
     }
   });
 
-  it('o menu cobre as sete áreas na ordem da operação, e nenhuma além', () => {
+  it('o menu inclui a Academia na ordem da operação', () => {
     expect(adminNavEntries.map((entry) => entry.label)).toEqual([
       'Visão geral',
       'Desafios',
+      'Academia NUY',
+      'Comentários',
       'Submissões',
       'Creators',
       'Recompensas',
@@ -83,6 +85,8 @@ describe('rotas /admin', () => {
     expect(adminNavEntries.map((entry) => entry.href)).toEqual([
       '/admin',
       '/admin/desafios',
+      '/admin/academia',
+      '/admin/academia/comentarios',
       '/admin/submissoes',
       '/admin/creators',
       '/admin/recompensas',

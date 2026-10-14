@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bell,
   Coins,
   Gift,
@@ -16,6 +17,7 @@ export type NavEntry = { label: string; href: string; icon: LucideIcon };
 export const primaryNav: NavEntry[] = [
   { label: 'Início', href: '/app', icon: Home },
   { label: 'Desafios', href: '/app/desafios', icon: Sparkles },
+  { label: 'Academia NUY', href: '/app/academia', icon: BookOpen },
   { label: 'Meus conteúdos', href: '/app/conteudos', icon: PenLine },
   { label: 'Pontos', href: '/app/pontos', icon: Coins },
   { label: 'Recompensas', href: '/app/recompensas', icon: Gift },
@@ -55,6 +57,7 @@ function pick(entries: NavEntry[], href: string): NavEntry {
  * Nenhum destino novo: são os mesmos links que a sidebar já mostra no desktop.
  */
 export const moreNav: NavEntry[] = [
+  pick(primaryNav, '/app/academia'),
   pick(primaryNav, '/app/recompensas'),
   pick(primaryNav, '/app/ranking'),
   pick(secondaryNav, '/app/notificacoes'),

@@ -37,6 +37,8 @@ import { Block, ScreenHeader } from './ui/screen';
 import { EmptyState, UnavailableState } from './ui/state';
 import { Tabs, type TabItem } from './ui/tabs';
 import styles from '../styles/app.module.css';
+import { CommunityComments } from '@/features/academy/components/comments';
+import type { AcademyComment, AcademyLoad } from '@/features/academy/domain';
 
 type EmptyCopy = { title: string; text: string; action?: { href: string; label: string } };
 
@@ -285,11 +287,15 @@ export function ChallengeDetailScreen({
   slug,
   now,
   participationEnabled,
+  comments,
+  viewerId,
 }: {
   detail: ChallengeDetail;
   slug: string;
   now: Date;
   participationEnabled: boolean;
+  comments: AcademyLoad<AcademyComment>;
+  viewerId: string;
 }) {
   const challenge = detail.challenge.state === 'ok' ? (detail.challenge.items[0] ?? null) : null;
   if (detail.challenge.state === 'unavailable')
@@ -512,6 +518,7 @@ export function ChallengeDetailScreen({
           />
         </aside>
       </div>
+      <CommunityComments target="desafio" comments={comments} viewerId={viewerId} />
     </>
   );
 }

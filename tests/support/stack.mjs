@@ -96,14 +96,14 @@ export async function startProxy({ proxyPort, appPort }) {
 }
 
 /**
- * @param {{ startApp?: boolean, mediaKey?: string }} [options]
+ * @param {{ startApp?: boolean, mediaKey?: string, academyTest?: boolean }} [options]
  *   `mediaKey` liga a capacidade de mídia do app. Padrão: ligada, com uma chave de
  *   mentira, porque o stub serve os bytes e o caminho real (servidor busca com
  *   chave, rota entrega) é o que se quer exercitar. String vazia desliga, e é assim
  *   que o estado "sem armazenamento" é medido.
  */
-export async function startStack({ startApp = true, mediaKey = 'stub-media-key' } = {}) {
-  const stub = await startStub({ port: STUB_PORT });
+export async function startStack({ startApp = true, mediaKey = 'stub-media-key', academyTest = false } = {}) {
+  const stub = await startStub({ port: STUB_PORT, academyFixture: academyTest });
 
   let app = null;
   if (startApp) {
@@ -122,7 +122,8 @@ export async function startStack({ startApp = true, mediaKey = 'stub-media-key' 
         // de operação (telas dizem o estado real em vez de gravar). Definida
         // como string vazia, ela tem precedência sobre o `.env.local` de quem
         // roda — sem isto, ter a chave no ambiente mudaria o que o teste mede.
-        APPWRITE_OPS_API_KEY: '',
+        APPWRITE_OPS_API_KEY: academyTest ? 'stub-ops-key' : '',
+        APPWRITE_ACADEMY_ENABLED: academyTest ? 'true' : 'false',
         // A chave de MÍDIA é oposta: ligada por padrão, para o caminho de arquivo
         // ser exercitado de verdade (o stub cobra a chave, como o Appwrite).
         APPWRITE_MEDIA_API_KEY: mediaKey,
