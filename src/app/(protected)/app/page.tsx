@@ -34,15 +34,22 @@ export default async function DashboardPage() {
 
 async function DashboardBody({ secret, userId }: { secret: string; userId: string }) {
   const now = new Date();
-  const [journey, challenges, ranking] = await Promise.all([
-    loadJourney(secret, userId),
+  // A jornada sai daqui como PROMESSA e entra também no `loadCatalog`, que a
+  // espera dentro da própria `Promise.all` junto com as duas leituras do
+  // catálogo. Antes, o catálogo só começava depois de a jornada resolver — era o
+  // último estágio do painel (medido no journal: estágios 4 e 5). As leituras são
+  // as mesmas, os escopos são os mesmos e a elegibilidade continua usando
+  // `journey.summary`; o que muda é só quando elas começam.
+  const journey = loadJourney(secret, userId);
+  const [journeyView, challenges, ranking, catalog] = await Promise.all([
+    journey,
     loadChallenges(secret, userId),
     loadRanking(secret, userId, now),
+    loadCatalog(secret, userId, now, journey),
   ]);
-  const catalog = await loadCatalog(secret, userId, now, journey);
   return (
     <DashboardData
-      journey={journey}
+      journey={journeyView}
       challenges={challenges}
       ranking={ranking}
       catalog={catalog}

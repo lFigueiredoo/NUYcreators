@@ -97,20 +97,27 @@ export type CatalogView = {
  * O CTA de resgate só fica disponível com backend validado: a function
  * `redeem-reward` está declarada como não implementada no provisionamento, então
  * `redemptionEnabled` é `false` e a tela informa isso em vez de simular sucesso.
+ *
+ * `journeySource` aceita a jornada já resolvida OU a promessa dela: as duas
+ * leituras daqui (`rewards`, `reward_redemptions`) não dependem da jornada — só a
+ * elegibilidade calculada depois depende, e ela usa `journey.summary`. Quem já
+ * tem a promessa em mãos passa a promessa, e as três leituras viram UMA onda em
+ * vez de duas (medido no journal: eram os estágios 4 e 5 do painel).
  */
 export async function loadCatalog(
   secret: string,
   userId: string,
   now: Date,
-  journey: JourneyView,
+  journeySource: JourneyView | Promise<JourneyView>,
 ): Promise<CatalogView> {
-  const [rewards, redemptions] = await Promise.all([
+  const [rewards, redemptions, journey] = await Promise.all([
     listSession(secret, SCOPE, 'rewards', mapReward, { limit: 100 }),
     listSession(secret, SCOPE, 'reward_redemptions', mapRedemption, {
       queries: [Query.equal('userId', userId), Query.orderDesc('requestedAt')],
       limit: 50,
       paged: true,
     }),
+    journeySource,
   ]);
   if (rewards.state !== 'ok' || redemptions.state !== 'ok')
     return {

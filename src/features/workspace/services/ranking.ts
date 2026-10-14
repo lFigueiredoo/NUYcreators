@@ -82,6 +82,13 @@ export async function loadRanking(
 
   const ranked = rankEntries(entries.items);
   const window = ranked.slice(0, WINDOW);
+  // `own` já está decidido aqui: depende só de `ranked`, não do nome público.
+  // Saber disso agora deixa a busca de quem está FORA da janela correr em paralelo
+  // com a leitura dos perfis, em vez de depois dela — e ela só é disparada quando
+  // faz falta: dentro da janela, `positionOf` já respondeu e a leitura extra seria
+  // desperdício. As consultas são as mesmas duas; o que muda é a ordem no tempo.
+  const own = positionOf(ranked, userId);
+  const foraDaJanela = own ? null : ownOutsideWindow(secret, key, userId);
   const names = new Map<string, string>();
   if (window.length > 0) {
     const profiles = await listSession(secret, SCOPE, 'public_creator_profiles', mapPublic, {
@@ -97,7 +104,6 @@ export async function loadRanking(
       for (const profile of profiles.items) names.set(profile.userId, profile.displayName);
   }
 
-  const own = positionOf(ranked, userId);
   return {
     periodKey: key,
     periodLabel: periodLabel(key),
@@ -111,7 +117,7 @@ export async function loadRanking(
     ),
     own: own
       ? { position: own.position, earnedPoints: own.earnedPoints }
-      : await ownOutsideWindow(secret, key, userId),
+      : await foraDaJanela,
   };
 }
 

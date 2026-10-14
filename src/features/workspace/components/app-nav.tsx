@@ -33,10 +33,18 @@ function NavLink({ entry, badge }: { entry: NavEntry; badge?: number | null }) {
   );
 }
 
-/** Sidebar do desktop: principal + utilitários. */
+/**
+ * Sidebar do desktop: principal + utilitários.
+ *
+ * Os dois blocos de navegação ficam dentro de um contêiner que rola por conta
+ * própria. Em tela baixa o excedente da lista — e não a marca nem o rodapé, onde
+ * "Sair" mora — passa a ser alcançável: antes ele pintava ABAIXO da viewport, e
+ * a barra é `sticky` com `height: 100dvh`, então rolar a página nunca o trazia
+ * de volta. Acima do limiar não há excedente e a composição é idêntica.
+ */
 export function SidebarNav({ unread }: { unread: number | null }) {
   return (
-    <>
+    <div className={styles.navScroll}>
       <nav className={styles.nav} aria-label="Navegação principal">
         {primaryNav.map((entry) => (
           <NavLink key={entry.href} entry={entry} />
@@ -51,7 +59,7 @@ export function SidebarNav({ unread }: { unread: number | null }) {
           />
         ))}
       </nav>
-    </>
+    </div>
   );
 }
 

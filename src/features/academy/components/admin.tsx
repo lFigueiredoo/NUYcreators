@@ -12,6 +12,7 @@ import type {
 } from '../domain';
 import styles from '../academy.module.css';
 import { AcademyNotice } from './creator';
+import { AcademyModerationControls } from './moderation-controls';
 
 const moderationStatusLabel: Record<AcademyCommentStatus, string> = {
   pending: 'Aguardando aprovação',
@@ -229,9 +230,11 @@ export function AdminAcademyCategories({
 export function AdminAcademyComments({
   comments,
   reports,
+  enabled = false,
 }: {
   comments: AcademyPage<AcademyModerationComment>;
   reports: AcademyLoad<AcademyReport>;
+  enabled?: boolean;
 }) {
   return (
     <div className={styles.page}>
@@ -274,25 +277,7 @@ export function AdminAcademyComments({
                     .join('; ')}
                 </p>
               ) : null}
-              <div className={styles.editorActions}>
-                <button className={styles.button} type="button" disabled>
-                  Responder
-                </button>
-                <button
-                  className={`${styles.button} ${styles.buttonSecondary}`}
-                  type="button"
-                  disabled
-                >
-                  Ocultar
-                </button>
-                <button
-                  className={`${styles.button} ${styles.buttonSecondary}`}
-                  type="button"
-                  disabled
-                >
-                  Excluir
-                </button>
-              </div>
+              <AcademyModerationControls comment={comment} enabled={enabled} />
             </article>
           ))}
         </div>

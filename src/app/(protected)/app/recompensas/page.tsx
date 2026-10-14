@@ -19,9 +19,10 @@ export default function RewardsPage() {
 async function RewardsBody() {
   const { secret, viewer } = await workspaceSession();
   const now = new Date();
-  // A jornada entra antes do catálogo: o saldo exibido é o mesmo número da
-  // tela de Pontos, lido uma vez só.
-  const journey = await loadJourney(secret, viewer.id);
+  // A jornada é a MESMA leitura da tela de Pontos (o saldo exibido é o mesmo
+  // número). Ela entra no catálogo como PROMESSA: as duas leituras do catálogo
+  // começam no mesmo tick que ela, em vez de esperar a jornada resolver.
+  const journey = loadJourney(secret, viewer.id);
   const catalog = await loadCatalog(secret, viewer.id, now, journey);
   return <RewardsScreen catalog={catalog} redemptionEnabled={redemptionEnabled()} />;
 }

@@ -1,6 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { saveAcademyDraftAction, setAcademyCourseStatusAction } from '../services/actions';
 import { ArrowLeft, ArrowDown, ArrowUp, BookOpen, FileText, Plus, Video } from 'lucide-react';
 import type {
   AcademyCategory,
@@ -26,20 +28,22 @@ function hydrateModules(modules: AcademyModule[], lessons: AcademyLesson[]): Mod
     }));
 }
 
-/** Editor de revisão local: nenhuma ação de persistência é ligada antes da migração. */
 export function AcademyEditor({
   course,
   categories,
   existingModules = [],
   existingLessons = [],
   existingMaterials = [],
+  enabled = false,
 }: {
   course?: AcademyCourse | null;
   categories: AcademyCategory[];
   existingModules?: AcademyModule[];
   existingLessons?: AcademyLesson[];
   existingMaterials?: AcademyMaterial[];
+  enabled?: boolean;
 }) {
+  const router = useRouter();
   const [title, setTitle] = useState(course?.title ?? '');
   const [slug, setSlug] = useState(course?.slug ?? '');
   const [summary, setSummary] = useState(course?.summary ?? '');
@@ -49,7 +53,41 @@ export function AcademyEditor({
   const [modules, setModules] = useState<ModuleDraft[]>(() =>
     hydrateModules(existingModules, existingLessons),
   );
-  const [materials] = useState<AcademyMaterial[]>(() => [...existingMaterials]);
+  const [materials, setMaterials] = useState<AcademyMaterial[]>(() => [...existingMaterials]);
+  const [savedId, setSavedId] = useState(course?.id ?? '');
+  const [savedVersion, setSavedVersion] = useState(course?.version ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  async function saveDraft() {
+    setSaving(true);
+    setMessage('Salvando treinamento...');
+    const result = await saveAcademyDraftAction({
+      id: savedId || undefined, expectedVersion: savedVersion || undefined,
+      title, slug, summary, description, categoryId: category, order: course?.order ?? 0,
+      modules, materials,
+    });
+    setSaving(false);
+    setMessage(result.message);
+    if (result.ok && result.id && result.version) {
+      setSavedId(result.id);
+      setSavedVersion(result.version);
+      if (!savedId) router.replace(`/admin/academia/${encodeURIComponent(result.id)}`);
+      router.refresh();
+    }
+    return result;
+  }
+  async function changeStatus(status: 'published' | 'archived') {
+    if (!savedId || !savedVersion) return setMessage('Salve o rascunho antes de alterar o status.');
+    setSaving(true);
+    const result = await setAcademyCourseStatusAction(savedId, savedVersion, status);
+    setSaving(false);
+    setMessage(result.message);
+    if (result.ok) {
+      setSavedVersion(result.version ?? savedVersion + 1);
+      router.refresh();
+    }
+  }
 
   function addModule() {
     setModules((current) => [
@@ -89,6 +127,14 @@ export function AcademyEditor({
       ),
     );
   }
+  function addMaterial() {
+    const firstLesson = modules.flatMap((module) => module.lessons)[0];
+    if (!firstLesson) return setMessage('Adicione uma aula antes do material.');
+    setMaterials((current) => [...current, {
+      id: `local-${crypto.randomUUID()}`, courseId: savedId, lessonId: firstLesson.id,
+      title: '', kind: 'pdf', fileId: null, url: null, order: current.length + 1,
+    }]);
+  }
   function moveModule(index: number, step: number) {
     setModules((current) => {
       const updated = [...current];
@@ -113,12 +159,11 @@ export function AcademyEditor({
           <p className={styles.eyebrow}>Editor da Academia</p>
           <h1>{course ? 'Editar treinamento' : 'Novo treinamento'}</h1>
           <p>
-            Prepare o conteúdo e acompanhe a prévia. A gravação será habilitada após a migração
-            aprovada.
+            Prepare o conteúdo, salve o rascunho e acompanhe a prévia.
           </p>
         </div>
         <span className={styles.status}>
-          {course?.status === 'published' ? 'Publicado' : 'Rascunho local'}
+          {course?.status === 'published' ? 'Publicado' : savedId ? 'Rascunho' : 'Novo rascunho'}
         </span>
       </div>
       <div className={styles.editorGrid}>
@@ -251,7 +296,7 @@ export function AcademyEditor({
                     </label>
                     <ul className={styles.list}>
                       {module.lessons.map((lesson, lessonIndex) => (
-                        <li className={styles.listItem} key={lesson.id} data-lesson-id={lesson.id}>
+                        <li className={`${styles.listItem} ${styles.editorLessonItem}`} key={lesson.id} data-lesson-id={lesson.id}>
                           <Video size={16} aria-hidden="true" />
                           <input
                             className={styles.input}
@@ -275,6 +320,11 @@ export function AcademyEditor({
                             }
                             placeholder={`Aula ${lessonIndex + 1}`}
                           />
+                          <input className={styles.input} aria-label={`MP4 homologado da aula ${lessonIndex + 1}`}
+                            placeholder="ID do MP4 homologado" value={lesson.videoFileId ?? ''}
+                            onChange={(event) => setModules((current) => current.map((entry) =>
+                              entry.id === module.id ? { ...entry, lessons: entry.lessons.map((item) =>
+                                item.id === lesson.id ? { ...item, videoFileId: event.target.value || null } : item) } : entry))} />
                         </li>
                       ))}
                     </ul>
@@ -307,25 +357,40 @@ export function AcademyEditor({
                     .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
                     .map((material) => (
                       <li
-                        className={styles.listItem}
+                        className={`${styles.listItem} ${styles.editorMaterialItem}`}
                         key={material.id}
                         data-material-id={material.id}
                       >
-                        <span>{material.title}</span>
-                        <span className={styles.muted}>
-                          {material.lessonId
-                            ? (modules
-                                .flatMap((module) => module.lessons)
-                                .find((lesson) => lesson.id === material.lessonId)?.title ??
-                              'Aula vinculada')
-                            : 'Treinamento'}
-                        </span>
+                        <input className={styles.input} aria-label={`Título do material ${material.order}`}
+                          placeholder="Título do material" value={material.title}
+                          onChange={(event) => setMaterials((current) => current.map((item) =>
+                            item.id === material.id ? { ...item, title: event.target.value } : item))} />
+                        <select className={styles.select} aria-label={`Aula do material ${material.order}`}
+                          value={material.lessonId ?? ''} onChange={(event) => setMaterials((current) => current.map((item) =>
+                            item.id === material.id ? { ...item, lessonId: event.target.value } : item))}>
+                          {modules.flatMap((module) => module.lessons).map((lesson) =>
+                            <option key={lesson.id} value={lesson.id}>{lesson.title || 'Aula sem título'}</option>)}
+                        </select>
+                        <select className={styles.select} aria-label={`Tipo do material ${material.order}`}
+                          value={material.kind} onChange={(event) => setMaterials((current) => current.map((item) =>
+                            item.id === material.id ? { ...item, kind: event.target.value as 'pdf' | 'link', fileId: null, url: null } : item))}>
+                          <option value="pdf">PDF</option><option value="link">Link</option>
+                        </select>
+                        <input className={styles.input} aria-label={`Arquivo ou URL do material ${material.order}`}
+                          placeholder={material.kind === 'pdf' ? 'ID do PDF homologado' : 'URL HTTPS'}
+                          value={material.kind === 'pdf' ? material.fileId ?? '' : material.url ?? ''}
+                          onChange={(event) => setMaterials((current) => current.map((item) =>
+                            item.id === material.id ? { ...item,
+                              ...(item.kind === 'pdf' ? { fileId: event.target.value || null } :
+                                { url: event.target.value || null }) } : item))} />
                       </li>
                     ))}
                 </ul>
               </div>
             ) : null}
             <div className={styles.editorActions}>
+              <button className={`${styles.button} ${styles.buttonSecondary}`} type="button"
+                onClick={addMaterial}><Plus size={16} /> Adicionar material</button>
               <button
                 className={`${styles.button} ${styles.buttonSecondary}`}
                 type="button"
@@ -343,18 +408,22 @@ export function AcademyEditor({
             </div>
           </section>
           <div className={styles.editorActions}>
-            <button type="button" className={styles.button} disabled>
+            <button type="button" className={styles.button} disabled={!enabled || saving}
+              onClick={saveDraft}>
               Salvar rascunho
             </button>
-            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} disabled>
+            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`}
+              disabled={!enabled || saving || !savedId} onClick={() => changeStatus('published')}>
               Publicar
             </button>
-            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`} disabled>
+            <button type="button" className={`${styles.button} ${styles.buttonSecondary}`}
+              disabled={!enabled || saving || !savedId} onClick={() => changeStatus('archived')}>
               Arquivar
             </button>
           </div>
           <p className={styles.muted} role="status">
-            Nada foi salvo. Os campos desta prévia são locais à página e serão perdidos ao sair.
+            {message || (enabled ? 'Salve para confirmar as alterações no servidor.' :
+              'Nada foi salvo. A Academia está indisponível neste ambiente.')}
           </p>
         </div>
         <aside className={styles.stack}>

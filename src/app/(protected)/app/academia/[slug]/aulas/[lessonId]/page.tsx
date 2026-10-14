@@ -1,5 +1,5 @@
 import { AcademyLessonDetail } from '@/features/academy/components/creator';
-import { creatorAcademyCourse, lessonComments } from '@/features/academy/services/read';
+import { creatorAcademyCourse, creatorLessonProgress, lessonComments } from '@/features/academy/services/read';
 import { workspaceSession } from '@/features/workspace/services/viewer';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +17,8 @@ export default async function AcademyLessonPage({
   const comments = lesson
     ? await lessonComments(secret, lesson.id)
     : { state: 'pending' as const, items: [] };
+  const progress = lesson ? await creatorLessonProgress(secret, viewer.id, lesson.id)
+    : { state: 'pending' as const, items: [] };
   return (
     <AcademyLessonDetail
       course={detail.course}
@@ -27,6 +29,8 @@ export default async function AcademyLessonPage({
       materialState={detail.materials.state}
       comments={comments}
       viewerId={viewer.id}
+      completed={progress.items.length > 0}
+      progressEnabled={progress.state === 'ok'}
     />
   );
 }

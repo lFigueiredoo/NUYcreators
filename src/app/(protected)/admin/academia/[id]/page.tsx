@@ -4,6 +4,7 @@ import { adminAcademyCourse, adminAcademyCategories } from '@/features/academy/s
 import { requireStaff } from '@/lib/security/authorization';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { academyEnabled } from '@/features/academy/domain';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Editar treinamento · Academia NUY' };
@@ -41,6 +42,7 @@ export default async function EditAcademyCoursePage({
       existingModules={detail.modules.items}
       existingLessons={detail.lessons.items}
       existingMaterials={detail.materials.items}
+      enabled={academyEnabled()}
     />
   );
 }

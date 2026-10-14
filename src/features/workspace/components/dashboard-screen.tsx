@@ -131,12 +131,19 @@ function BannerShell({
             limpador, os três da linha Herbal Selvagem. O arquivo entrou no acervo
             byte a byte como veio (mesmo SHA-256), sem recodificação: a sobra de
             proporção é resolvida pelo `object-fit` da caixa, não pelo arquivo. */}
+        {/* A faixa é o LCP do painel (medido: `lcp.element` aponta para esta
+            imagem). O Next 16 depreciou `priority` em favor de `preload`, mas
+            recomenda `loading="eager"` + `fetchPriority="high"` quando o
+            `loading` já é usado — é o caso aqui, e é o que tira a imagem do
+            lazy sem abrir mão das outras props. */}
         <Image
           src="/brand/nuy-creators-v2/products/products-herbal-selvagem.png"
           alt=""
           width={1672}
           height={941}
           sizes="(max-width: 900px) 100vw, 540px"
+          loading="eager"
+          fetchPriority="high"
           className={styles.bannerImg}
         />
       </div>

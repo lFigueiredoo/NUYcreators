@@ -110,6 +110,14 @@ export const academyFixtureTables = {
       order: 1,
     },
   ],
+  academy_media: [
+    { $id: 'media-video-1', $permissions: [], fileId: 'private-video-1',
+      lessonId: 'lesson-voz', kind: 'video', status: 'ready', mimeType: 'video/mp4',
+      sizeBytes: 1024, createdBy: 'academy-admin', createdAt: '2026-10-01T00:00:00.000Z' },
+    { $id: 'media-pdf-1', $permissions: [], fileId: 'private-pdf-1',
+      lessonId: 'lesson-voz', kind: 'pdf', status: 'ready', mimeType: 'application/pdf',
+      sizeBytes: 512, createdBy: 'academy-admin', createdAt: '2026-10-01T00:00:00.000Z' },
+  ],
   academy_progress: [],
   community_comments: [
     {
@@ -156,4 +164,5 @@ export const academyFixtureTables = {
       status: 'open',
     },
   ],
+  community_moderation_events: [],
 };

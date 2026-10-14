@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PRODUCTION_PROTECTED_PROJECT_ID } from './protected-project';
 export const environmentSchema = z.object({
   APPWRITE_ENDPOINT: z.union([z.url(), z.literal('')]).optional(),
   APPWRITE_PROJECT_ID: z.string().optional(),
@@ -43,6 +44,13 @@ export function parseEnvironment(input: Record<string, string | undefined>) {
   )
     throw new Error(
       'Project ID não corresponde ao APPWRITE_EXPECTED_PROJECT_ID aprovado. Sem fallback de projeto.',
+    );
+  if (
+    process.env.VERCEL_ENV === 'preview' &&
+    env.APPWRITE_PROJECT_ID === PRODUCTION_PROTECTED_PROJECT_ID
+  )
+    throw new Error(
+      'PRODUCTION_PROTECTED: Preview não pode conectar ao projeto Appwrite de produção.',
     );
   if (
     env.APPWRITE_REGISTRATION_ENABLED === 'true' &&

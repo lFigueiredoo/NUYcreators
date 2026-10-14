@@ -11,6 +11,7 @@ export type AcademyCourse = {
   authorizedCoverUrl: string | null;
   status: 'draft' | 'published' | 'archived';
   order: number;
+  version: number;
 };
 export type AcademyModule = {
   id: string;

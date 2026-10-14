@@ -20,6 +20,7 @@
  */
 import { Client, Functions, Storage, TablesDB, TablesDBIndexType, Teams } from 'node-appwrite';
 import { parseEnvironment } from '../../src/lib/env/schema';
+import { assertDedicatedProject } from './safety';
 
 /** Id que não existe de propósito: a sonda mede escopo, não recurso. */
 const PROBE_TABLE = 'zz-probe-nao-usar';
@@ -188,6 +189,7 @@ const MARK: Record<Verdict, string> = {
 };
 
 export async function runCapabilities(env: NodeJS.ProcessEnv) {
+  assertDedicatedProject(env); // Bloqueia produção antes até das sondas de escopo.
   const parsed = parseEnvironment(env);
   if (!parsed.APPWRITE_ENDPOINT || !parsed.APPWRITE_PROJECT_ID || !env.APPWRITE_API_KEY)
     throw new Error('Configure APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID e APPWRITE_API_KEY.');

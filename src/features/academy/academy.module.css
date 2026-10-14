@@ -343,6 +343,20 @@
 .listItem:hover {
   border-color: var(--app-gold);
 }
+.editorLessonItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+}
+.editorMaterialItem {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.editorLessonItem .input,
+.editorMaterialItem .input,
+.editorMaterialItem .select {
+  width: 100%;
+  min-width: 0;
+}
 .muted {
   color: var(--app-navy-soft);
   font-size: 0.82rem;
@@ -476,6 +490,15 @@
   }
 }
 @media (max-width: 520px) {
+  .editorLessonItem {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .editorLessonItem .input:last-child {
+    grid-column: 1 / -1;
+  }
+  .editorMaterialItem {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .page {
     gap: 22px;
   }

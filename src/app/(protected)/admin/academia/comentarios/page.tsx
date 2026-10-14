@@ -1,6 +1,7 @@
 import { AdminAcademyComments } from '@/features/academy/components/admin';
 import { adminAcademyComments, adminAcademyReports } from '@/features/academy/services/read';
 import { requireStaff } from '@/lib/security/authorization';
+import { academyEnabled } from '@/features/academy/domain';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Comentários · Academia NUY' };
@@ -19,5 +20,5 @@ export default async function AdminAcademyCommentsPage({
     adminAcademyComments(page),
     adminAcademyReports(),
   ]);
-  return <AdminAcademyComments comments={comments} reports={reports} />;
+  return <AdminAcademyComments comments={comments} reports={reports} enabled={academyEnabled()} />;
 }

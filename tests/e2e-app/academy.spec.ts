@@ -68,7 +68,7 @@ test('creator vê catálogo, detalhe, aula e controles privados em três tamanho
     });
     await page.getByRole('link', { name: /A voz que é sua/ }).click();
     await expect(page.getByText('O vídeo desta aula estará disponível em breve.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Marcar como concluída' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Marcar como concluída' })).toBeEnabled();
     await expect(page.getByRole('button', { name: 'Abrir PDF' })).toBeDisabled();
     await expect(page.getByText('Essa aula me ajudou a organizar minhas ideias.')).toBeVisible();
     await expect(page.getByText('Comentário aguardando aprovação.')).toHaveCount(0);
@@ -112,7 +112,7 @@ test('busca e categoria filtram o catálogo sem mostrar rascunhos', async ({ pag
   await expect(page.getByText('Rascunho interno')).toHaveCount(0);
 });
 
-test('Admin vê gestão e editor com prévia local sem persistência', async ({ page }) => {
+test('Admin vê gestão e editor com prévia e ações de persistência', async ({ page }) => {
   await signIn(page, 'academy-admin@nuy.test', 'senha-de-teste-academy');
   for (const [width, height] of [
     [1440, 900],
@@ -152,7 +152,7 @@ test('Admin vê gestão e editor com prévia local sem persistência', async ({ 
     });
     await page.goto(`${stack.origin}/admin/academia`);
     await page.getByRole('link', { name: /Presença com propósito/ }).click();
-    await expect(page.getByRole('textbox', { name: 'Título' })).toHaveValue(
+    await expect(page.getByRole('textbox', { name: 'Título', exact: true })).toHaveValue(
       'Presença com propósito',
     );
     await expect(page.locator('[data-module-id="module-historia"]')).toBeVisible();
@@ -165,8 +165,8 @@ test('Admin vê gestão e editor com prévia local sem persistência', async ({ 
     await page.getByRole('button', { name: 'Adicionar módulo' }).click();
     await page.getByRole('button', { name: 'Adicionar aula' }).click();
     await expect(page.getByText('Treinamento em revisão').last()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeDisabled();
-    await expect(page.getByText('Nada foi salvo.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeEnabled();
+    await expect(page.getByText('Salve para confirmar as alterações no servidor.')).toBeVisible();
     await page.evaluate(() => {
       (document.activeElement as HTMLElement | null)?.blur();
       window.scrollTo(0, 0);
@@ -212,4 +212,71 @@ test('catálogo com mais de 100 registros mantém paginação e busca global', a
     .filter((entry) => entry.path.endsWith('/tables/academy_courses/rows'))
     .map((entry) => decodeURIComponent(entry.search));
   expect(catalogQueries.some((query) => query.includes('searchText'))).toBe(true);
+});
+
+test('Academia V2: Admin publica, Creator conclui e comenta, equipe aprova e responde', async ({ page, browser }) => {
+  await signIn(page, 'academy-admin@nuy.test', 'senha-de-teste-academy');
+  await page.goto(`${stack.origin}/admin/academia/novo`);
+  await page.getByRole('textbox', { name: 'Título', exact: true }).fill('Formação funcional V2');
+  await page.getByRole('textbox', { name: 'Slug' }).fill('formacao-funcional-v2');
+  await page.getByRole('textbox', { name: 'Resumo' }).fill('Um percurso completo de teste.');
+  await page.getByRole('combobox', { name: 'Categoria' }).selectOption('cat-criacao');
+  await page.getByRole('button', { name: 'Adicionar módulo' }).click();
+  await page.getByRole('textbox', { name: 'Nome do módulo' }).fill('Módulo de estreia');
+  await page.getByRole('button', { name: 'Adicionar aula' }).click();
+  await page.getByRole('textbox', { name: 'Nome da aula 1' }).fill('Aula de estreia');
+  await page.getByRole('textbox', { name: 'MP4 homologado da aula 1' }).fill('v2-video');
+  await page.getByRole('button', { name: 'Adicionar material' }).click();
+  await page.getByRole('textbox', { name: 'Título do material 1' }).fill('Guia PDF V2');
+  await page.getByRole('textbox', { name: 'Arquivo ou URL do material 1' }).fill('v2-pdf');
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Alteração salva e confirmada.' })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/academia\/(?!novo$)[^/]+$/);
+  const courseId = page.url().split('/').at(-1)!;
+  const lesson = stack.stub.dataset.tables.academy_lessons.find((row) => row.courseId === courseId)!;
+  const material = stack.stub.dataset.tables.academy_materials.find((row) => row.courseId === courseId)!;
+  expect(lesson?.title).toBe('Aula de estreia');
+  expect(material?.lessonId).toBe(lesson.$id);
+  // O teste local emula a verificação externa de codec, AV e Storage privado.
+  for (const [fileId, kind, mimeType] of [
+    ['v2-video', 'video', 'video/mp4'], ['v2-pdf', 'pdf', 'application/pdf'],
+  ]) stack.stub.dataset.tables.academy_media.push({
+    $id: `media-${fileId}`, $permissions: [], fileId, lessonId: lesson.$id,
+    kind, status: 'ready', mimeType, sizeBytes: 1024, createdBy: 'academy-admin',
+    createdAt: new Date().toISOString(),
+  });
+  await page.getByRole('button', { name: 'Publicar', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Alteração salva e confirmada.' })).toBeVisible();
+  expect(stack.stub.dataset.tables.academy_courses.find((row) => row.$id === courseId)?.status)
+    .toBe('published');
+
+  const context = await browser.newContext({ ignoreHTTPSErrors: true });
+  const creator = await context.newPage();
+  try {
+    await signIn(creator, 'ana@nuy.test', 'senha-de-teste-123');
+    await creator.goto(`${stack.origin}/app/academia/formacao-funcional-v2/aulas/${lesson.$id}`);
+    await expect(creator.getByRole('heading', { name: 'Aula de estreia' })).toBeVisible();
+    await expect(creator.getByRole('button', { name: 'Abrir PDF' })).toBeDisabled();
+    await creator.getByRole('button', { name: 'Marcar como concluída' }).click();
+    await expect(creator.getByRole('button', { name: 'Concluída' })).toBeVisible();
+    await creator.getByRole('textbox', { name: 'Seu comentário' }).fill('Aprendi com esta aula V2.');
+    await creator.getByRole('button', { name: 'Publicar comentário' }).click();
+    await expect(creator.getByRole('status').filter({ hasText: 'Aguardando aprovação.' })).toBeVisible();
+    await expect(creator.getByText('Aprendi com esta aula V2.')).toHaveCount(0);
+    await page.goto(`${stack.origin}/admin/academia/comentarios`);
+    const thread = page.locator('article').filter({ hasText: 'Aprendi com esta aula V2.' });
+    await expect(thread).toBeVisible();
+    await thread.getByRole('button', { name: 'Aprovar' }).click();
+    await expect(thread.getByText('Visível', { exact: false })).toBeVisible();
+    await thread.getByRole('textbox', { name: 'Resposta da equipe' }).fill('Equipe NUY: obrigada por participar!');
+    await thread.getByRole('button', { name: 'Responder como equipe' }).click();
+    const reply = page.locator('article').filter({ hasText: 'Equipe NUY: obrigada por participar!' });
+    await expect(reply).toBeVisible();
+    await reply.getByRole('button', { name: 'Aprovar' }).click();
+    await creator.reload();
+    await expect(creator.getByText('Aprendi com esta aula V2.')).toBeVisible();
+    await expect(creator.getByText('Equipe NUY: obrigada por participar!')).toBeVisible();
+    expect(stack.stub.dataset.tables.notifications.some((row) => row.type === 'academy_reply'
+      && row.userId === 'viewer-ana')).toBe(true);
+  } finally { await context.close(); }
 });

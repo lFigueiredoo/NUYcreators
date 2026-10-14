@@ -131,6 +131,7 @@ export async function startStub(options = {}) {
   }
   const sessions = new Map();
   const journal = [];
+  const transactions = new Map();
 
   const rowsOf = (tableId) => dataset.tables[tableId] ?? null;
 
@@ -231,6 +232,49 @@ export async function startStub(options = {}) {
       return failure(response, 404, 'stub_route_not_found', 'Rota de conta desconhecida.');
     }
 
+    // Isolated Academy transactions with optimistic row conflict detection.
+    if (segments[0] === 'tablesdb' && segments[1] === 'transactions') {
+      if (!isAdmin) return failure(response, 401, 'user_unauthorized', 'Chave necessária.');
+      if (segments.length === 2 && request.method === 'POST') {
+        const txId = randomUUID();
+        transactions.set(txId, {
+          original: structuredClone(dataset.tables), working: structuredClone(dataset.tables),
+          touched: new Map(),
+        });
+        return json(response, 201, { $id: txId, status: 'pending', ttl: body.ttl ?? 120 });
+      }
+      const txId = segments[2];
+      const tx = transactions.get(txId);
+      if (!tx) return failure(response, 404, 'transaction_not_found', 'Transação ausente.');
+      if (request.method === 'DELETE') {
+        transactions.delete(txId);
+        return json(response, 200, {});
+      }
+      if (request.method === 'PATCH' && body.rollback) {
+        transactions.delete(txId);
+        return json(response, 200, { $id: txId, status: 'failed' });
+      }
+      if (request.method === 'PATCH' && body.commit) {
+        for (const [key] of tx.touched) {
+          const [tableId, rowId] = key.split('|');
+          const before = tx.original[tableId]?.find((row) => row.$id === rowId) ?? null;
+          const current = dataset.tables[tableId]?.find((row) => row.$id === rowId) ?? null;
+          if (JSON.stringify(before) !== JSON.stringify(current))
+            return failure(response, 409, 'transaction_conflict', 'Linha alterada em paralelo.');
+        }
+        for (const [key] of tx.touched) {
+          const [tableId, rowId] = key.split('|');
+          const now = tx.working[tableId].find((row) => row.$id === rowId);
+          const index = dataset.tables[tableId].findIndex((row) => row.$id === rowId);
+          if (index >= 0) dataset.tables[tableId][index] = structuredClone(now);
+          else dataset.tables[tableId].push(structuredClone(now));
+        }
+        transactions.delete(txId);
+        return json(response, 200, { $id: txId, status: 'completed' });
+      }
+      return failure(response, 405, 'stub_route_not_found', 'Transação inválida.');
+    }
+
     // ------------------------------------------------------- rows (TablesDB)
     // GET /tablesdb/{db}/tables/{table}/rows[/{id}] — os mesmos IDs de table do
     // manifesto, e o envelope do TablesDB (`rows`, não `documents`).
@@ -239,7 +283,10 @@ export async function startStub(options = {}) {
         return failure(response, 401, 'user_unauthorized', 'Sessão necessária.');
 
       const tableId = segments[3];
-      const table = rowsOf(tableId);
+      const txId = url.searchParams.get('transactionId') ?? body.transactionId;
+      const tx = txId ? transactions.get(txId) : null;
+      if (txId && !tx) return failure(response, 404, 'transaction_not_found', 'Transação ausente.');
+      const table = tx ? tx.working[tableId] : rowsOf(tableId);
       if (!table) return failure(response, 404, 'table_not_found', 'Tabela não provisionada.');
 
       const queries = [];
@@ -264,11 +311,12 @@ export async function startStub(options = {}) {
         if (isAdmin) return true;
         const permissions = row.$permissions ?? [];
         if (permissions.includes('read("any")')) return true;
+        if (session && permissions.includes('read("users")')) return true;
         return context.userId ? permissions.includes(`read("user:${context.userId}")`) : false;
       };
 
       // Linha única: /tablesdb/{db}/tables/{table}/rows/{id}
-      if (segments.length === 6) {
+      if (segments.length === 6 && request.method === 'GET') {
         const rowId = decodeURIComponent(segments[5]);
         const found = table.find((entry) => entry.$id === rowId);
         if (!found || !visible(found))
@@ -276,6 +324,28 @@ export async function startStub(options = {}) {
         return json(response, 200, withSystemFields(found, dataset, table.indexOf(found), tableId));
       }
 
+      if (!isAdmin && request.method !== 'GET')
+        return failure(response, 401, 'user_unauthorized', 'Escrita só pelo servidor.');
+      if (!tableId.startsWith('academy_') && !tableId.startsWith('community_') && tableId !== 'notifications' && request.method !== 'GET')
+        return failure(response, 403, 'stub_write_forbidden', 'Escrita fora da Academia.');
+      if (segments.length === 5 && request.method === 'POST') {
+        const rowId = body.rowId;
+        if (!rowId || table.some((row) => row.$id === rowId))
+          return failure(response, 409, 'row_already_exists', 'Linha duplicada.');
+        const row = { $id: rowId, $permissions: body.permissions ?? [], ...body.data };
+        table.push(row);
+        if (tx) tx.touched.set(`${tableId}|${rowId}`, true);
+        return json(response, 201, withSystemFields(row, dataset, table.length - 1, tableId));
+      }
+      if (segments.length === 6 && request.method === 'PATCH') {
+        const rowId = decodeURIComponent(segments[5]);
+        const index = table.findIndex((row) => row.$id === rowId);
+        if (index < 0) return failure(response, 404, 'row_not_found', 'Linha ausente.');
+        table[index] = { ...table[index], ...body.data,
+          ...(body.permissions ? { $permissions: body.permissions } : {}) };
+        if (tx) tx.touched.set(`${tableId}|${rowId}`, true);
+        return json(response, 200, withSystemFields(table[index], dataset, index, tableId));
+      }
       if (segments.length === 5 && request.method === 'GET') {
         const filtered = table
           .map((row, index) => withSystemFields(row, dataset, index, tableId))

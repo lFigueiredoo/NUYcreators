@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { Query } from 'node-appwrite';
 import { countSession, listSession, optionalText, text, type Document, type Loaded } from './read';
 
@@ -39,13 +40,21 @@ function mapNotification(document: Document): NotificationItem {
  * escrita é da function de ownership, que ainda não existe, e um botão que não
  * grava nada seria mentira.
  */
-/** Só a contagem — usada pelo cromo do shell, sem carregar a lista. */
-export async function loadUnreadCount(secret: string, userId: string): Promise<number | null> {
-  return countSession(secret, SCOPE, 'notifications', [
-    Query.equal('userId', userId),
-    Query.isNull('readAt'),
-  ]);
-}
+/**
+ * Só a contagem — usada pelo cromo do shell, sem carregar a lista.
+ *
+ * `cache()` porque o cromo e a tela pedem a MESMA contagem na MESMA requisição:
+ * `/app/notificacoes` executava esta query duas vezes (layout + página). É a
+ * dedução de uma ida ao Appwrite, com a mesma query e o mesmo escopo — o
+ * resultado é idêntico por construção, não por coincidência.
+ */
+export const loadUnreadCount = cache(
+  async (secret: string, userId: string): Promise<number | null> =>
+    countSession(secret, SCOPE, 'notifications', [
+      Query.equal('userId', userId),
+      Query.isNull('readAt'),
+    ]),
+);
 
 export async function loadNotifications(
   secret: string,
@@ -58,10 +67,9 @@ export async function loadNotifications(
       limit,
       paged: true,
     }),
-    countSession(secret, SCOPE, 'notifications', [
-      Query.equal('userId', userId),
-      Query.isNull('readAt'),
-    ]),
+    // A MESMA contagem que o cromo já pediu nesta requisição: `cache()` a
+    // resolve uma vez só (ver `loadUnreadCount`).
+    loadUnreadCount(secret, userId),
   ]);
   return { items, unread };
 }

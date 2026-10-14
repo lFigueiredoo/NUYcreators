@@ -36,6 +36,7 @@ import {
   Users,
 } from 'node-appwrite';
 import { parseEnvironment } from '../../src/lib/env/schema';
+import { assertDedicatedProject } from './safety';
 
 /** Id que não existe de propósito: a sonda mede escopo, não recurso. */
 const FANTASMA = 'zz-probe-nao-usar';
@@ -467,6 +468,7 @@ const MARK: Record<ScopeFinding['expectation'], string> = {
 };
 
 export async function runKeyScopes(env: NodeJS.ProcessEnv, only?: string) {
+  assertDedicatedProject(env); // QA de chaves nunca sonda o projeto protegido.
   const wanted = only ? [only] : Object.keys(PROFILES);
   const all: ScopeFinding[] = [];
   const absent: string[] = [];

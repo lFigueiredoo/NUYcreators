@@ -7,6 +7,7 @@ import {
   verifyIntegrationIdentity,
   verifyReadOnlyIdentity,
 } from '../../infra/appwrite/identity';
+import { PRODUCTION_PROTECTED_PROJECT_ID } from '../../infra/appwrite/safety';
 const env = {
   APPWRITE_ENDPOINT: 'https://shared-appwrite.example.test/v1',
   APPWRITE_PROJECT_ID: 'isolated-identity-unit-test',
@@ -69,6 +70,16 @@ it('fails before network when expected ID is missing or different', async () => 
   await expect(
     verifyReadOnlyIdentity({ ...env, APPWRITE_EXPECTED_PROJECT_ID: 'other-project' }),
   ).rejects.toThrow('difere');
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+it('rejects the protected production ID before contacting Appwrite', async () => {
+  await expect(
+    verifyReadOnlyIdentity({
+      ...env,
+      APPWRITE_PROJECT_ID: PRODUCTION_PROTECTED_PROJECT_ID,
+      APPWRITE_EXPECTED_PROJECT_ID: PRODUCTION_PROTECTED_PROJECT_ID,
+    }),
+  ).rejects.toThrow('PRODUCTION_PROTECTED');
   expect(fetchMock).not.toHaveBeenCalled();
 });
 it('requires authorized dev/staging and does not silently reuse a credential', async () => {

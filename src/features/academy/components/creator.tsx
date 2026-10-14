@@ -18,9 +18,11 @@ import type {
   AcademyMaterial,
   AcademyModule,
   AcademyPage,
+  AcademyProgress,
 } from '../domain';
 import styles from '../academy.module.css';
 import { CommunityComments } from './comments';
+import { LessonProgress } from './lesson-progress';
 import type { AcademyComment } from '../domain';
 
 export function AcademyNotice({ text, error = false }: { text?: string; error?: boolean }) {
@@ -204,12 +206,14 @@ export function AcademyCourseDetail({
   modules,
   lessons,
   materials,
+  progress,
 }: {
   course: AcademyCourse | null;
   courseState: AcademyLoad<AcademyCourse>['state'];
   modules: AcademyLoad<AcademyModule>;
   lessons: AcademyLoad<AcademyLesson>;
   materials: AcademyLoad<AcademyMaterial>;
+  progress: AcademyLoad<AcademyProgress>;
 }) {
   if (!course)
     return (
@@ -229,6 +233,9 @@ export function AcademyCourseDetail({
         />
       </div>
     );
+  const done = new Set(progress.items.map((entry) => entry.lessonId));
+  const completed = lessons.items.filter((lesson) => done.has(lesson.id)).length;
+  const nextLesson = lessons.items.find((lesson) => !done.has(lesson.id));
   return (
     <div className={styles.page}>
       <nav className={styles.crumbs} aria-label="Trilha de navegação">
@@ -303,10 +310,15 @@ export function AcademyCourseDetail({
         <aside className={styles.stack}>
           <section className={styles.panel}>
             <h2>Seu progresso</h2>
-            <p>Em breve, você poderá acompanhar suas aulas por aqui.</p>
-            <button className={styles.button} type="button" disabled>
+            <p>{progress.state === 'ok' && lessons.state === 'ok'
+              ? `${completed} de ${lessons.items.length} aulas concluídas.`
+              : 'Não foi possível carregar seu progresso agora.'}</p>
+            {nextLesson ? <Link className={styles.button}
+              href={`/app/academia/${encodeURIComponent(course.slug)}/aulas/${encodeURIComponent(nextLesson.id)}`}>
               Continuar aprendendo
-            </button>
+            </Link> : <button className={styles.button} type="button" disabled>
+              {completed ? 'Treinamento concluído' : 'Continuar aprendendo'}
+            </button>}
           </section>
           <section className={styles.panel}>
             <h2>Materiais</h2>
@@ -334,6 +346,8 @@ export function AcademyLessonDetail({
   comments,
   viewerId,
   playbackUrl,
+  completed = false,
+  progressEnabled = false,
 }: {
   course: AcademyCourse | null;
   courseState: AcademyLoad<AcademyCourse>['state'];
@@ -344,6 +358,8 @@ export function AcademyLessonDetail({
   comments: AcademyLoad<AcademyComment>;
   viewerId: string;
   playbackUrl?: string | null;
+  completed?: boolean;
+  progressEnabled?: boolean;
 }) {
   if (!course || !lesson)
     return (
@@ -424,15 +440,12 @@ export function AcademyLessonDetail({
               <p>Nenhum material complementar publicado.</p>
             )}
           </section>
-          <CommunityComments target="aula" comments={comments} viewerId={viewerId} />
+          <CommunityComments target="aula" targetId={lesson.id} comments={comments} viewerId={viewerId} />
         </div>
         <aside className={styles.stack}>
           <section className={styles.panel}>
             <h2>Minha aprendizagem</h2>
-            <p>Em breve, você poderá acompanhar seu progresso nesta aula.</p>
-            <button className={styles.button} type="button" disabled>
-              Marcar como concluída
-            </button>
+            <LessonProgress lessonId={lesson.id} completed={completed} enabled={progressEnabled} />
           </section>
           <AcademyNotice text="Alguns recursos desta aula ainda estão sendo preparados." />
         </aside>

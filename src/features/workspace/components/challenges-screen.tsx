@@ -518,7 +518,7 @@ export function ChallengeDetailScreen({
           />
         </aside>
       </div>
-      <CommunityComments target="desafio" comments={comments} viewerId={viewerId} />
+      <CommunityComments target="desafio" targetId={challenge.id} comments={comments} viewerId={viewerId} />
     </>
   );
 }

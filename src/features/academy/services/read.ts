@@ -53,6 +53,7 @@ export const mapCourse = (row: Row): AcademyCourse => ({
   authorizedCoverUrl: null,
   status: courseStatus(row.status),
   order: number(row.order),
+  version: number(row.version),
 });
 export const mapModule = (row: Row): AcademyModule => ({
   id: string(row.$id),
@@ -267,7 +268,19 @@ export async function creatorAcademyCourse(secret: string, slug: string) {
       Query.orderAsc('$id'),
     ]),
   ]);
-  return { courseState: found.state, course, modules, lessons, materials };
+  const publishedIds = new Set(lessons.items.map((lesson) => lesson.id));
+  return { courseState: found.state, course, modules, lessons,
+    materials: { ...materials, items: materials.items.filter((item) =>
+      !item.lessonId || publishedIds.has(item.lessonId)) } };
+}
+
+export function creatorLessonProgress(secret: string, userId: string, lessonId: string) {
+  return fromSession(secret, 'academy_progress', mapProgress,
+    [Query.equal('userId', userId), Query.equal('lessonId', lessonId)], 1);
+}
+export function creatorCourseProgress(secret: string, userId: string, courseId: string) {
+  return fromSessionAll(secret, 'academy_progress', mapProgress,
+    [Query.equal('userId', userId), Query.equal('courseId', courseId)]);
 }
 
 export function lessonComments(secret: string, lessonId: string) {

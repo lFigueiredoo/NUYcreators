@@ -3,6 +3,7 @@ import {
   assertAppwriteEndpoint,
   assertDedicatedProject,
   assertTestEnvironment,
+  PRODUCTION_PROTECTED_PROJECT_ID,
 } from '../../infra/appwrite/safety';
 import { confirmedRoles, hasCapability, ownTeamRoles } from '../../src/lib/security/memberships';
 it('permits shared infrastructure endpoints without inferring project identity from the hostname', () => {
@@ -50,6 +51,19 @@ it('refuses integration tests outside explicitly confirmed staging/dev', () => {
       APPWRITE_TEST_ENVIRONMENT: 'production',
     }),
   ).toThrow();
+});
+it('blocks the protected production project even when local flags call it staging', () => {
+  const env = {
+    APPWRITE_ENDPOINT: 'https://api.edocs.phiq.com.br/v1',
+    APPWRITE_PROJECT_ID: PRODUCTION_PROTECTED_PROJECT_ID,
+    APPWRITE_EXPECTED_PROJECT_ID: PRODUCTION_PROTECTED_PROJECT_ID,
+    APPWRITE_DEDICATED_PROJECT_CONFIRMED: 'true',
+    APPWRITE_TEST_ENVIRONMENT: 'staging',
+    APPWRITE_TEST_API_KEY: 'test-only',
+    APPWRITE_RUN_INTEGRATION_TESTS: 'true',
+  };
+  expect(() => assertDedicatedProject(env)).toThrow('PRODUCTION_PROTECTED');
+  expect(() => assertTestEnvironment(env)).toThrow('PRODUCTION_PROTECTED');
 });
 it('does not trust unconfirmed membership, another team or payload roles', () => {
   const membership = { userId: 'user', teamId: 'nuy-admins', confirm: false, roles: ['admin'] };

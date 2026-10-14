@@ -9,11 +9,12 @@ import { tables } from '../../infra/appwrite/schema';
 it('mantém a migração da Academia aditiva e fora do manifesto atual', () => {
   const current = new Set(tables.map((table) => table.id));
   const proposed = academyTablesProposal.map((table) => table.id);
-  expect(proposed).toHaveLength(9);
+  expect(proposed).toHaveLength(10);
   expect(new Set(proposed).size).toBe(proposed.length);
   expect(proposed.filter((id) => current.has(id))).toEqual([]);
   expect(proposed).toContain('community_comments');
   expect(proposed).toContain('academy_progress');
+  expect(proposed).toContain('academy_media');
   expect(proposed).toContain('community_moderation_events');
 });
 

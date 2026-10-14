@@ -1,3 +1,6 @@
+import { PRODUCTION_PROTECTED_PROJECT_ID } from '../../src/lib/env/protected-project';
+export { PRODUCTION_PROTECTED_PROJECT_ID } from '../../src/lib/env/protected-project';
+
 export function assertAppwriteEndpoint(endpoint: string | undefined) {
   if (!endpoint)
     throw new Error('APPWRITE_ENDPOINT ausente. Configure o endpoint aprovado da infraestrutura.');
@@ -32,6 +35,10 @@ export function assertDedicatedProject(env: Record<string, string | undefined>) 
     );
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,35}$/.test(env.APPWRITE_PROJECT_ID))
     throw new Error('Formato de Project ID inválido.');
+  if (env.APPWRITE_PROJECT_ID === PRODUCTION_PROTECTED_PROJECT_ID)
+    throw new Error(
+      'PRODUCTION_PROTECTED: o Project ID configurado pertence à produção. Use um projeto de staging distinto; nenhuma requisição será feita.',
+    );
   if (!env.APPWRITE_PROJECT_ID || env.APPWRITE_DEDICATED_PROJECT_CONFIRMED !== 'true')
     throw new Error(
       'Confirme o ID do projeto dedicado NUY Creators e APPWRITE_DEDICATED_PROJECT_CONFIRMED=true.',

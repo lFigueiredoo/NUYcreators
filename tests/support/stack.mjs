@@ -96,14 +96,25 @@ export async function startProxy({ proxyPort, appPort }) {
 }
 
 /**
- * @param {{ startApp?: boolean, mediaKey?: string, academyTest?: boolean }} [options]
+ * @param {{ startApp?: boolean, mediaKey?: string, appwriteEndpoint?: string }} [options]
  *   `mediaKey` liga a capacidade de mídia do app. Padrão: ligada, com uma chave de
  *   mentira, porque o stub serve os bytes e o caminho real (servidor busca com
  *   chave, rota entrega) é o que se quer exercitar. String vazia desliga, e é assim
  *   que o estado "sem armazenamento" é medido.
+ *
+ *   `appwriteEndpoint` existe para a sonda de performance pôr um proxy de atraso
+ *   ENTRE o app e o stub e medir latência de dado sem latência de asset. O padrão
+ *   é o stub direto: com ele, todo chamador que não passa nada recebe exatamente o
+ *   mesmo env de antes — nenhuma suíte muda de comportamento.
  */
-export async function startStack({ startApp = true, mediaKey = 'stub-media-key', academyTest = false } = {}) {
+export async function startStack({
+  startApp = true,
+  mediaKey = 'stub-media-key',
+  appwriteEndpoint = null,
+  academyTest = false,
+} = {}) {
   const stub = await startStub({ port: STUB_PORT, academyFixture: academyTest });
+  const endpoint = appwriteEndpoint ?? stub.endpoint;
 
   let app = null;
   if (startApp) {
@@ -114,7 +125,7 @@ export async function startStack({ startApp = true, mediaKey = 'stub-media-key',
         NODE_ENV: 'production',
         PORT: String(APP_PORT),
         APP_URL: TEST_ORIGIN,
-        APPWRITE_ENDPOINT: stub.endpoint,
+        APPWRITE_ENDPOINT: endpoint,
         APPWRITE_PROJECT_ID: 'nuy-stub',
         APPWRITE_EXPECTED_PROJECT_ID: 'nuy-stub',
         APPWRITE_AUTH_API_KEY: 'stub-auth-key',

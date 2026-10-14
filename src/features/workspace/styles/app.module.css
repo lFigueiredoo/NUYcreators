@@ -302,6 +302,27 @@
   border-right: 1px solid var(--app-line);
 }
 
+/* Rolagem própria dos destinos. A marca e o rodapé ficam FORA daqui, fixos: em
+   tela baixa é a lista que sobra para fora do quadro, e ela passa a ser
+   alcançável em vez de inalcançável ("Sair" continua sempre à vista).
+   `min-height: 0` é o que deixa o flex encolher abaixo do conteúdo, e
+   `overscroll-behavior` impede a rolagem de vazar para a página no fim da lista.
+   A margem negativa com o padding compensado mantém cada pílula na posição
+   exata de antes e abre o espaço de que o anel de foco (`outline-offset: 2px`,
+   global) precisa — dentro de um contêiner de rolagem ele seria recortado nas
+   bordas. Sem excedente não há barra e nada muda acima do limiar. */
+.navScroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-5);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -4px calc(-1 * var(--app-2));
+  padding: 4px var(--app-2);
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
