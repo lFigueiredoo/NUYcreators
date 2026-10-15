@@ -225,6 +225,8 @@ export async function hosted(
       correlationId: event.req.headers['x-appwrite-trigger'] ?? 'function',
       academyCommentsReady: process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
         process.env.APPWRITE_ACADEMY_ENABLED === 'true',
+      challengeCommentsPrivateReady:
+        process.env.APPWRITE_ACADEMY_CHALLENGE_ACL_PRIVATE_READY === 'true',
     },
     body: body(event),
   };

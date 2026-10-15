@@ -34,6 +34,8 @@ export type CoreContext = {
   correlationId: string;
   /** Set by the trusted host only after the additive Academy tables are active. */
   academyCommentsReady?: boolean;
+  /** Set only after the existing challenge-comment ACL migration is verified. */
+  challengeCommentsPrivateReady?: boolean;
 };
 
 /** Códigos de recusa com significado de negócio — a UI traduz, o core não escreve copy. */

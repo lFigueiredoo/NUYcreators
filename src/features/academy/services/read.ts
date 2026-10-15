@@ -299,17 +299,24 @@ export function lessonComments(secret: string, lessonId: string) {
 }
 
 export async function challengeComments(secret: string, challengeId: string) {
-  const challenge = await readById(() => sessionTables(secret), 'challenges', challengeId,
-    (row) => ({ status: string(row.status) }));
-  if (challenge.state !== 'ok' || challenge.items[0]?.status !== 'published')
-    return { state: challenge.state, items: [] } as AcademyLoad<AcademyComment>;
-  return fromSessionAll(secret, 'community_comments', mapComment, [
+  const published = async () => {
+    const challenge = await readById(() => sessionTables(secret), 'challenges', challengeId,
+      (row) => ({ status: string(row.status) }));
+    return challenge.state === 'ok' && challenge.items[0]?.status === 'published';
+  };
+  if (!await published()) return { state: 'pending', items: [] } as AcademyLoad<AcademyComment>;
+  // The operations key stays on the server. Challenge rows grant only author read;
+  // the creator session must first prove access to a currently published challenge.
+  const comments = await fromAdminAll('community_comments', mapComment, [
     Query.equal('targetType', 'challenge'),
     Query.equal('targetId', challengeId),
     Query.equal('status', 'visible'),
     Query.orderAsc('createdAt'),
     Query.orderAsc('$id'),
   ]);
+  if (comments.state !== 'ok') return comments;
+  return await published() ? comments
+    : { state: 'pending', items: [] } as AcademyLoad<AcademyComment>;
 }
 
 export function adminAcademyCatalog(page = 1) {

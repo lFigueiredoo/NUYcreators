@@ -543,24 +543,36 @@ export async function createComment(ctx: Context, raw: unknown) {
   const parsed = commentInput.safeParse(raw);
   if (!parsed.success) throw new AcademyError('invalid', 'Comentário inválido.');
   const input = parsed.data;
-  await publishedTarget(ctx, input.targetType, input.targetId);
-  if (input.parentId) {
-    const parent = await get(ctx, 'community_comments', input.parentId);
-    if (parent.targetType !== input.targetType || parent.targetId !== input.targetId ||
-        parent.status !== 'visible') throw new AcademyError('invalid', 'Resposta sem comentário visível.');
-  }
   const { idempotencyKey, ...content } = input;
   const rowId = idempotencyKey ? createHash('sha256').update(`${ctx.actor.id}:${idempotencyKey}`)
     .digest('hex').slice(0, 36) : randomUUID();
+  const write = async (tx?: string) => {
+    await publishedTarget(ctx, input.targetType, input.targetId, tx);
+    if (input.parentId) {
+      const parent = await get(ctx, 'community_comments', input.parentId, tx);
+      if (parent.targetType !== input.targetType || parent.targetId !== input.targetId ||
+          parent.status !== 'visible')
+        throw new AcademyError('invalid', 'Resposta sem comentário visível.');
+    }
+    if (input.targetType === 'challenge' && tx)
+      // Stage a write on the same row as archive so one concurrent commit loses.
+      await update(ctx, 'challenges', input.targetId, {}, undefined, tx);
+    return create(ctx, 'community_comments', { ...content, authorId: ctx.actor.id,
+      status: 'pending', createdAt: new Date().toISOString() }, ownRead(ctx.actor.id), rowId, tx);
+  };
   try {
-    return await create(ctx, 'community_comments', { ...content, authorId: ctx.actor.id,
-      status: 'pending', createdAt: new Date().toISOString() }, ownRead(ctx.actor.id), rowId);
+    return input.targetType === 'challenge' ? await transaction(ctx, write) : await write();
   } catch (error) {
     if (error instanceof AcademyError && error.code === 'conflict') {
-      const existing = await get(ctx, 'community_comments', rowId);
-      if (existing.authorId === ctx.actor.id && existing.targetType === input.targetType &&
-        existing.targetId === input.targetId && existing.parentId === input.parentId &&
-        existing.body === input.body) return existing;
+      try {
+        const existing = await get(ctx, 'community_comments', rowId);
+        if (existing.authorId === ctx.actor.id && existing.targetType === input.targetType &&
+          existing.targetId === input.targetId && existing.parentId === input.parentId &&
+          existing.body === input.body) return existing;
+      } catch (lookupError) {
+        if (!(lookupError instanceof AcademyError && lookupError.code === 'missing'))
+          throw lookupError;
+      }
     }
     throw error;
   }
@@ -625,12 +637,15 @@ export async function moderateComment(ctx: Context, raw: unknown) {
       if (current.targetType !== 'lesson' && current.targetType !== 'challenge')
         throw new AcademyError('invalid', 'Alvo desconhecido.');
       await publishedTarget(ctx, current.targetType, String(current.targetId), tx);
+      if (current.targetType === 'challenge')
+        await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
     }
     const now = new Date().toISOString();
     const updated = await update(ctx, 'community_comments', input.commentId, {
       status: input.to, moderatedBy: ctx.actor.id, moderatedAt: now,
       moderationReason: input.reason },
-      input.to === 'visible' ? usersRead : ownRead(String(current.authorId)), tx);
+      input.to === 'visible' && current.targetType === 'lesson'
+        ? usersRead : ownRead(String(current.authorId)), tx);
     await create(ctx, 'community_moderation_events', { commentId: input.commentId,
       actorId: ctx.actor.id, fromStatus: current.status, toStatus: input.to,
       reason: input.reason, createdAt: now }, [], undefined, tx);

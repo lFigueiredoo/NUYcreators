@@ -201,6 +201,8 @@ export async function workspaceContext(): Promise<CoreContext | null> {
     correlationId: randomUUID(),
     academyCommentsReady: process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
       process.env.APPWRITE_ACADEMY_ENABLED === 'true',
+    challengeCommentsPrivateReady:
+      process.env.APPWRITE_ACADEMY_CHALLENGE_ACL_PRIVATE_READY === 'true',
   };
 }
 

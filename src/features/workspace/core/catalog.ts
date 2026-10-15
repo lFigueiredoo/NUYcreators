@@ -48,11 +48,40 @@ function permissionsFor(status: string): string[] {
   return status === 'draft' || status === 'archived' ? [] : PUBLIC_READ;
 }
 
-/** Revoke public ACL in the same transaction as the challenge transition. */
+/** The verified private model needs reads only; it never writes every comment on archive. */
+async function verifyPrivateChallengeComments(
+  ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
+): Promise<CoreResult<null>> {
+  let cursor: string | undefined;
+  for (;;) {
+    const found = await listTableRows(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId: 'community_comments',
+      queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId),
+        Query.orderAsc('$id'), Query.limit(100), ...(cursor ? [Query.cursorAfter(cursor)] : [])],
+      transactionId: tx.transactionId,
+    });
+    for (const comment of found.rows) {
+      const authorId = String(comment.authorId ?? '');
+      const permissions = comment.$permissions;
+      if (!authorId || !Array.isArray(permissions) ||
+          permissions.some((permission) =>
+            permission !== Permission.read(Role.user(authorId))))
+        return failure('conflict');
+    }
+    if (found.rows.length < 100) return done(null);
+    const next = String(found.rows.at(-1)?.$id ?? '');
+    if (!next || next === cursor) return failure('unavailable', true);
+    cursor = next;
+  }
+}
+
+/** Legacy revocation remains atomic for small challenges until ACL migration. */
 async function refreshChallengeCommentPermissions(
   ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
-  published: boolean,
 ): Promise<CoreResult<null>> {
+  if (ctx.challengeCommentsPrivateReady)
+    return verifyPrivateChallengeComments(ctx, tx, challengeId);
   if (!ctx.academyCommentsReady) return done(null);
   const found = await listTableRows(ctx.tables, {
     databaseId: ctx.databaseId,
@@ -68,9 +97,7 @@ async function refreshChallengeCommentPermissions(
       databaseId: ctx.databaseId,
       tableId: 'community_comments',
       rowId: String(comment.$id),
-      permissions: published && comment.status === 'visible'
-        ? [Permission.read(Role.users())]
-        : [Permission.read(Role.user(authorId))],
+      permissions: [Permission.read(Role.user(authorId))],
       transactionId: tx.transactionId,
     });
   }
@@ -394,8 +421,7 @@ export async function saveChallenge(
         });
       await syncRequirements(ctx, tx, challengeId, status, input.draft.requirements);
       if (existing && status !== existing.status) {
-        const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId,
-          status === 'published');
+        const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId);
         if (!comments.ok) return failure(comments.failure.code);
       }
       const diff = auditDiff(existing ?? {}, { ...data, status, version });
@@ -465,8 +491,7 @@ async function transitionChallenge(
         transactionId: tx.transactionId,
       });
       await refreshRequirementPermissions(ctx, tx, challengeId, nextStatus);
-      const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId,
-        nextStatus === 'published');
+      const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId);
       if (!comments.ok) return failure(comments.failure.code);
       await recordAudit(ctx, tx, {
         action: nextStatus === 'published' ? 'challenge.published'
