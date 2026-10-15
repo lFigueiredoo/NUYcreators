@@ -41,6 +41,9 @@ export const mapCategory = (row: Row): AcademyCategory => ({
   id: string(row.$id),
   name: string(row.name),
   slug: string(row.slug),
+  description: string(row.description),
+  order: number(row.order),
+  active: row.active === true,
 });
 export const mapCourse = (row: Row): AcademyCourse => ({
   id: string(row.$id),
@@ -268,10 +271,12 @@ export async function creatorAcademyCourse(secret: string, slug: string) {
       Query.orderAsc('$id'),
     ]),
   ]);
-  const publishedIds = new Set(lessons.items.map((lesson) => lesson.id));
+  const publishedModules = new Set(modules.items.map((module) => module.id));
+  const publishedIds = new Set(lessons.items.filter((lesson) =>
+    lesson.courseId === course.id && publishedModules.has(lesson.moduleId)).map((lesson) => lesson.id));
   return { courseState: found.state, course, modules, lessons,
     materials: { ...materials, items: materials.items.filter((item) =>
-      !item.lessonId || publishedIds.has(item.lessonId)) } };
+      item.courseId === course.id && Boolean(item.lessonId) && publishedIds.has(item.lessonId!)) } };
 }
 
 export function creatorLessonProgress(secret: string, userId: string, lessonId: string) {
@@ -293,7 +298,11 @@ export function lessonComments(secret: string, lessonId: string) {
   ]);
 }
 
-export function challengeComments(secret: string, challengeId: string) {
+export async function challengeComments(secret: string, challengeId: string) {
+  const challenge = await readById(() => sessionTables(secret), 'challenges', challengeId,
+    (row) => ({ status: string(row.status) }));
+  if (challenge.state !== 'ok' || challenge.items[0]?.status !== 'published')
+    return { state: challenge.state, items: [] } as AcademyLoad<AcademyComment>;
   return fromSessionAll(secret, 'community_comments', mapComment, [
     Query.equal('targetType', 'challenge'),
     Query.equal('targetId', challengeId),

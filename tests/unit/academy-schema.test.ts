@@ -33,6 +33,10 @@ it('prepara busca paginada e integridade da ordem sem alterar o manifesto v001',
   expect(
     academyTablesProposal.find((table) => table.id === 'academy_lessons')?.unique,
   ).toContainEqual(['moduleId', 'order']);
+  expect(academyTablesProposal.find((table) => table.id === 'academy_materials')?.columns)
+    .toContainEqual(expect.objectContaining({ key: 'lessonId', required: true }));
+  expect(academyTablesProposal.find((table) => table.id === 'academy_materials')?.indexes)
+    .toContainEqual(['courseId', 'lessonId']);
 });
 
 it('propõe mídia privada e chaves de unicidade para progresso e denúncias', () => {

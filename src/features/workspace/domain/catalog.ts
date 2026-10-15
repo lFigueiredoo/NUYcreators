@@ -49,6 +49,9 @@ export function isCatalogStatus(value: string): value is CatalogStatus {
 /** Rótulo do estado; palavra desconhecida aparece crua, nunca traduzida no chute. */
 export function catalogView(value: string | null | undefined) {
   if (value && isCatalogStatus(value)) return catalogStatusView[value];
+  if (value === 'archived')
+    return { label: 'Arquivado', tone: 'muted' as Tone,
+      hint: 'Preservado para auditoria e indisponível para creators.' };
   if (value === 'active')
     return { label: 'Publicado', tone: 'success' as Tone, hint: catalogStatusView.published.hint };
   return { label: value || 'Sem estado', tone: 'neutral' as Tone, hint: '' };

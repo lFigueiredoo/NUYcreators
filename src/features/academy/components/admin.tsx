@@ -13,6 +13,7 @@ import type {
 import styles from '../academy.module.css';
 import { AcademyNotice } from './creator';
 import { AcademyModerationControls } from './moderation-controls';
+import { AcademyCategoryForm } from './category-controls';
 
 const moderationStatusLabel: Record<AcademyCommentStatus, string> = {
   pending: 'Aguardando aprovação',
@@ -163,8 +164,10 @@ export function AdminAcademyHome({ courses, enabled = false }: {
 
 export function AdminAcademyCategories({
   categories,
+  enabled = false,
 }: {
   categories: AcademyLoad<AcademyCategory>;
+  enabled?: boolean;
 }) {
   return (
     <div className={styles.page}>
@@ -178,7 +181,7 @@ export function AdminAcademyCategories({
           Voltar à Academia
         </Link>
       </div>
-      <AcademyNotice text="Categorias podem ser revisadas localmente; criação e edição dependem da migração aprovada." />
+      {!enabled ? <AcademyNotice text="Categorias serão habilitadas após a migração aprovada." /> : null}
       <div className={styles.detailGrid}>
         <section className={styles.panel}>
           <h2>Categorias cadastradas</h2>
@@ -186,8 +189,9 @@ export function AdminAcademyCategories({
             <ul className={styles.list}>
               {categories.items.map((item) => (
                 <li className={styles.listItem} key={item.id}>
-                  <span>{item.name}</span>
-                  <span className={styles.muted}>{item.slug}</span>
+                  <h3>{item.name}</h3>
+                  <p className={styles.muted}>{item.slug} · ordem {item.order} · {item.active ? 'ativa' : 'inativa'}</p>
+                  <AcademyCategoryForm category={item} enabled={enabled} />
                 </li>
               ))}
             </ul>
@@ -201,28 +205,7 @@ export function AdminAcademyCategories({
         </section>
         <section className={styles.panel}>
           <h2>Nova categoria</h2>
-          <div className={styles.stack}>
-            <label className={styles.field}>
-              Nome
-              <input className={styles.input} placeholder="Nome da categoria" maxLength={255} />
-            </label>
-            <label className={styles.field}>
-              Slug
-              <input className={styles.input} placeholder="nome-da-categoria" maxLength={80} />
-            </label>
-            <label className={styles.field}>
-              Descrição
-              <textarea
-                className={styles.textarea}
-                maxLength={1000}
-                placeholder="Uma frase sobre o tema"
-              />
-            </label>
-            <button type="button" className={styles.button} disabled>
-              Salvar categoria
-            </button>
-            <p className={styles.muted}>Nenhuma alteração é enviada ao Appwrite.</p>
-          </div>
+          <AcademyCategoryForm enabled={enabled} />
         </section>
       </div>
     </div>

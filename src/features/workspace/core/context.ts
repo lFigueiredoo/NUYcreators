@@ -32,6 +32,8 @@ export type CoreContext = {
   now: Date;
   /** Correlação da requisição; vai para `audit_logs.correlationId`. Nunca é identidade. */
   correlationId: string;
+  /** Set by the trusted host only after the additive Academy tables are active. */
+  academyCommentsReady?: boolean;
 };
 
 /** Códigos de recusa com significado de negócio — a UI traduz, o core não escreve copy. */

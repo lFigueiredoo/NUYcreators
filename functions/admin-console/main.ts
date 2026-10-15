@@ -12,6 +12,7 @@ import {
   adminRewards,
   adminSubmission,
   adminSubmissions,
+  archiveChallenge,
   closeChallenge,
   closeReward,
   publishChallenge,
@@ -188,6 +189,13 @@ export default async function main(event: FunctionEvent) {
     case 'challenge.close':
       return write(
         closeChallenge(ctx, {
+          challengeId: text(body.challengeId),
+          expectedVersion: integer(body.expectedVersion),
+        }),
+      );
+    case 'challenge.archive':
+      return write(
+        archiveChallenge(ctx, {
           challengeId: text(body.challengeId),
           expectedVersion: integer(body.expectedVersion),
         }),

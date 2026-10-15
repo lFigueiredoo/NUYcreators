@@ -122,6 +122,8 @@ export async function startStub(options = {}) {
   if (options.academyFixture) {
     dataset.users.push(academyAdmin);
     Object.assign(dataset.tables, academyFixtureTables);
+    dataset.tables.audit_logs ??= [];
+    dataset.tables.audit_log_snapshots ??= [];
     dataset.tables.public_creator_profiles.push({
       $id: 'academy-public-ana',
       $permissions: [],
@@ -326,7 +328,9 @@ export async function startStub(options = {}) {
 
       if (!isAdmin && request.method !== 'GET')
         return failure(response, 401, 'user_unauthorized', 'Escrita só pelo servidor.');
-      if (!tableId.startsWith('academy_') && !tableId.startsWith('community_') && tableId !== 'notifications' && request.method !== 'GET')
+      if (!tableId.startsWith('academy_') && !tableId.startsWith('community_') && tableId !== 'notifications' &&
+          !(options.academyFixture && ['challenges', 'challenge_requirements',
+            'audit_logs', 'audit_log_snapshots'].includes(tableId)) && request.method !== 'GET')
         return failure(response, 403, 'stub_write_forbidden', 'Escrita fora da Academia.');
       if (segments.length === 5 && request.method === 'POST') {
         const rowId = body.rowId;

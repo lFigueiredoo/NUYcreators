@@ -199,6 +199,8 @@ export async function workspaceContext(): Promise<CoreContext | null> {
     actor: { userId: user.$id, roles: await sessionRoles(secret, user.$id) },
     now: new Date(),
     correlationId: randomUUID(),
+    academyCommentsReady: process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
+      process.env.APPWRITE_ACADEMY_ENABLED === 'true',
   };
 }
 

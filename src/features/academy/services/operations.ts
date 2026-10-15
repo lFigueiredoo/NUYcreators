@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { Permission, Query, Role, type TablesDB } from 'node-appwrite';
 import { z } from 'zod';
+import { academyCategorySeeds, planAcademyCategorySeeds } from '../../../../infra/appwrite/academy-seeds';
 import { canModerateComment, type AcademyCommentStatus } from '../domain';
 
 /** Pure command layer: the caller supplies the authenticated actor and an isolated TablesDB client. */
@@ -24,6 +25,10 @@ export const courseInput = z.object({
   id: id.optional(), expectedVersion: version.optional(), title, slug,
   summary: optionalText(1000).min(2), description: optionalText(6000),
   categoryId: id, order: position,
+});
+export const categoryInput = z.object({
+  id: id.optional(), name: title, slug, description: optionalText(1000),
+  order: position, active: z.boolean(),
 });
 export const moduleInput = z.object({
   id: id.optional(), courseId: id, expectedCourseVersion: version,
@@ -52,6 +57,16 @@ export const moderationInput = z.object({
 });
 
 const db = (ctx: Context) => ctx.databaseId;
+/** Local safety budget, pending measurement of the installed Appwrite transaction limit. */
+export const EDITOR_MAX_STAGED_WRITES = 50;
+const stagedWrites = new Map<string, number>();
+function countWrite(transactionId?: string) {
+  if (!transactionId || !stagedWrites.has(transactionId)) return;
+  const count = stagedWrites.get(transactionId)! + 1;
+  if (count > EDITOR_MAX_STAGED_WRITES)
+    throw new AcademyError('invalid', `O editor aceita no máximo ${EDITOR_MAX_STAGED_WRITES} gravações por salvamento. Divida o treinamento.`);
+  stagedWrites.set(transactionId, count);
+}
 const usersRead = [Permission.read(Role.users())];
 const ownRead = (userId: string) => [Permission.read(Role.user(userId))];
 function requireManage(ctx: Context) {
@@ -89,18 +104,22 @@ async function rows(ctx: Context, tableId: string, queries: string[], transactio
 }
 async function create(ctx: Context, tableId: string, data: Record<string, unknown>,
   permissions: string[], rowId: string = randomUUID(), transactionId?: string) {
+  countWrite(transactionId);
   try { return await ctx.tables.createRow({ databaseId: db(ctx), tableId, rowId, data, permissions, transactionId }); }
   catch (error) { mapFailure(error); }
 }
 async function update(ctx: Context, tableId: string, rowId: string,
   data: Record<string, unknown>, permissions?: string[], transactionId?: string) {
+  countWrite(transactionId);
   try { return await ctx.tables.updateRow({ databaseId: db(ctx), tableId, rowId, data, permissions, transactionId }); }
   catch (error) { mapFailure(error); }
 }
-async function transaction<T>(ctx: Context, run: (transactionId: string) => Promise<T>): Promise<T> {
+async function transaction<T>(ctx: Context, run: (transactionId: string) => Promise<T>,
+  editorBudget = false): Promise<T> {
   let transactionId: string;
   try { transactionId = (await ctx.tables.createTransaction({ ttl: 120 })).$id; }
   catch (error) { mapFailure(error); }
+  if (editorBudget) stagedWrites.set(transactionId, 0);
   try {
     const result = await run(transactionId);
     await ctx.tables.updateTransaction({ transactionId, commit: true });
@@ -109,6 +128,7 @@ async function transaction<T>(ctx: Context, run: (transactionId: string) => Prom
     try { await ctx.tables.updateTransaction({ transactionId, rollback: true }); } catch { /* best effort */ }
     return mapFailure(error);
   } finally {
+    stagedWrites.delete(transactionId);
     try { await ctx.tables.deleteTransaction({ transactionId }); } catch { /* TTL cleans up */ }
   }
 }
@@ -118,6 +138,59 @@ function checkVersion(row: Record<string, unknown>, expected: number) {
 async function category(ctx: Context, categoryId: string, tx?: string) {
   const row = await get(ctx, 'academy_categories', categoryId, tx);
   if (row.active !== true) throw new AcademyError('invalid', 'Categoria inativa.');
+}
+export async function saveCategory(ctx: Context, raw: unknown) {
+  requireManage(ctx);
+  const parsed = categoryInput.safeParse(raw);
+  if (!parsed.success) throw new AcademyError('invalid', 'Confira os campos da categoria.');
+  const input = parsed.data;
+  return transaction(ctx, async (tx) => {
+    const sameSlug = await rows(ctx, 'academy_categories', [Query.equal('slug', input.slug)], tx);
+    if (sameSlug.some((row) => row.$id !== input.id))
+      throw new AcademyError('conflict', 'Este slug já está em uso.');
+    const data = { name: input.name, slug: input.slug, description: input.description,
+      order: input.order, active: input.active };
+    if (!input.id) return create(ctx, 'academy_categories', data,
+      input.active ? usersRead : [], undefined, tx);
+    const current = await get(ctx, 'academy_categories', input.id, tx);
+    if (current.slug !== input.slug)
+      throw new AcademyError('invalid', 'O slug de uma categoria existente é estável.');
+    if (!input.active && current.active === true) {
+      const published = await rows(ctx, 'academy_courses', [
+        Query.equal('categoryId', input.id), Query.equal('status', 'published'),
+      ], tx);
+      if (published.length) throw new AcademyError('invalid',
+        'Arquive os treinamentos publicados antes de desativar esta categoria.');
+    }
+    return update(ctx, 'academy_categories', input.id, data,
+      input.active ? usersRead : [], tx);
+  });
+}
+/** Prepared for a separately approved run; no route or Action invokes this automatically. */
+export async function seedInitialCategories(ctx: Context) {
+  requireManage(ctx);
+  return transaction(ctx, async (tx) => {
+    const existing = await rows(ctx, 'academy_categories', [], tx);
+    const plan = planAcademyCategorySeeds(existing.map((row) => ({
+      $id: row.$id, slug: String(row.slug),
+    })));
+    if (plan.conflicts.length)
+      throw new AcademyError('conflict', 'IDs ou slugs iniciais conflitam com categorias existentes.');
+    for (const seed of plan.pending) {
+      await create(ctx, 'academy_categories', { slug: seed.slug, name: seed.name,
+        description: '', order: seed.order, active: true }, usersRead, seed.id, tx);
+    }
+    return { created: plan.pending.length, total: academyCategorySeeds.length };
+  });
+}
+async function lessonInCourse(ctx: Context, lessonId: string, courseId: string, tx: string) {
+  const lesson = await get(ctx, 'academy_lessons', lessonId, tx);
+  if (lesson.courseId !== courseId) throw new AcademyError('invalid', 'Aula de outro curso.');
+  const moduleId = String(lesson.moduleId ?? '');
+  if (!moduleId) throw new AcademyError('invalid', 'Aula sem módulo.');
+  const module = await get(ctx, 'academy_modules', moduleId, tx);
+  if (module.courseId !== courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
+  return lesson;
 }
 async function course(ctx: Context, courseId: string, tx?: string) {
   return get(ctx, 'academy_courses', courseId, tx);
@@ -202,6 +275,10 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
   ].filter(Boolean);
   if (new Set(allIds).size !== allIds.length)
     throw new AcademyError('invalid', 'IDs repetidos no editor.');
+  const minimumWrites = 1 + input.modules.length +
+    input.modules.reduce((total, module) => total + module.lessons.length, 0) + input.materials.length;
+  if (minimumWrites > EDITOR_MAX_STAGED_WRITES)
+    throw new AcademyError('invalid', `O editor aceita no máximo ${EDITOR_MAX_STAGED_WRITES} gravações por salvamento. Divida o treinamento.`);
   return transaction(ctx, async (tx) => {
     await category(ctx, input.categoryId, tx);
     const same = await rows(ctx, 'academy_courses', [Query.equal('slug', input.slug)], tx);
@@ -274,15 +351,17 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
       else {
         const existing = await get(ctx, 'academy_materials', material.id, tx);
         if (existing.courseId !== courseId) throw new AcademyError('invalid', 'Material de outro curso.');
+        const linkedLesson = await lessonInCourse(ctx, lessonId, courseId, tx);
         await update(ctx, 'academy_materials', material.id, materialData,
-          existing.fileId !== material.fileId || existing.lessonId !== lessonId ? [] : undefined, tx);
+          existing.fileId !== material.fileId || existing.lessonId !== lessonId ||
+          saved.status !== 'published' || linkedLesson.status !== 'published' ? [] : undefined, tx);
         materialIds.set(material.id, material.id);
       }
     }
     return { id: courseId, version: Number(saved.version),
       moduleIds: Object.fromEntries(moduleIds), lessonIds: Object.fromEntries(lessonIds),
       materialIds: Object.fromEntries(materialIds) };
-  });
+  }, true);
 }
 
 export async function saveModule(ctx: Context, raw: unknown) {
@@ -345,8 +424,7 @@ export async function saveMaterial(ctx: Context, raw: unknown) {
     throw new AcademyError('invalid', 'Links precisam usar HTTPS.');
   return transaction(ctx, async (tx) => {
     const parent = await editableCourse(ctx, input.courseId, input.expectedCourseVersion, tx);
-    const lesson = await get(ctx, 'academy_lessons', input.lessonId, tx);
-    if (lesson.courseId !== input.courseId) throw new AcademyError('invalid', 'Aula de outro curso.');
+    const lesson = await lessonInCourse(ctx, input.lessonId, input.courseId, tx);
     const data = { courseId: input.courseId, lessonId: input.lessonId, title: input.title,
       kind: input.kind, fileId: input.fileId, url: input.url, order: input.order };
     let saved;
@@ -354,7 +432,8 @@ export async function saveMaterial(ctx: Context, raw: unknown) {
       const existing = await get(ctx, 'academy_materials', input.id, tx);
       if (existing.courseId !== input.courseId) throw new AcademyError('invalid', 'Material de outro curso.');
       saved = await update(ctx, 'academy_materials', input.id, data,
-        existing.fileId !== input.fileId || existing.lessonId !== input.lessonId ? [] : undefined, tx);
+        existing.fileId !== input.fileId || existing.lessonId !== input.lessonId ||
+        parent.status !== 'published' || lesson.status !== 'published' ? [] : undefined, tx);
     } else saved = await create(ctx, 'academy_materials', data, [], undefined, tx);
     await bump(ctx, parent, tx);
     return saved;
@@ -377,7 +456,8 @@ export async function setCourseStatus(ctx: Context, courseId: string, expectedVe
       const modules = await rows(ctx, 'academy_modules', [Query.equal('courseId', courseId)], tx);
       const lessons = await rows(ctx, 'academy_lessons', [Query.equal('courseId', courseId)], tx);
       if (!modules.length || !lessons.length || lessons.some((entry) => !entry.title ||
-        !entry.videoFileId || !modules.some((module) => module.$id === entry.moduleId)))
+        !entry.videoFileId || !modules.some((module) =>
+          module.$id === entry.moduleId && module.courseId === courseId)))
         throw new AcademyError('invalid', 'Publique apenas com módulos e aulas completas, com vídeo validado.');
       // The media registry is private; an unverified file ID must never make a course public.
       for (const lesson of lessons) {
@@ -394,11 +474,23 @@ export async function setCourseStatus(ctx: Context, courseId: string, expectedVe
         await update(ctx, 'academy_modules', module.$id, {}, usersRead, tx);
       const materials = await rows(ctx, 'academy_materials', [Query.equal('courseId', courseId)], tx);
       for (const material of materials) {
+        if (!material.lessonId || !lessons.some((lesson) => lesson.$id === material.lessonId &&
+          lesson.courseId === courseId && modules.some((module) =>
+            module.$id === lesson.moduleId && module.courseId === courseId)))
+          throw new AcademyError('invalid', 'Material sem aula e módulo válidos no curso.');
         if (material.kind === 'pdf') {
+          if (!material.fileId || material.url)
+            throw new AcademyError('invalid', 'PDF sem arquivo privado válido.');
           const media = await rows(ctx, 'academy_media', [Query.equal('fileId', String(material.fileId))], tx);
           if (media.length !== 1 || media[0].kind !== 'pdf' || media[0].status !== 'ready' ||
             media[0].lessonId !== material.lessonId)
             throw new AcademyError('invalid', 'PDF sem homologação privada.');
+        } else if (material.kind === 'link') {
+          if (material.fileId || typeof material.url !== 'string' ||
+            !z.url().safeParse(material.url).success || new URL(material.url).protocol !== 'https:')
+            throw new AcademyError('invalid', 'Link de material precisa usar HTTPS.');
+        } else {
+          throw new AcademyError('invalid', 'Tipo de material desconhecido.');
         }
         await update(ctx, 'academy_materials', material.$id, {}, usersRead, tx);
       }

@@ -45,7 +45,36 @@ const PUBLIC_READ = [Permission.read(Role.any())];
 
 /** Rascunho é da equipe: nem a sessão da própria criadora lê a linha. */
 function permissionsFor(status: string): string[] {
-  return status === 'draft' ? [] : PUBLIC_READ;
+  return status === 'draft' || status === 'archived' ? [] : PUBLIC_READ;
+}
+
+/** Revoke public ACL in the same transaction as the challenge transition. */
+async function refreshChallengeCommentPermissions(
+  ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
+  published: boolean,
+): Promise<CoreResult<null>> {
+  if (!ctx.academyCommentsReady) return done(null);
+  const found = await listTableRows(ctx.tables, {
+    databaseId: ctx.databaseId,
+    tableId: 'community_comments',
+    queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId), Query.limit(41)],
+    transactionId: tx.transactionId,
+  });
+  // Conservative local ceiling until Appwrite 2.2.0 transaction capacity is measured.
+  if (found.total > 40) return failure('limit_reached');
+  for (const comment of found.rows) {
+    const authorId = String(comment.authorId);
+    await updateTableRow(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId: 'community_comments',
+      rowId: String(comment.$id),
+      permissions: published && comment.status === 'visible'
+        ? [Permission.read(Role.users())]
+        : [Permission.read(Role.user(authorId))],
+      transactionId: tx.transactionId,
+    });
+  }
+  return done(null);
 }
 
 function text(value: unknown): string {
@@ -326,6 +355,7 @@ export async function saveChallenge(
       if (existing) {
         if (input.expectedVersion == null || input.expectedVersion !== integer(existing.version))
           return failure('conflict');
+        if (existing.status === 'archived') return failure('invalid');
       }
       const status = existing
         ? input.publish
@@ -363,6 +393,11 @@ export async function saveChallenge(
           transactionId: tx.transactionId,
         });
       await syncRequirements(ctx, tx, challengeId, status, input.draft.requirements);
+      if (existing && status !== existing.status) {
+        const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId,
+          status === 'published');
+        if (!comments.ok) return failure(comments.failure.code);
+      }
       const diff = auditDiff(existing ?? {}, { ...data, status, version });
       await recordAudit(ctx, tx, {
         action: existing ? 'challenge.updated' : 'challenge.created',
@@ -393,10 +428,18 @@ export async function closeChallenge(
   return transitionChallenge(ctx, input, 'closed');
 }
 
+/** Remove a challenge from the creator catalog while retaining rows for audit. */
+export async function archiveChallenge(
+  ctx: CoreContext,
+  input: { challengeId: string; expectedVersion?: number | null },
+): Promise<CoreResult<ChallengeResult>> {
+  return transitionChallenge(ctx, input, 'archived');
+}
+
 async function transitionChallenge(
   ctx: CoreContext,
   input: { challengeId: string; expectedVersion?: number | null },
-  nextStatus: 'published' | 'closed',
+  nextStatus: 'published' | 'closed' | 'archived',
 ): Promise<CoreResult<ChallengeResult>> {
   const blocked = requiresStaff<ChallengeResult>(ctx, 'manage-catalog');
   if (blocked) return blocked;
@@ -409,6 +452,7 @@ async function transitionChallenge(
       if (!existing) return failure('not_found');
       const status = text(existing.status);
       if (status === nextStatus) return failure('conflict');
+      if (status === 'archived') return failure('invalid');
       if (input.expectedVersion != null && input.expectedVersion !== integer(existing.version))
         return failure('conflict');
       const version = integer(existing.version) + 1;
@@ -421,8 +465,12 @@ async function transitionChallenge(
         transactionId: tx.transactionId,
       });
       await refreshRequirementPermissions(ctx, tx, challengeId, nextStatus);
+      const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId,
+        nextStatus === 'published');
+      if (!comments.ok) return failure(comments.failure.code);
       await recordAudit(ctx, tx, {
-        action: nextStatus === 'published' ? 'challenge.published' : 'challenge.closed',
+        action: nextStatus === 'published' ? 'challenge.published'
+          : nextStatus === 'archived' ? 'challenge.archived' : 'challenge.closed',
         entityType: 'challenges',
         entityId: challengeId,
         before: { status, version: integer(existing.version) },

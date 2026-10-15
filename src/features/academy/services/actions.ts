@@ -9,7 +9,7 @@ import { hasCapability } from '@/lib/security/memberships';
 import { academyEnabled } from '../domain';
 import {
   AcademyError, completeLesson, createComment, editComment, hideOwnComment,
-  moderateComment, reportComment, saveEditorDraft, setCourseStatus, staffReply,
+  moderateComment, reportComment, saveCategory, saveEditorDraft, setCourseStatus, staffReply,
   type Context,
 } from './operations';
 
@@ -51,6 +51,9 @@ async function perform(run: (ctx: Context) => Promise<unknown>): Promise<Academy
 }
 export async function saveAcademyDraftAction(raw: unknown) {
   return perform((ctx) => saveEditorDraft(ctx, raw));
+}
+export async function saveAcademyCategoryAction(raw: unknown) {
+  return perform((ctx) => saveCategory(ctx, raw));
 }
 export async function setAcademyCourseStatusAction(id: string, version: number,
   status: 'published' | 'archived') {

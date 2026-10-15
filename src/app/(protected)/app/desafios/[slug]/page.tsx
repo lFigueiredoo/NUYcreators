@@ -31,7 +31,8 @@ export default async function ChallengeDetailPage({
 async function ChallengeDetailBody({ slug }: { slug: string }) {
   const { secret, viewer } = await workspaceSession();
   const detail = await loadChallengeDetail(secret, viewer.id, slug);
-  const challengeId = detail.challenge.state === 'ok' ? detail.challenge.items[0]?.id : null;
+  const challenge = detail.challenge.state === 'ok' ? detail.challenge.items[0] : null;
+  const challengeId = challenge?.status === 'published' ? challenge.id : null;
   const comments = challengeId
     ? await challengeComments(secret, challengeId)
     : { state: 'pending' as const, items: [] };

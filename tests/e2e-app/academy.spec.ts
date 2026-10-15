@@ -95,6 +95,28 @@ test('permissões: creator não abre Admin e visitante não abre Academia', asyn
   await expect(page).toHaveURL(/\/app\?access=denied/);
   await page.goto(`${stack.origin}/admin/academia/novo`);
   await expect(page).toHaveURL(/\/app\?access=denied/);
+  await page.goto(`${stack.origin}/admin/academia/categorias`);
+  await expect(page).toHaveURL(/\/app\?access=denied/);
+});
+
+test('Admin cria e ordena categoria; Creator não alcança a gestão', async ({ page }) => {
+  await signIn(page, 'academy-admin@nuy.test', 'senha-de-teste-academy');
+  await page.goto(`${stack.origin}/admin/academia/categorias`);
+  const create = page.getByRole('heading', { name: 'Nova categoria' }).locator('..');
+  await create.getByRole('textbox', { name: 'Nome' }).fill('Categoria C1');
+  await create.getByRole('textbox', { name: 'Slug' }).fill('categoria-c1');
+  await create.getByRole('spinbutton', { name: 'Ordem' }).fill('80');
+  await create.getByRole('button', { name: 'Criar categoria' }).click();
+  await expect(create.getByRole('status')).toContainText('salva');
+  await page.reload();
+  const saved = page.getByRole('heading', { name: 'Categoria C1' }).locator('..');
+  await expect(saved.getByText(/ordem 80/)).toBeVisible();
+  await saved.getByRole('spinbutton', { name: 'Ordem' }).fill('7');
+  await saved.getByRole('button', { name: 'Salvar alterações' }).click();
+  await expect(saved.getByRole('status')).toContainText('salva');
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Categoria C1' }).locator('..')
+    .getByText(/ordem 7/)).toBeVisible();
 });
 
 test('busca e categoria filtram o catálogo sem mostrar rascunhos', async ({ page }) => {

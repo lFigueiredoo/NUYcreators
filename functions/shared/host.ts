@@ -223,6 +223,8 @@ export async function hosted(
       },
       now: new Date(),
       correlationId: event.req.headers['x-appwrite-trigger'] ?? 'function',
+      academyCommentsReady: process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
+        process.env.APPWRITE_ACADEMY_ENABLED === 'true',
     },
     body: body(event),
   };

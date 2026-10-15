@@ -1,4 +1,5 @@
-export type AcademyCategory = { id: string; name: string; slug: string };
+export type AcademyCategory = { id: string; name: string; slug: string;
+  description: string; order: number; active: boolean };
 export type AcademyCourse = {
   id: string;
   slug: string;

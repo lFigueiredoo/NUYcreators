@@ -22,6 +22,7 @@ export {
   saveChallenge,
   publishChallenge,
   closeChallenge,
+  archiveChallenge,
   saveReward,
   publishReward,
   closeReward,

@@ -34,7 +34,7 @@ function table(
   };
 }
 
-export const academySchemaVersion = 'academy-002-proposal-v2';
+export const academySchemaVersion = 'academy-003-proposal-c1';
 /** Índice FULLTEXT separado: o manifesto v001 só expressa índices key/unique. */
 export const academyFulltextIndexesProposal = [
   { tableId: 'academy_courses', key: 'searchText', attributes: ['searchText'] },
@@ -77,11 +77,12 @@ export const academyTablesProposal: Table[] = [
   ),
   table(
     'academy_materials',
-    'courseId lessonId? title kind fileId? url:2048? order:#',
+    'courseId lessonId title kind fileId? url:2048? order:#',
     [],
     [
       ['courseId', 'order'],
       ['lessonId', 'order'],
+      ['courseId', 'lessonId'],
     ],
   ),
   table(
