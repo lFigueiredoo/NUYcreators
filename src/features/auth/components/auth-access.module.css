@@ -49,6 +49,7 @@
   font-size: 16px;
   line-height: 1.6;
   color-scheme: light;
+  animation: au-page-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 /* O `em` do global nasce lavanda (#c8b3de): aqui ele é itálico da casa. */
@@ -141,6 +142,7 @@
      creme da frase lê a 14,6:1 sobre ele — o véu em degradê que existia para
      salvar a leitura sobre a foto saiu junto com a foto. */
   background: var(--au-navy);
+  animation: au-visual-in 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 .visualPhrase {
@@ -175,6 +177,7 @@
   max-width: 432px;
   margin: auto;
   padding: 26px 0 34px;
+  animation: au-content-in 0.55s 0.08s cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
 .title {
@@ -376,6 +379,37 @@
 @keyframes au-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes au-page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes au-visual-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes au-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

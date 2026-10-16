@@ -307,20 +307,23 @@ export function ResetScreen({
 /**
  * 03 — Verificação de e-mail.
  *
- * Com os tokens do link, a ação real continua sendo um clique explícito
- * ("Confirmar meu e-mail" → `verifyAction`): confirmar no carregamento da
- * página seria mudar a funcionalidade. Sem tokens, não há o que confirmar —
- * a tela mostra o texto aprovado e a saída que existe (`/login`); o reenvio do
- * e-mail exige sessão e vive no onboarding, onde já funcionava.
+ * Com os tokens do link, a confirmação acontece automaticamente no carregamento
+ * e a pessoa segue para o próximo passo válido. O formulário continua como
+ * fallback para links expirados ou falhas transitórias. Sem tokens, a tela
+ * orienta a pessoa a conferir a caixa de entrada.
  */
 export function VerifyScreen({
   configured,
   token,
+  initialError = '',
 }: {
   configured: boolean;
   token: { userId: string; secret: string };
+  initialError?: string;
 }) {
-  const [state, action, pending] = useActionState(verifyAction, { message: '' });
+  const [state, action, pending] = useActionState(verifyAction, {
+    message: initialError,
+  });
   const hasToken = Boolean(token.userId && token.secret);
 
   if (state.success)
@@ -331,14 +334,14 @@ export function VerifyScreen({
             E-mail <em>confirmado.</em>
           </>
         }
-        lead="Seu endereço foi verificado. O próximo passo é completar o seu perfil."
+        lead="Seu endereço foi verificado. Vamos levar você para o próximo passo."
       >
         <div className={styles.done}>
           <span className={styles.doneIcon} aria-hidden="true">
             <CircleCheck size={22} />
           </span>
           <Link className={`${styles.submit} ${styles.doneAction}`} href="/onboarding">
-            Continuar para o meu perfil
+            Completar meu perfil
             <ArrowRight size={17} aria-hidden="true" className={styles.arrow} />
           </Link>
         </div>
@@ -377,7 +380,10 @@ export function VerifyScreen({
         </form>
       ) : (
         <div className={styles.form}>
-          <Notice>Abra o link que enviamos para o seu e-mail para confirmar o endereço.</Notice>
+          <Notice>
+            Cadastro concluído. Abra o link que enviamos para o seu e-mail; depois da confirmação,
+            você será encaminhado automaticamente para completar o perfil.
+          </Notice>
           <Link className={styles.submit} href="/login">
             Ir para o login
             <ArrowRight size={17} aria-hidden="true" className={styles.arrow} />

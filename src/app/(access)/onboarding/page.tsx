@@ -82,6 +82,11 @@ export default async function Onboarding({
             )}
           </div>
         )}
+        {params.verification === 'verified' && user.emailVerification && (
+          <p className={`${styles.message} ${styles.success}`} role="status" aria-live="polite">
+            E-mail confirmado. Agora complete seu perfil para entrar na comunidade.
+          </p>
+        )}
 
         <OnboardingForm
           name={user.name}

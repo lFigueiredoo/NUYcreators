@@ -28,8 +28,13 @@ import { failureMessage, refusalMessage } from './onboarding-refusal';
 
 export type FormState = { message: string; success?: boolean };
 async function allowedRequest() {
-  const origin = (await headers()).get('origin');
-  return origin === new URL(getEnvironment().APP_URL).origin;
+  try {
+    const origin = (await headers()).get('origin');
+    return origin === new URL(getEnvironment().APP_URL).origin;
+  } catch (error) {
+    console.error('Não foi possível validar a origem da ação de autenticação:', error);
+    return false;
+  }
 }
 async function saveSession(email: string, password: string) {
   const session = await createSessionAccount().createEmailPasswordSession({ email, password });
@@ -104,7 +109,7 @@ export async function signupAction(_previous: FormState, form: FormData): Promis
         'Não foi possível concluir. Se já criou sua conta, entre para reenviar a verificação.',
     };
   }
-  redirect('/onboarding');
+  redirect('/verificar-email');
 }
 export async function recoveryAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !authConfigured())
@@ -140,6 +145,13 @@ export async function resetAction(_previous: FormState, form: FormData): Promise
 export async function verifyAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !authConfigured())
     return { message: 'A verificação ainda não está disponível.' };
+  const result = await verifyEmailToken(form);
+  if (result.success) redirect('/onboarding?verification=verified');
+  return result;
+}
+
+export async function verifyEmailToken(form: FormData): Promise<FormState> {
+  if (!authConfigured()) return { message: 'A verificação ainda não está disponível.' };
   const parsed = verificationSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { message: 'Link inválido.' };
   try {
@@ -147,7 +159,7 @@ export async function verifyAction(_previous: FormState, form: FormData): Promis
   } catch {
     return { message: 'Link inválido ou expirado.' };
   }
-  return { success: true, message: 'Email verificado. Entre para completar seu perfil.' };
+  return { success: true, message: 'Email verificado.' };
 }
 export async function resendAction(): Promise<void> {
   if (!(await allowedRequest()) || !authConfigured()) return;
