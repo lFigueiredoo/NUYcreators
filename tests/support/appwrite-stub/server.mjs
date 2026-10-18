@@ -33,6 +33,7 @@ const SUPPORTED = new Set([
   'orderDesc',
   'limit',
   'offset',
+  'cursorAfter',
   'search',
 ]);
 
@@ -365,6 +366,13 @@ export async function startStub(options = {}) {
           sorted.sort((a, b) => compare(a, b, sort.attribute, direction));
         }
 
+        const cursorQuery = queries.find((query) => query.method === 'cursorAfter');
+        const cursorId = cursorQuery?.values?.[0];
+        const cursorIndex = cursorQuery
+          ? sorted.findIndex((row) => row.$id === cursorId) : -1;
+        if (cursorQuery && cursorIndex < 0)
+          return failure(response, 400, 'general_argument_invalid', 'Cursor ausente.');
+        const afterCursor = cursorQuery ? sorted.slice(cursorIndex + 1) : sorted;
         const limitQuery = [...queries].reverse().find((query) => query.method === 'limit');
         const offsetQuery = [...queries].reverse().find((query) => query.method === 'offset');
         const limit = Math.min(Number(limitQuery?.values?.[0] ?? 25), 100);
@@ -372,7 +380,7 @@ export async function startStub(options = {}) {
 
         return json(response, 200, {
           total: sorted.length,
-          rows: sorted.slice(offset, offset + limit),
+          rows: afterCursor.slice(offset, offset + limit),
         });
       }
 

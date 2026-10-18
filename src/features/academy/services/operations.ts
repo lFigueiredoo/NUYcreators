@@ -586,6 +586,10 @@ export async function editComment(ctx: Context, commentId: string, body: string)
     if (current.authorId !== ctx.actor.id) throw new AcademyError('forbidden', 'Comentário de outra pessoa.');
     if (!['pending', 'visible', 'hidden'].includes(String(current.status)))
       throw new AcademyError('invalid', 'Comentário não editável.');
+    if (current.targetType === 'challenge') {
+      await publishedTarget(ctx, 'challenge', String(current.targetId), tx);
+      await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
+    }
     return update(ctx, 'community_comments', commentId,
       { body: valid.data, status: 'pending', editedAt: new Date().toISOString() },
       ownRead(ctx.actor.id), tx);
@@ -598,6 +602,10 @@ export async function hideOwnComment(ctx: Context, commentId: string) {
     if (current.authorId !== ctx.actor.id) throw new AcademyError('forbidden', 'Comentário de outra pessoa.');
     if (!['pending', 'visible'].includes(String(current.status)))
       throw new AcademyError('invalid', 'Comentário não ocultável.');
+    if (current.targetType === 'challenge') {
+      await publishedTarget(ctx, 'challenge', String(current.targetId), tx);
+      await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
+    }
     return update(ctx, 'community_comments', commentId, { status: 'hidden',
       moderatedAt: new Date().toISOString(), moderationReason: 'Ocultado pela autora' },
       ownRead(ctx.actor.id), tx);

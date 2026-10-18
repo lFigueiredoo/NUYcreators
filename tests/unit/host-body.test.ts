@@ -60,3 +60,13 @@ it('B2 · corpo que não é objeto (lista, número, texto) vira corpo vazio', as
 it('C · corpo presente e JSON inválido CONTINUA sendo erro', async () => {
   await expect(hosted(event('{"kind":'))).rejects.toThrowError(SyntaxError);
 });
+
+it('ACL privada exige schema pronto e atestado explícito no host da Function', async () => {
+  vi.stubEnv('APPWRITE_ACADEMY_CHALLENGE_ACL_PRIVATE_READY', 'true');
+  vi.stubEnv('APPWRITE_ACADEMY_SCHEMA_READY', 'false');
+  const blocked = await hosted(event('{}'));
+  expect(blocked.ready && blocked.ctx.challengeCommentsPrivateReady).toBe(false);
+  vi.stubEnv('APPWRITE_ACADEMY_SCHEMA_READY', 'true');
+  const ready = await hosted(event('{}'));
+  expect(ready.ready && ready.ctx.challengeCommentsPrivateReady).toBe(true);
+});

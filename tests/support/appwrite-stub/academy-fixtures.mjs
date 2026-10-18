@@ -153,6 +153,17 @@ export const academyFixtureTables = {
       status: 'unexpected-state',
       createdAt: '2026-10-03T10:00:00.000Z',
     },
+    {
+      $id: 'challenge-private-visible',
+      $permissions: ['read("user:viewer-ana")'],
+      targetType: 'challenge',
+      targetId: 'challenge-reels',
+      parentId: null,
+      authorId: 'viewer-ana',
+      body: 'Conversa privada na TablesDB, visível no desafio publicado.',
+      status: 'visible',
+      createdAt: '2026-10-04T10:00:00.000Z',
+    },
   ],
   community_reports: [
     {

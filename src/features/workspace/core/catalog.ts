@@ -48,47 +48,30 @@ function permissionsFor(status: string): string[] {
   return status === 'draft' || status === 'archived' ? [] : PUBLIC_READ;
 }
 
-/** The verified private model needs reads only; it never writes every comment on archive. */
-async function verifyPrivateChallengeComments(
-  ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
-): Promise<CoreResult<null>> {
-  let cursor: string | undefined;
-  for (;;) {
-    const found = await listTableRows(ctx.tables, {
-      databaseId: ctx.databaseId,
-      tableId: 'community_comments',
-      queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId),
-        Query.orderAsc('$id'), Query.limit(100), ...(cursor ? [Query.cursorAfter(cursor)] : [])],
-      transactionId: tx.transactionId,
-    });
-    for (const comment of found.rows) {
-      const authorId = String(comment.authorId ?? '');
-      const permissions = comment.$permissions;
-      if (!authorId || !Array.isArray(permissions) ||
-          permissions.some((permission) =>
-            permission !== Permission.read(Role.user(authorId))))
-        return failure('conflict');
-    }
-    if (found.rows.length < 100) return done(null);
-    const next = String(found.rows.at(-1)?.$id ?? '');
-    if (!next || next === cursor) return failure('unavailable', true);
-    cursor = next;
-  }
-}
-
-/** Legacy revocation remains atomic for small challenges until ACL migration. */
+/** Private mode is enabled only after the separate, complete ACL audit/migration. */
 async function refreshChallengeCommentPermissions(
   ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
 ): Promise<CoreResult<null>> {
-  if (ctx.challengeCommentsPrivateReady)
-    return verifyPrivateChallengeComments(ctx, tx, challengeId);
-  if (!ctx.academyCommentsReady) return done(null);
-  const found = await listTableRows(ctx.tables, {
-    databaseId: ctx.databaseId,
-    tableId: 'community_comments',
-    queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId), Query.limit(41)],
-    transactionId: tx.transactionId,
-  });
+  if (ctx.challengeCommentsPrivateReady) {
+    // A flag is an operational attestation, never inferred from a challenge's size.
+    // No comment scan is allowed in the archive transaction in this mode.
+    if (!ctx.academyCommentsReady) return failure('unavailable', true);
+    return done(null);
+  }
+  // Legacy revocation remains atomic for small challenges until ACL migration.
+  let found: Awaited<ReturnType<typeof listTableRows>>;
+  try {
+    found = await listTableRows(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId: 'community_comments',
+      queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId), Query.limit(41)],
+      transactionId: tx.transactionId,
+    });
+  } catch (error) {
+    // Only a verified missing table may skip revocation before Academy schema exists.
+    if (!ctx.academyCommentsReady && isAbsent(error)) return done(null);
+    throw error;
+  }
   // Conservative local ceiling until Appwrite 2.2.0 transaction capacity is measured.
   if (found.total > 40) return failure('limit_reached');
   for (const comment of found.rows) {

@@ -269,11 +269,9 @@ it('a reply racing archive remains private after its initial target check', asyn
   const archived = await archiveChallenge(core, { challengeId: targetId, expectedVersion: 1 });
   release();
   expect(archived.ok).toBe(true);
-  const reply = await replyPromise;
-  expect(reply).toMatchObject({ status: 'pending',
-    $permissions: ['read("user:viewer-ana")'] });
-  await expect(viewerTables.getRow({ databaseId: 'nuy-creators',
-    tableId: 'community_comments', rowId: reply.$id })).rejects.toMatchObject({ code: 404 });
+  await expect(replyPromise).rejects.toMatchObject({ code: 'conflict' });
+  expect(stub.dataset.tables.community_comments.filter((row) =>
+    row.targetId === targetId && row.body === 'Racing reply')).toHaveLength(0);
   await expect(createComment(creator, { targetType: 'challenge', targetId,
     parentId, body: 'Reply after archive' })).rejects.toMatchObject({ code: 'missing' });
 });

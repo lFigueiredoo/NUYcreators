@@ -99,6 +99,28 @@ test('permissões: creator não abre Admin e visitante não abre Academia', asyn
   await expect(page).toHaveURL(/\/app\?access=denied/);
 });
 
+test('comentário de desafio com ACL privada aparece só pela leitura autorizada do servidor', async ({ page }) => {
+  await signIn(page, 'nova@nuy.test', 'senha-de-teste-789');
+  const response = await page.goto(`${stack.origin}/app/desafios/reels-de-verao-nuy`);
+  expect(response?.headers()['cache-control']).toContain('no-store');
+  await expect(page.getByText('Conversa privada na TablesDB, visível no desafio publicado.'))
+    .toBeVisible();
+  const challenge = stack.stub.dataset.tables.challenges.find((row) =>
+    row.$id === 'challenge-reels');
+  if (!challenge) throw new Error('Desafio de teste ausente.');
+  const previous = { status: challenge.status, permissions: challenge.$permissions };
+  try {
+    challenge.status = 'archived';
+    challenge.$permissions = [];
+    await page.reload();
+    await expect(page.getByText('Conversa privada na TablesDB, visível no desafio publicado.'))
+      .toHaveCount(0);
+  } finally {
+    challenge.status = previous.status;
+    challenge.$permissions = previous.permissions;
+  }
+});
+
 test('Admin cria e ordena categoria; Creator não alcança a gestão', async ({ page }) => {
   await signIn(page, 'academy-admin@nuy.test', 'senha-de-teste-academy');
   await page.goto(`${stack.origin}/admin/academia/categorias`);
@@ -158,7 +180,7 @@ test('Admin vê gestão e editor com prévia e ações de persistência', async 
     await page.goto(`${stack.origin}/admin/academia/comentarios`);
     await expect(page.getByRole('heading', { name: 'Comentários', level: 1 })).toBeVisible();
     await expect(page.getByText('Aula · A voz que é sua').first()).toBeVisible();
-    await expect(page.getByText(/Ana Beatriz · Visível/)).toBeVisible();
+    await expect(page.getByText(/Ana Beatriz · Visível/).first()).toBeVisible();
     await expect(page.getByText('Status desconhecido', { exact: false })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Denúncias' })).toBeVisible();
     await expect(page.getByText('Verificar o contexto deste comentário.', { exact: true })).toBeVisible();
