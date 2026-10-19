@@ -252,6 +252,41 @@ it('a comment started during archive cannot commit after it', async () => {
     row.targetId === targetId && row.body === 'Racing new comment')).toHaveLength(0);
 });
 
+it('does not restore a challenge archived between target read and transactional touch', async () => {
+  const { targetId } = addChallenge(0, 'before-touch-race');
+  let release!: () => void;
+  let entered!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  const reached = new Promise<void>((resolve) => { entered = resolve; });
+  const wrapped = new Proxy(admin.tables, {
+    get(target, property) {
+      const value = Reflect.get(target, property);
+      if (property === 'getRow') return async (args: {
+        tableId: string; rowId: string; transactionId?: string;
+      }) => {
+        const row = await value.call(target, args);
+        if (args.tableId === 'challenges' && args.rowId === targetId &&
+            args.transactionId) { entered(); await held; }
+        return row;
+      };
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  }) as Context['tables'];
+  const pending = createComment({ ...creator, tables: wrapped }, {
+    targetType: 'challenge', targetId, parentId: null, body: 'Before touch race',
+  });
+  await reached;
+  const archived = await archiveChallenge(core('c12-before-touch-race'),
+    { challengeId: targetId, expectedVersion: 1 });
+  release();
+  expect(archived.ok).toBe(true);
+  await expect(pending).rejects.toMatchObject({ code: 'missing' });
+  expect(stub.dataset.tables.challenges.find((row) => row.$id === targetId)?.status)
+    .toBe('archived');
+  expect(stub.dataset.tables.community_comments.filter((row) =>
+    row.targetId === targetId)).toHaveLength(0);
+});
+
 it('a reply started before archive cannot commit or notify afterward', async () => {
   const { targetId, comments } = addChallenge(1, 'reply-race');
   comments[0].status = 'visible';

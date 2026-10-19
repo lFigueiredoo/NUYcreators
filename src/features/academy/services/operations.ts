@@ -524,6 +524,13 @@ async function publishedTarget(ctx: Context, type: 'lesson' | 'challenge', targe
     assertEnabled(challenge.status);
   }
 }
+/** A neutral same-value write detects conflicts without restoring an archived status. */
+async function touchPublishedChallenge(ctx: Context, challengeId: string, tx: string) {
+  const challenge = await get(ctx, 'challenges', challengeId, tx);
+  await update(ctx, 'challenges', challengeId,
+    { participantCount: Number(challenge.participantCount) }, undefined, tx);
+  await publishedTarget(ctx, 'challenge', challengeId);
+}
 export async function completeLesson(ctx: Context, lessonId: string) {
   id.parse(lessonId);
   await publishedTarget(ctx, 'lesson', lessonId);
@@ -556,7 +563,7 @@ export async function createComment(ctx: Context, raw: unknown) {
     }
     if (input.targetType === 'challenge' && tx)
       // Stage a write on the same row as archive so one concurrent commit loses.
-      await update(ctx, 'challenges', input.targetId, {}, undefined, tx);
+      await touchPublishedChallenge(ctx, input.targetId, tx);
     return create(ctx, 'community_comments', { ...content, authorId: ctx.actor.id,
       status: 'pending', createdAt: new Date().toISOString() }, ownRead(ctx.actor.id), rowId, tx);
   };
@@ -588,7 +595,7 @@ export async function editComment(ctx: Context, commentId: string, body: string)
       throw new AcademyError('invalid', 'Comentário não editável.');
     if (current.targetType === 'challenge') {
       await publishedTarget(ctx, 'challenge', String(current.targetId), tx);
-      await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
+      await touchPublishedChallenge(ctx, String(current.targetId), tx);
     }
     return update(ctx, 'community_comments', commentId,
       { body: valid.data, status: 'pending', editedAt: new Date().toISOString() },
@@ -604,7 +611,7 @@ export async function hideOwnComment(ctx: Context, commentId: string) {
       throw new AcademyError('invalid', 'Comentário não ocultável.');
     if (current.targetType === 'challenge') {
       await publishedTarget(ctx, 'challenge', String(current.targetId), tx);
-      await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
+      await touchPublishedChallenge(ctx, String(current.targetId), tx);
     }
     return update(ctx, 'community_comments', commentId, { status: 'hidden',
       moderatedAt: new Date().toISOString(), moderationReason: 'Ocultado pela autora' },
@@ -646,7 +653,7 @@ export async function moderateComment(ctx: Context, raw: unknown) {
         throw new AcademyError('invalid', 'Alvo desconhecido.');
       await publishedTarget(ctx, current.targetType, String(current.targetId), tx);
       if (current.targetType === 'challenge')
-        await update(ctx, 'challenges', String(current.targetId), {}, undefined, tx);
+        await touchPublishedChallenge(ctx, String(current.targetId), tx);
     }
     const now = new Date().toISOString();
     const updated = await update(ctx, 'community_comments', input.commentId, {
