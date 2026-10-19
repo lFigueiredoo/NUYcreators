@@ -213,8 +213,5 @@ export async function onboardingAction(_previous: FormState, form: FormData): Pr
   } catch (error) {
     return { message: failureMessage(error) };
   }
-  return {
-    success: true,
-    message: 'Seu perfil foi salvo. A área de creators estará disponível na próxima etapa.',
-  };
+  redirect('/app');
 }
