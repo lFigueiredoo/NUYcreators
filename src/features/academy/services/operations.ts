@@ -188,8 +188,8 @@ async function lessonInCourse(ctx: Context, lessonId: string, courseId: string, 
   if (lesson.courseId !== courseId) throw new AcademyError('invalid', 'Aula de outro curso.');
   const moduleId = String(lesson.moduleId ?? '');
   if (!moduleId) throw new AcademyError('invalid', 'Aula sem módulo.');
-  const module = await get(ctx, 'academy_modules', moduleId, tx);
-  if (module.courseId !== courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
+  const courseModule = await get(ctx, 'academy_modules', moduleId, tx);
+  if (courseModule.courseId !== courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
   return lesson;
 }
 async function course(ctx: Context, courseId: string, tx?: string) {
@@ -269,14 +269,14 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
   if (Boolean(input.id) !== Boolean(input.expectedVersion))
     throw new AcademyError('invalid', 'Versão do curso obrigatória.');
   const allIds = [
-    ...input.modules.map((module) => module.id),
-    ...input.modules.flatMap((module) => module.lessons.map((lesson) => lesson.id)),
+    ...input.modules.map((courseModule) => courseModule.id),
+    ...input.modules.flatMap((courseModule) => courseModule.lessons.map((lesson) => lesson.id)),
     ...input.materials.map((material) => material.id),
   ].filter(Boolean);
   if (new Set(allIds).size !== allIds.length)
     throw new AcademyError('invalid', 'IDs repetidos no editor.');
   const minimumWrites = 1 + input.modules.length +
-    input.modules.reduce((total, module) => total + module.lessons.length, 0) + input.materials.length;
+    input.modules.reduce((total, courseModule) => total + courseModule.lessons.length, 0) + input.materials.length;
   if (minimumWrites > EDITOR_MAX_STAGED_WRITES)
     throw new AcademyError('invalid', `O editor aceita no máximo ${EDITOR_MAX_STAGED_WRITES} gravações por salvamento. Divida o treinamento.`);
   return transaction(ctx, async (tx) => {
@@ -297,22 +297,22 @@ export async function saveEditorDraft(ctx: Context, raw: unknown) {
     }
     const courseId = saved.$id;
     const moduleIds = new Map<string, string>();
-    for (const module of input.modules) {
-      const moduleData = { courseId, title: module.title, summary: module.summary, order: module.order };
-      if (module.id.startsWith('local-') || !module.id) {
+    for (const courseModule of input.modules) {
+      const moduleData = { courseId, title: courseModule.title, summary: courseModule.summary, order: courseModule.order };
+      if (courseModule.id.startsWith('local-') || !courseModule.id) {
         const created = await create(ctx, 'academy_modules', moduleData, [], undefined, tx);
-        moduleIds.set(module.id, created.$id);
+        moduleIds.set(courseModule.id, created.$id);
       } else {
-        const existing = await get(ctx, 'academy_modules', module.id, tx);
+        const existing = await get(ctx, 'academy_modules', courseModule.id, tx);
         if (existing.courseId !== courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
-        await update(ctx, 'academy_modules', module.id, moduleData, undefined, tx);
-        moduleIds.set(module.id, module.id);
+        await update(ctx, 'academy_modules', courseModule.id, moduleData, undefined, tx);
+        moduleIds.set(courseModule.id, courseModule.id);
       }
     }
     const lessonIds = new Map<string, string>();
-    for (const module of input.modules) {
-      for (const lesson of module.lessons) {
-        const lessonData = { courseId, moduleId: moduleIds.get(module.id),
+    for (const courseModule of input.modules) {
+      for (const lesson of courseModule.lessons) {
+        const lessonData = { courseId, moduleId: moduleIds.get(courseModule.id),
           title: lesson.title, summary: lesson.summary, order: lesson.order,
           durationSeconds: lesson.durationSeconds, videoFileId: lesson.videoFileId };
         if (lesson.id.startsWith('local-') || !lesson.id) {
@@ -390,8 +390,8 @@ export async function saveLesson(ctx: Context, raw: unknown) {
   const input = parsed.data;
   return transaction(ctx, async (tx) => {
     const parent = await editableCourse(ctx, input.courseId, input.expectedCourseVersion, tx);
-    const module = await get(ctx, 'academy_modules', input.moduleId, tx);
-    if (module.courseId !== input.courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
+    const courseModule = await get(ctx, 'academy_modules', input.moduleId, tx);
+    if (courseModule.courseId !== input.courseId) throw new AcademyError('invalid', 'Módulo de outro curso.');
     const data = { courseId: input.courseId, moduleId: input.moduleId,
       title: input.title, summary: input.summary, order: input.order,
       durationSeconds: input.durationSeconds, videoFileId: input.videoFileId };
@@ -456,8 +456,8 @@ export async function setCourseStatus(ctx: Context, courseId: string, expectedVe
       const modules = await rows(ctx, 'academy_modules', [Query.equal('courseId', courseId)], tx);
       const lessons = await rows(ctx, 'academy_lessons', [Query.equal('courseId', courseId)], tx);
       if (!modules.length || !lessons.length || lessons.some((entry) => !entry.title ||
-        !entry.videoFileId || !modules.some((module) =>
-          module.$id === entry.moduleId && module.courseId === courseId)))
+        !entry.videoFileId || !modules.some((courseModule) =>
+          courseModule.$id === entry.moduleId && courseModule.courseId === courseId)))
         throw new AcademyError('invalid', 'Publique apenas com módulos e aulas completas, com vídeo validado.');
       // The media registry is private; an unverified file ID must never make a course public.
       for (const lesson of lessons) {
@@ -470,13 +470,13 @@ export async function setCourseStatus(ctx: Context, courseId: string, expectedVe
         await update(ctx, 'academy_lessons', lesson.$id, { status: 'published', publishedAt: new Date().toISOString() }, usersRead, tx);
         await setLessonCommentReads(ctx, lesson.$id, true, tx);
       }
-      for (const module of modules)
-        await update(ctx, 'academy_modules', module.$id, {}, usersRead, tx);
+      for (const courseModule of modules)
+        await update(ctx, 'academy_modules', courseModule.$id, {}, usersRead, tx);
       const materials = await rows(ctx, 'academy_materials', [Query.equal('courseId', courseId)], tx);
       for (const material of materials) {
         if (!material.lessonId || !lessons.some((lesson) => lesson.$id === material.lessonId &&
-          lesson.courseId === courseId && modules.some((module) =>
-            module.$id === lesson.moduleId && module.courseId === courseId)))
+          lesson.courseId === courseId && modules.some((courseModule) =>
+            courseModule.$id === lesson.moduleId && courseModule.courseId === courseId)))
           throw new AcademyError('invalid', 'Material sem aula e módulo válidos no curso.');
         if (material.kind === 'pdf') {
           if (!material.fileId || material.url)

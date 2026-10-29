@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Gift, Inbox, ShoppingBag, Sparkles, UsersRound } from 'lucide-react';
 import { Block, ScreenHeader } from '@/features/workspace/components/ui/screen';
 import { EmptyState } from '@/features/workspace/components/ui/state';
 import type { AuditEntry } from '@/features/workspace/core';
@@ -29,7 +30,7 @@ export function OverviewScreen({
       <ScreenHeader
         kicker="Administração"
         title="Visão geral"
-        intro="Contagem exata do banco. Zero é resposta: significa que não existe nenhum registro naquele estado."
+        intro="Acompanhe o que está no ar e encontre rapidamente o que precisa da equipe."
       />
       <Outcome result={overview} what="os números da operação">
         {(counts) => (
@@ -40,30 +41,37 @@ export function OverviewScreen({
                 value={counts.challengesLive}
                 hint="Publicados e dentro da janela"
                 href="/admin/desafios?estado=live"
+                icon={Sparkles}
               />
               <Kpi
                 label="Submissões pendentes"
                 value={counts.submissionsPending}
                 hint="Aguardando decisão"
                 href="/admin/submissoes?estado=pending"
+                icon={Inbox}
+                attention
               />
               <Kpi
                 label="Creators cadastradas"
                 value={counts.creators}
                 hint="Com onboarding concluído"
                 href="/admin/creators"
+                icon={UsersRound}
               />
               <Kpi
                 label="Resgates pendentes"
                 value={counts.redemptionsRequested}
                 hint="Solicitados, sem tratamento"
                 href="/admin/relatorios"
+                icon={ShoppingBag}
+                attention
               />
               <Kpi
                 label="Recompensas ativas"
                 value={counts.rewardsLive}
                 hint="No catálogo das creators"
                 href="/admin/recompensas?estado=live"
+                icon={Gift}
               />
             </div>
 

@@ -77,21 +77,21 @@ try {
       categoryId: 'cat-primeiros-passos', order: 999 });
     console.log(`C2_PASS create_draft_course id=${course.$id}`);
   }
-  let modules = await server.listRows({ databaseId, tableId: 'academy_modules',
+  const modules = await server.listRows({ databaseId, tableId: 'academy_modules',
     queries: [Query.equal('courseId', course.$id), Query.limit(2)] });
-  let module = modules.rows[0];
-  if (!module) {
-    module = await saveModule(admin, { courseId: course.$id,
+  let courseModule = modules.rows[0];
+  if (!courseModule) {
+    courseModule = await saveModule(admin, { courseId: course.$id,
       expectedCourseVersion: Number(course.version), title: 'Módulo sintético',
       summary: 'Prova da transação', order: 1 });
-    console.log(`C2_PASS create_module id=${module.$id}`);
+    console.log(`C2_PASS create_module id=${courseModule.$id}`);
   }
   course = await server.getRow({ databaseId, tableId: 'academy_courses', rowId: course.$id });
   const lessons = await server.listRows({ databaseId, tableId: 'academy_lessons',
     queries: [Query.equal('courseId', course.$id), Query.limit(2)] });
   let lesson = lessons.rows[0];
   if (!lesson) {
-    lesson = await saveLesson(admin, { courseId: course.$id, moduleId: module.$id,
+    lesson = await saveLesson(admin, { courseId: course.$id, moduleId: courseModule.$id,
       expectedCourseVersion: Number(course.version), title: 'Aula sintética',
       summary: 'Vídeo ainda não homologado', order: 1,
       durationSeconds: 90, videoFileId: 'c2-no-video-uploaded' });
@@ -137,7 +137,7 @@ try {
   assert(page1.rows.length === 2 && page2.rows.length === 2 && page1.total === 5,
     'paginação real incompleta');
   console.log('C2_PASS cursor_pagination page_size=2 total=5');
-  console.log(`C2_SMOKE_COMPLETE course=${course.$id} module=${module.$id} lesson=${lesson.$id}`);
+  console.log(`C2_SMOKE_COMPLETE course=${course.$id} module=${courseModule.$id} lesson=${lesson.$id}`);
 } catch (error) {
   const code = (error as { code?: unknown })?.code;
   console.error(error instanceof Error && error.message.startsWith('C2:')

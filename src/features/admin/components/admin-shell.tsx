@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
-import { landingFontVariables } from '@/features/public-landing/landing-fonts';
 import { hasCapability } from '@/lib/security/memberships';
 import type { AdminRole } from '@/lib/security/permissions';
+import { adminFont } from '../admin-fonts';
 // Folha global da superfície autenticada (foco e seleção), escopada por `.nuy-app`
 // na raiz — a mesma do shell da creator: é a mesma superfície.
 import '@/styles/app-surface.css';
@@ -40,10 +40,14 @@ export function AdminShell({
     .map((entry) => entry.id);
 
   return (
-    <div className={`${appStyles.app} ${styles.admin} ${landingFontVariables} nuy-app`}>
-      <div className={appStyles.shell}>
-        <aside className={appStyles.sidebar}>
-          <Link href="/admin" className={appStyles.brand} aria-label="NUY Creators — administração">
+    <div className={`${appStyles.app} ${styles.admin} ${adminFont.variable} nuy-app`}>
+      <div className={`${appStyles.shell} ${styles.shell}`}>
+        <aside className={`${appStyles.sidebar} ${styles.sidebar}`}>
+          <Link
+            href="/admin"
+            className={`${appStyles.brand} ${styles.brand}`}
+            aria-label="NUY Creators — administração"
+          >
             <Image
               src="/brand/logo/nuy-creators-lockup.png"
               alt=""
@@ -61,8 +65,8 @@ export function AdminShell({
           <AdminNav allowed={allowed} />
         </aside>
         <div className={appStyles.body}>
-          <AdminTopbar name={name} email={email} role={roleLabel(roles)} />
-          <main id="main" className={appStyles.main}>
+          <AdminTopbar name={name} email={email} role={roleLabel(roles)} allowed={allowed} />
+          <main id="main" className={`${appStyles.main} ${styles.main}`}>
             {children}
           </main>
         </div>

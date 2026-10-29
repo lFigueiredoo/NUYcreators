@@ -40,6 +40,7 @@ export type AdminNavEntry = {
   href: string;
   icon: LucideIcon;
   capability: string;
+  section: 'Geral' | 'Conteúdo' | 'Comunidade' | 'Catálogo' | 'Análise';
 };
 
 export const adminNavEntries: AdminNavEntry[] = [
@@ -49,6 +50,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin',
     icon: LayoutDashboard,
     capability: 'view-audit',
+    section: 'Geral',
   },
   {
     id: 'challenges',
@@ -56,6 +58,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/desafios',
     icon: Sparkles,
     capability: 'manage-catalog',
+    section: 'Conteúdo',
   },
   {
     id: 'academy',
@@ -63,6 +66,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/academia',
     icon: BookOpen,
     capability: 'manage-catalog',
+    section: 'Conteúdo',
   },
   {
     id: 'academy-comments',
@@ -70,6 +74,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/academia/comentarios',
     icon: MessagesSquare,
     capability: 'moderate',
+    section: 'Comunidade',
   },
   {
     id: 'submissions',
@@ -77,6 +82,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/submissoes',
     icon: Inbox,
     capability: 'moderate',
+    section: 'Comunidade',
   },
   {
     id: 'creators',
@@ -84,6 +90,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/creators',
     icon: Users,
     capability: 'view-audit',
+    section: 'Comunidade',
   },
   {
     id: 'rewards',
@@ -91,6 +98,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/recompensas',
     icon: Gift,
     capability: 'manage-catalog',
+    section: 'Catálogo',
   },
   {
     id: 'campaigns',
@@ -98,6 +106,7 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/campanhas',
     icon: Megaphone,
     capability: 'manage-catalog',
+    section: 'Catálogo',
   },
   {
     id: 'reports',
@@ -105,8 +114,22 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/relatorios',
     icon: BarChart3,
     capability: 'view-audit',
+    section: 'Análise',
   },
 ];
+
+/** Agrupa apenas seções consecutivas, preservando a ordem operacional do menu. */
+export function adminNavSections(entries: readonly AdminNavEntry[]) {
+  return entries.reduce<Array<{ label: AdminNavEntry['section']; entries: AdminNavEntry[] }>>(
+    (sections, entry) => {
+      const current = sections.at(-1);
+      if (current?.label === entry.section) current.entries.push(entry);
+      else sections.push({ label: entry.section, entries: [entry] });
+      return sections;
+    },
+    [],
+  );
+}
 
 /** `/admin` só fica ativo nele mesmo; o resto ativa também nas telas internas. */
 export function adminCurrent(pathname: string, href: string) {

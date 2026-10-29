@@ -19,10 +19,32 @@
 .admin {
   --adm-line: #e8dfd1;
   --adm-line-strong: var(--app-beige);
-  --adm-radius: 14px;
+  --adm-radius: 16px;
   --adm-ok: #1f5d3a;
   --adm-warn: #8a6320;
   --adm-stop: #8c2f2f;
+  /* O shell compartilhado lê estes dois tokens. No admin, ambos apontam para a
+     família arredondada própria da operação — sem deixar Playfair em títulos e
+     Inter em controles. */
+  --pl-font-body: var(--adm-font);
+  --pl-font-display: var(--adm-font);
+  font-family: var(--adm-font), 'Nunito Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+.admin h1,
+.admin h2 {
+  font-family: var(--adm-font), 'Nunito Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.admin h1 {
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  line-height: 1.03;
+}
+
+.shell {
+  grid-template-columns: 252px minmax(0, 1fr);
 }
 
 /* Conteúdo mais largo que o da creator: a tabela de submissões não cabe em
@@ -34,20 +56,34 @@
 
 /* --------------------------------------------------------------- sidebar -- */
 
-/*
- * Selo do topo: a única diferença estrutural da sidebar. O menu escondido é
- * conveniência — a barreira é o `requireStaff` de cada rota, não este selo.
- */
+.sidebar {
+  gap: 16px;
+  padding: 24px 14px 18px;
+  background:
+    linear-gradient(180deg, rgba(197, 163, 66, 0.08), transparent 116px), var(--app-surface);
+}
+
+.brand {
+  min-height: 30px;
+  padding-inline: 10px;
+}
+
+.admin .brand img {
+  height: 25px;
+}
+
+/* Selo do topo: deixa inequívoco que esta é uma superfície de operação. */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
   align-self: flex-start;
-  margin: 0 10px;
+  margin: 0 8px;
   padding: 5px 11px;
   border-radius: 999px;
-  background: var(--app-navy);
-  color: var(--app-cream);
+  border: 1px solid color-mix(in srgb, var(--app-gold) 38%, transparent);
+  background: var(--app-gold-wash);
+  color: var(--app-gold-ink);
   font-size: 0.62rem;
   font-weight: 600;
   /* Uma linha só: o selo é curto de propósito para caber na largura da sidebar. */
@@ -56,12 +92,94 @@
   text-transform: uppercase;
 }
 
+.nav {
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 4px 8px;
+  scrollbar-width: thin;
+}
+
+.navSection,
+.navItems {
+  display: flex;
+  flex-direction: column;
+}
+
+.navSection {
+  gap: 5px;
+}
+
+.navItems {
+  gap: 3px;
+}
+
+.admin .navLabel {
+  margin: 0;
+  padding: 0 11px;
+  color: #738296;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin .navLink {
+  min-height: 42px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 0.91rem;
+  font-weight: 600;
+}
+
+.admin .navLink:hover {
+  background: var(--app-surface-soft);
+}
+
+.admin .navLink[aria-current='page'] {
+  background: var(--app-navy);
+  box-shadow: 0 8px 18px -14px rgba(8, 43, 85, 0.8);
+}
+
+/* --------------------------------------------------------------- topbar -- */
+
+.topbar {
+  min-height: 64px;
+  background: color-mix(in srgb, var(--app-cream) 94%, white);
+}
+
+.topbarLead,
+.topbarActions {
+  min-width: 0;
+}
+
+.mobileBrand,
+.mobileMenu {
+  display: none;
+}
+
 /* Identidade de quem opera, na topbar. */
 .operator {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+}
+.operatorAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--app-navy);
+  color: var(--app-cream);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 .admin .operatorName {
   margin: 0;
@@ -89,7 +207,42 @@
   padding: 15px 17px;
   border: 1px solid var(--adm-line);
   border-radius: var(--adm-radius);
-  background: var(--app-warm);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+.kpiHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kpiIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  margin-top: -2px;
+  border-radius: 11px;
+  background: var(--app-gold-wash);
+  color: var(--app-gold-ink);
+}
+.kpiAttention {
+  border-color: color-mix(in srgb, var(--app-gold) 52%, var(--adm-line));
+  background:
+    linear-gradient(145deg, rgba(197, 163, 66, 0.09), transparent 64%), var(--app-surface);
+}
+a.kpi {
+  transition:
+    transform var(--app-motion-fast) var(--app-ease-state),
+    border-color var(--app-motion-fast) var(--app-ease-state),
+    box-shadow var(--app-motion-fast) var(--app-ease-state);
+}
+a.kpi:hover {
+  transform: translateY(-2px);
+  border-color: var(--app-sand);
+  box-shadow: var(--app-shadow-lift);
 }
 .admin .kpiLabel {
   margin: 0;
@@ -101,8 +254,9 @@
 }
 .admin .kpiValue {
   margin: 0;
-  font-family: var(--pl-font-display), Georgia, serif;
-  font-size: 1.85rem;
+  font-family: var(--adm-font), 'Nunito Sans', sans-serif;
+  font-size: 2rem;
+  font-weight: 750;
   line-height: 1.05;
   color: var(--app-navy);
   font-variant-numeric: tabular-nums;
@@ -520,51 +674,133 @@
 }
 
 @media (max-width: 900px) {
-  /*
-   * Diferente do produto da creator, aqui a sidebar NÃO desaparece: são sete
-   * destinos e uma barra inferior de sete colunas não cabe. Ela vira uma faixa
-   * no topo, com o menu rolando na horizontal — some o cromo, não o acesso.
-   */
-  .admin .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 25;
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin .main {
+    padding: 24px 20px 48px;
+  }
+  .topbar {
+    min-height: 64px;
+    padding-inline: 16px;
+    background: var(--app-surface);
+  }
+  .desktopAction {
+    display: none !important;
+  }
+  .mobileBrand {
+    display: inline-flex;
+    align-items: center;
+  }
+  .mobileBrand img {
+    display: block;
+    width: 96px;
     height: auto;
-    display: flex;
-    gap: 10px;
-    padding: 12px 12px 10px;
-    border-right: 0;
-    border-bottom: 1px solid var(--app-beige);
   }
-  .admin .brand {
-    padding: 0 4px;
+  .mobileMenu {
+    display: block;
+    position: relative;
   }
-  .admin .nav {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 4px;
-    padding-bottom: 2px;
-    scrollbar-width: thin;
+  .mobileMenu summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--app-line-strong);
+    border-radius: 999px;
+    background: var(--app-surface);
+    color: var(--app-navy);
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
   }
-  .admin .navLink {
-    white-space: nowrap;
-    padding: 8px 12px;
-  }
-  .admin .navLabel {
+  .mobileMenu summary::-webkit-details-marker {
     display: none;
   }
-  .admin .sidebarFooter {
-    flex-direction: row;
-    gap: 4px;
-    padding-top: 8px;
-    border-top: 1px solid var(--app-beige);
+  .mobileMenu[open] summary {
+    border-color: var(--app-navy);
+    background: var(--app-navy);
+    color: var(--app-cream);
   }
-  .chip {
-    margin: 0 4px;
+  .mobileMenuPanel {
+    position: fixed;
+    top: 72px;
+    right: 12px;
+    left: 12px;
+    z-index: 40;
+    max-height: calc(100dvh - 84px);
+    padding: 14px;
+    overflow-y: auto;
+    border: 1px solid var(--adm-line);
+    border-radius: 20px;
+    background: var(--app-surface);
+    box-shadow: 0 24px 70px -30px rgba(8, 43, 85, 0.55);
+  }
+  .mobileOperator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 4px 14px;
+    border-bottom: 1px solid var(--adm-line);
+  }
+  .mobileNav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 0;
+  }
+  .mobileNavSection {
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid var(--adm-line);
+    border-radius: 14px;
+    background: var(--app-surface-soft);
+  }
+  .admin .mobileNavLabel {
+    margin: 0 0 4px;
+    padding: 0 8px;
+    color: var(--app-navy-soft);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .admin .mobileNavLink {
+    min-height: 40px;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+  }
+  .mobileMenuFooter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--adm-line);
+  }
+  .mobileUtility {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid var(--adm-line-strong);
+    border-radius: 12px;
+    background: var(--app-surface);
+    color: var(--app-navy);
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 650;
+    cursor: pointer;
   }
 }
 
 @media (max-width: 640px) {
+  .admin .main {
+    padding-inline: 16px;
+  }
   .requirementRow {
     grid-template-columns: minmax(0, 1fr) 104px 40px;
   }

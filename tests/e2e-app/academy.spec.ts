@@ -164,9 +164,28 @@ test('Admin vê gestão e editor com prévia e ações de persistência', async 
     [375, 667],
   ]) {
     await page.setViewportSize({ width, height });
+    await page.goto(`${stack.origin}/admin`);
+    await expect(page.getByRole('heading', { name: 'Visão geral', level: 1 })).toBeVisible();
+    await page.screenshot({
+      path: `${destination}/admin-visao-geral-${width}x${height}.png`,
+      fullPage: true,
+    });
     await page.goto(`${stack.origin}/admin/academia`);
     await expect(page.getByRole('heading', { name: 'Academia NUY', level: 1 })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Novo treinamento' })).toBeVisible();
+    if (width <= 900) {
+      const menu = page.locator('summary', { hasText: 'Menu' });
+      await expect(menu).toBeVisible();
+      await menu.click();
+      const mobileNavigation = page.getByRole('navigation', { name: 'Menu da administração' });
+      await expect(mobileNavigation.getByRole('link', { name: 'Visão geral' })).toBeVisible();
+      await expect(mobileNavigation.getByRole('link', { name: 'Relatórios' })).toBeVisible();
+      await page.screenshot({
+        path: `${destination}/admin-menu-${width}x${height}.png`,
+        fullPage: true,
+      });
+      await menu.click();
+    }
     await page.screenshot({
       path: `${destination}/admin-lista-${width}x${height}.png`,
       fullPage: true,

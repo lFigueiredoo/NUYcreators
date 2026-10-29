@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
 import { Pill } from '@/features/workspace/components/ui/pill';
 import { UnavailableState } from '@/features/workspace/components/ui/state';
 import { catalogView } from '@/features/workspace/domain/catalog';
@@ -20,15 +21,26 @@ export function Kpi({
   value,
   hint,
   href,
+  icon: Icon,
+  attention = false,
 }: {
   label: string;
   value: number;
   hint?: string;
   href?: string;
+  icon?: LucideIcon;
+  attention?: boolean;
 }) {
   const body = (
     <>
-      <p className={styles.kpiLabel}>{label}</p>
+      <div className={styles.kpiHead}>
+        <p className={styles.kpiLabel}>{label}</p>
+        {Icon ? (
+          <span className={styles.kpiIcon} aria-hidden="true">
+            <Icon size={18} />
+          </span>
+        ) : null}
+      </div>
       <p className={styles.kpiValue}>{value}</p>
       {hint ? (
         <p className={`${styles.kpiHint} ${value === 0 ? styles.kpiHintZero : ''}`}>{hint}</p>
@@ -37,11 +49,19 @@ export function Kpi({
   );
   if (href)
     return (
-      <Link href={href} className={styles.kpi} style={{ textDecoration: 'none' }}>
+      <Link
+        href={href}
+        className={`${styles.kpi} ${attention && value > 0 ? styles.kpiAttention : ''}`}
+        style={{ textDecoration: 'none' }}
+      >
         {body}
       </Link>
     );
-  return <div className={styles.kpi}>{body}</div>;
+  return (
+    <div className={`${styles.kpi} ${attention && value > 0 ? styles.kpiAttention : ''}`}>
+      {body}
+    </div>
+  );
 }
 
 /** Estado do catálogo com o rótulo do domínio. Palavra desconhecida sai crua. */
