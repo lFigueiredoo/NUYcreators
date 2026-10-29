@@ -251,7 +251,7 @@ test('as telas de acesso declaram o estado honesto, sem fingir integração', as
     'Só falta confirmar seu e-mail.',
   );
   await expect(page.getByRole('status')).toHaveText(
-    'Abra o link que enviamos para o seu e-mail para confirmar o endereço.',
+    'Cadastro concluído. Abra o link que enviamos para o seu e-mail; depois da confirmação, você será encaminhado automaticamente para completar o perfil.',
   );
 
   expect(errors).toEqual([]);
