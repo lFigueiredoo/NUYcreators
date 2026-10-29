@@ -115,15 +115,10 @@ test('nenhum link público é morto: sem "#" solto e sem destino quebrado', asyn
 test('as páginas legais usam a chrome pública e mantêm o aviso honesto', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  // A versão em vigor é provisória (2026-10-07-v1) e continua marcada como tal:
-  // os termos avisam no topo, a política fecha o corpo dizendo o mesmo. O que o
-  // gate protege é a honestidade do aviso, não a redação de uma versão passada.
+  // Os documentos continuam marcados como minutas: os termos avisam no topo e a
+  // política fecha o corpo dizendo o mesmo. O gate protege a honestidade do aviso.
   for (const [route, title, notice] of [
-    [
-      '/termos',
-      'Termos de Uso — NUY Creators',
-      /Versão provisória — sujeita à revisão jurídica antes do lançamento definitivo\./,
-    ],
+    ['/termos', 'Termos de Uso — NUY Creators', /Minuta revisada para validação jurídica\./],
     [
       '/privacidade',
       'Política de Privacidade — NUY Creators',

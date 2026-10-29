@@ -26,6 +26,7 @@ const ROUTES = [
   '/app/pontos',
   '/app/recompensas',
   '/app/ranking',
+  '/app/regulamento',
   '/app/notificacoes',
   '/app/perfil',
 ];
@@ -89,15 +90,27 @@ test('sessão com onboarding entra na área e vê a própria jornada', async ({ 
   await expect(page.locator('h1')).toHaveText('Olá, Ana.');
   const nav = page.locator('nav[aria-label="Navegação principal"]').first();
   await expect(nav.getByRole('link', { name: 'Recompensas' })).toBeVisible();
-  const desafios = nav.getByRole('link', { name: 'Desafios' });
+  const ranking = nav.getByRole('link', { name: 'Ranking' });
+  const regulamento = nav.getByRole('link', { name: 'Regulamento' });
   const termos = nav.getByRole('link', { name: 'Termos' });
+  await expect(regulamento).toBeVisible();
   await expect(termos).toBeVisible();
-  await expect(desafios.locator('xpath=following-sibling::a[1]')).toHaveAttribute(
+  await expect(ranking.locator('xpath=following-sibling::a[1]')).toHaveAttribute(
+    'href',
+    '/app/regulamento',
+  );
+  await expect(regulamento.locator('xpath=following-sibling::a[1]')).toHaveAttribute(
     'href',
     '/termos',
   );
   // Sidebar e barra inferior marcam o destino atual; a primeira é a da sidebar.
   await expect(page.locator('a[aria-current="page"]').first()).toContainText('Início');
+  await regulamento.click();
+  await expect(page).toHaveURL(/\/app\/regulamento$/);
+  await expect(
+    page.getByRole('heading', { name: 'Regulamento do programa', level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText('Minuta não vigente').first()).toBeVisible();
 });
 
 test('saldo disponível e pontos de jornada são números diferentes', async ({ page }) => {
@@ -226,7 +239,9 @@ test('mobile: sem sidebar, barra inferior com cinco destinos', async ({ browser 
     await expect(bottom.getByRole('link', { name: label })).toBeVisible();
   }
   await bottom.getByRole('button', { name: 'Mais' }).click();
-  await expect(page.getByRole('navigation', { name: 'Mais seções' })).toContainText('Termos');
+  const more = page.getByRole('navigation', { name: 'Mais seções' });
+  await expect(more).toContainText('Regulamento');
+  await expect(more).toContainText('Termos');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('navigation', { name: 'Mais seções' })).toHaveCount(0);
   await bottom.getByRole('link', { name: 'Desafios' }).click();

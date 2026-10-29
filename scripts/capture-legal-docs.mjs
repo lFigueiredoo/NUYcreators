@@ -249,7 +249,10 @@ try {
           avisoNoTopo: (() => {
             const ps = document.querySelectorAll('article header p');
             const ultimo = ps[ps.length - 1]?.textContent ?? '';
-            return ps.length >= 3 && ultimo.startsWith('Versão provisória');
+            return (
+              ps.length >= 3 &&
+              (ultimo.startsWith('Versão provisória') || ultimo.startsWith('Minuta revisada'))
+            );
           })(),
           avisoNoFecho: (
             Array.from(document.querySelectorAll('article div:last-child p')).pop()?.textContent ??

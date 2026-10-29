@@ -2,14 +2,12 @@ import Link from 'next/link';
 import { LegalDocument } from '@/features/legal/components/legal-document';
 
 /**
- * Termos de Uso — versão 2026-10-07-v1 (provisória).
+ * Proposta de Termos de Uso v2, revisada em 29/10/2026.
  *
- * É a versão registrada no aceite do onboarding (`acceptedTermsVersion`) e o
- * aviso do topo é a única afirmação sobre o status deste documento: versão
- * provisória, sujeita à revisão jurídica antes do lançamento definitivo. Nada
- * aqui declara aprovação jurídica já ocorrida, e nenhuma cláusula nomeia
- * pessoa, CNPJ ou canal que não exista — os contatos são os canais oficiais,
- * como na Política de Privacidade.
+ * A versão continua identificada como minuta até que o jurídico aprove o
+ * documento, a configuração de aceite seja atualizada e, quando necessário, a
+ * plataforma implemente o novo aceite. O texto descreve apenas capacidades que
+ * existem no produto; campanhas promocionais e premiações ficam no Regulamento.
  */
 export const metadata = { title: 'Termos de Uso — NUY Creators' };
 
@@ -18,99 +16,135 @@ export default function Terms() {
     <LegalDocument
       eyebrow="Transparência"
       title="Termos de Uso — NUY Creators"
-      subtitle="Versão 2026-10-07-v1 · 07/10/2026"
-      notice="Versão provisória — sujeita à revisão jurídica antes do lançamento definitivo."
+      subtitle="Minuta 2026-10-29-v2 · 29/10/2026"
+      notice="Minuta revisada para validação jurídica. A nova versão somente entrará em vigor após aprovação e comunicação às participantes."
     >
-      <h2>Quem pode participar</h2>
+      <h2>1. Objeto e documentos aplicáveis</h2>
       <p>
-        O NUY Creators é uma comunidade para maiores de 18 anos. Ao criar a conta, a participante
-        declara que tem 18 anos ou mais e que as informações do cadastro são verdadeiras. A data de
-        nascimento é conferida no preenchimento do perfil e a participação é recusada abaixo dessa
-        idade.
+        Estes Termos disciplinam o acesso e o uso do NUY Creators, incluindo perfil, desafios,
+        conteúdos, Academia NUY, comentários, Pontos NUY, ranking, recompensas e notificações. A{' '}
+        <Link href="/privacidade">Política de Privacidade</Link> explica o tratamento de dados
+        pessoais. Campanhas, pontuações especiais e eventuais premiações dependem também do
+        Regulamento e das regras específicas publicadas no painel.
       </p>
 
-      <h2>Desafios e campanhas</h2>
+      <h2>2. Elegibilidade e conta</h2>
       <p>
-        A participante pode entrar em desafios e campanhas publicados pela equipe do NUY Creators.
-        Cada desafio informa suas próprias regras, prazos e critérios. Participar é opcional: a
-        criadora escolhe em quais desafios quer participar.
+        A plataforma é destinada a pessoas com 18 anos ou mais. A participante deve fornecer
+        informações verdadeiras, manter seus dados atualizados, usar apenas a própria conta e
+        proteger suas credenciais. Contas falsas, duplicadas, cedidas ou criadas para contornar
+        limites podem ser suspensas após análise.
       </p>
 
-      <h2>Conteúdo enviado</h2>
+      <h2>3. Desafios, campanhas e envios</h2>
       <p>
-        Ao enviar um conteúdo, a participante declara que é autora ou que tem autorização para
-        usá-lo. O conteúdo enviado pode ser analisado pela equipe e exibido dentro da plataforma,
-        conforme as regras do desafio. O envio não transfere a propriedade do conteúdo.
+        A participação em desafios é opcional. Cada desafio informa prazo, formatos aceitos,
+        requisitos, critérios de aprovação e quantidade de Pontos NUY. O conteúdo precisa ser
+        enviado pelo fluxo indicado e dentro do prazo. As regras específicas do desafio prevalecem
+        para aquela participação, sem afastar estes Termos, a legislação e a Política de
+        Privacidade.
       </p>
 
-      <h2>Moderação</h2>
+      <h2>4. Análise e moderação</h2>
       <p>
-        Todo conteúdo enviado passa por moderação. Um envio pode ser recusado ou removido quando não
-        seguir as regras do desafio ou destes termos, com o motivo registrado. A decisão pode ser
-        revista pelos canais oficiais.
+        Envios e interações podem passar por análise da equipe. O material pode ser aprovado,
+        recusado, devolvido para correção, ocultado ou removido quando não cumprir as regras, violar
+        direitos de terceiros ou representar risco à comunidade. Sempre que aplicável, a decisão e
+        seu motivo ficam registrados e podem ser questionados pelos canais oficiais.
       </p>
 
-      <h2>Pontos NUY</h2>
+      <h2>5. Pontos NUY</h2>
       <p>
-        Pontos NUY registram a participação dentro da comunidade. Eles{' '}
-        <strong>não têm valor monetário</strong>, não são moeda, não podem ser transferidos entre
-        contas nem convertidos em dinheiro. A equipe pode corrigir pontos lançados em erro, com
-        registro do ajuste.
+        Pontos NUY são registros de participação na plataforma. Eles não são moeda, não podem ser
+        vendidos, transferidos entre contas ou convertidos em dinheiro. O painel pode distinguir
+        pontos disponíveis para recompensas, pontos de jornada usados para nível e pontos obtidos em
+        um ciclo de ranking. Correções de erro, fraude, cancelamento ou duplicidade podem gerar
+        ajustes rastreáveis.
       </p>
 
-      <h2>Ranking</h2>
+      <h2>6. Ranking e ciclos</h2>
       <p>
-        O ranking é calculado a partir dos pontos das participantes, seguindo as regras divulgadas.
-        Em caso de correção de pontos ou de fraude comprovada, a posição pode ser recalculada.
+        O ranking considera os pontos elegíveis obtidos dentro do período indicado na tela. O início
+        de um novo ciclo não apaga o histórico nem os pontos de jornada: apenas inicia uma nova
+        apuração. Empates, correções e critérios de premiação, quando existirem, seguem o
+        Regulamento vigente e as regras divulgadas antes do ciclo.
       </p>
 
-      <h2>Recompensas</h2>
+      <h2>7. Recompensas, comissões e premiações</h2>
       <p>
-        As recompensas estão limitadas ao estoque disponível e às regras de cada campanha. O resgate
-        depende de pontos suficientes e da disponibilidade no momento do pedido, e fica registrado
-        na conta da participante.
+        Recompensas do catálogo dependem do saldo disponível, estoque, limites e confirmação do
+        resgate. Comissões por vendas, quando oferecidas, não se confundem com Pontos NUY ou prêmios
+        e dependem de condições comerciais próprias. Nenhum valor financeiro ou prêmio é prometido
+        por estes Termos; uma eventual promoção somente poderá ocorrer conforme Regulamento
+        definitivo, autorizações aplicáveis e comunicação oficial.
       </p>
 
-      <h2>Integridade e fraude</h2>
+      <h2>8. Publicidade e transparência</h2>
       <p>
-        Não é permitido criar contas falsas ou duplicadas, usar automação para acumular pontos,
-        manipular o ranking ou enviar conteúdo enganoso. A plataforma pode recusar participações,
-        reverter pontos e suspender contas em caso de fraude.
+        Conteúdo produzido em razão de pagamento, comissão, envio de produto, bonificação ou outro
+        benefício deve identificar de forma clara e imediata seu caráter publicitário, inclusive em
+        vídeos, Stories e transmissões ao vivo. A participante deve relatar experiências
+        verdadeiras, seguir o briefing aprovado e não atribuir aos produtos qualidades, resultados
+        ou indicações que não tenham sido fornecidos ou comprovados pela NUY.
       </p>
 
-      <h2>Redes sociais não verificadas</h2>
+      <h2>9. Autoria, imagem e licença de uso</h2>
       <p>
-        Perfis e links de redes sociais informados no perfil aparecem como{' '}
-        <strong>Não verificado</strong>. Enquanto não houver um processo específico de verificação,
-        o NUY Creators não confirma seguidores, audiência ou autenticidade desses perfis.
+        A participante mantém a autoria e os direitos sobre o conteúdo que cria e declara possuir as
+        autorizações necessárias sobre imagem, voz, música, marcas e materiais de terceiros. O envio
+        autoriza apenas o armazenamento, a análise, a moderação e a exibição necessária dentro da
+        plataforma. Repostagem, impulsionamento, adaptação ou uso publicitário externo pela NUY
+        dependem de autorização específica que informe finalidade, meios, território e prazo,
+        preservados os direitos morais da autora.
       </p>
 
-      <h2>Privacidade e LGPD</h2>
+      <h2>10. Condutas proibidas</h2>
       <p>
-        O tratamento de dados pessoais segue a{' '}
-        <Link href="/privacidade">Política de Privacidade</Link>, que faz parte destes termos. A
-        participante pode exercer os direitos previstos na LGPD (Lei nº 13.709/2018) pelos canais
-        oficiais.
+        Não é permitido usar bots, automação indevida, compra de engajamento, autocompra
+        fraudulenta, informações falsas, conteúdo duplicado para manipular limites, discurso
+        discriminatório, ameaças, assédio, violação de propriedade intelectual ou qualquer
+        expediente destinado a manipular aprovações, pontos, ranking, comissões ou recompensas.
       </p>
 
-      <h2>Imagem, voz e publicidade</h2>
+      <h2>11. Academia NUY e comunidade</h2>
       <p>
-        O aceite destes termos <strong>não concede autorização irrestrita</strong> para uso
-        publicitário da imagem, da voz ou do conteúdo da participante. Quando uma campanha exigir
-        esse uso, as condições específicas deverão ser apresentadas separadamente, para aceite
-        próprio.
+        Aulas, vídeos, PDFs e demais materiais da Academia destinam-se ao uso pessoal da
+        participante e não podem ser redistribuídos sem autorização. Comentários e respostas devem
+        respeitar as demais participantes, podem ser moderados e permanecem sujeitos às regras de
+        privacidade e segurança da plataforma.
       </p>
 
-      <h2>Alterações destes termos</h2>
+      <h2>12. Dados pessoais e segurança</h2>
       <p>
-        Estes termos são versionados. Alterações relevantes passam a valer em uma nova versão e
-        podem exigir novo aceite antes de a participante continuar usando a plataforma.
+        O tratamento de dados segue a Política de Privacidade e a legislação aplicável, incluindo a
+        Lei Geral de Proteção de Dados Pessoais. A participante pode solicitar o exercício de seus
+        direitos pelos canais oficiais. Pedidos de exclusão observam obrigações legais, prevenção a
+        fraudes, segurança e exercício regular de direitos.
       </p>
 
-      <h2>Legislação e canais oficiais</h2>
+      <h2>13. Plataformas de terceiros</h2>
       <p>
-        Estes termos são regidos pela legislação brasileira. Dúvidas, pedidos e denúncias são
-        atendidos pelos canais oficiais da NUY.
+        Instagram, TikTok, YouTube, Shopee e outros serviços externos possuem termos,
+        disponibilidade e sistemas próprios. A NUY não controla indisponibilidades, remoções ou
+        mudanças dessas plataformas, mas avaliará situações comprovadas conforme as regras do
+        desafio ou campanha.
+      </p>
+
+      <h2>14. Suspensão e encerramento</h2>
+      <p>
+        A conta pode ser temporariamente limitada ou suspensa para investigação de fraude, risco de
+        segurança ou violação relevante. O encerramento definitivo deve considerar a gravidade, as
+        evidências, os direitos já adquiridos e eventual manifestação da participante, sem impedir
+        medidas urgentes de proteção da plataforma e da comunidade.
+      </p>
+
+      <h2>15. Alterações, legislação e contato</h2>
+      <p>
+        Estes Termos são regidos pela legislação brasileira, inclusive pelas normas aplicáveis de
+        proteção de dados, internet, direitos autorais e defesa do consumidor. Alterações relevantes
+        receberão nova versão, comunicação clara e, quando necessário, novo aceite. Dúvidas,
+        contestações e solicitações devem ser encaminhadas pelos canais oficiais divulgados pela
+        NUY.
       </p>
     </LegalDocument>
   );

@@ -36,6 +36,8 @@ const SCREENS = [
   { name: 'app-recompensas-390', path: '/app/recompensas', viewport: MOBILE },
   { name: 'app-ranking-1920', path: '/app/ranking', viewport: DESKTOP },
   { name: 'app-ranking-390', path: '/app/ranking', viewport: MOBILE },
+  { name: 'app-regulamento-1920', path: '/app/regulamento', viewport: DESKTOP },
+  { name: 'app-regulamento-390', path: '/app/regulamento', viewport: MOBILE },
   { name: 'app-notificacoes-1920', path: '/app/notificacoes', viewport: DESKTOP },
   { name: 'app-notificacoes-390', path: '/app/notificacoes', viewport: MOBILE },
   { name: 'app-perfil-1920', path: '/app/perfil', viewport: DESKTOP },
