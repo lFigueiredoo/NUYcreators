@@ -1,6 +1,7 @@
 import { Account, Client, TablesDB } from 'node-appwrite';
 import { ownerReadPermissions } from '../../src/lib/security/permissions';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
+import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
 import { resolveEndpoint } from '../shared/host';
 import { createHash } from 'node:crypto';
 type Context = {
@@ -31,7 +32,7 @@ export default async function main({ req, res, error }: Context, services: Servi
   if (!parsed.success) return res.json({ error: 'invalid_profile' }, 400);
   const termsVersion = process.env.NUY_TERMS_VERSION;
   const minimumAge = Number(process.env.NUY_MINIMUM_AGE);
-  if (!termsVersion || !Number.isInteger(minimumAge) || minimumAge < 18)
+  if (termsVersion !== CURRENT_TERMS_VERSION || !Number.isInteger(minimumAge) || minimumAge < 18)
     return res.json({ error: 'participation_policy_unconfigured' }, 503);
   const birth = new Date(`${parsed.data.birthDate}T00:00:00Z`);
   const today = new Date();
@@ -88,6 +89,18 @@ export default async function main({ req, res, error }: Context, services: Servi
       });
       if (record.status !== 'active' || record.authUserId !== user.$id)
         return res.json({ error: 'account_disabled' }, 403);
+      if (record.acceptedTermsVersion !== termsVersion) {
+        await db.updateRow({
+          databaseId,
+          tableId: 'users',
+          rowId: user.$id,
+          data: {
+            acceptedTermsVersion: termsVersion,
+            consentAt: new Date().toISOString(),
+          },
+          permissions,
+        });
+      }
     } catch (err) {
       if ((err as { code?: number }).code !== 404) throw err;
       try {

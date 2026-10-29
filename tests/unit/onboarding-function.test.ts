@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   deleteRow: vi.fn(),
 }));
 import handler from '../../functions/complete-onboarding/main';
+import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
 const main = (ctx: Parameters<typeof handler>[0]) =>
   handler(ctx, {
     account: () => ({ get: mocks.getUser }),
@@ -49,12 +50,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv('APPWRITE_FUNCTION_API_ENDPOINT', 'https://example.test/v1');
   vi.stubEnv('APPWRITE_FUNCTION_PROJECT_ID', 'isolated-test');
-  vi.stubEnv('NUY_TERMS_VERSION', 'test-v1');
+  vi.stubEnv('NUY_TERMS_VERSION', CURRENT_TERMS_VERSION);
   vi.stubEnv('NUY_MINIMUM_AGE', '18');
   mocks.getUser.mockResolvedValue({ $id: 'trusted-user', emailVerification: true });
   mocks.getRow.mockImplementation(async ({ tableId }: { tableId: string }) =>
     tableId === 'users'
-      ? { authUserId: 'trusted-user', status: 'active' }
+      ? {
+          authUserId: 'trusted-user',
+          status: 'active',
+          acceptedTermsVersion: CURRENT_TERMS_VERSION,
+        }
       : { userId: 'trusted-user' },
   );
   mocks.updateRow.mockResolvedValue({});
@@ -84,6 +89,27 @@ it('enforces configured age policy', async () => {
 it('rejects suspended users', async () => {
   mocks.getRow.mockResolvedValue({ authUserId: 'trusted-user', status: 'suspended' });
   expect(await main(context())).toMatchObject({ status: 403 });
+});
+it('records an explicit acceptance when an existing user submits a newer terms version', async () => {
+  mocks.getRow.mockImplementation(async ({ tableId }: { tableId: string }) =>
+    tableId === 'users'
+      ? {
+          authUserId: 'trusted-user',
+          status: 'active',
+          acceptedTermsVersion: '2026-10-07-v1',
+        }
+      : { userId: 'trusted-user' },
+  );
+
+  expect(await main(context())).toMatchObject({ status: 200 });
+  const acceptanceWrite = mocks.updateRow.mock.calls.find(
+    ([input]) => input.tableId === 'users',
+  )?.[0];
+  expect(acceptanceWrite).toMatchObject({
+    rowId: 'trusted-user',
+    data: { acceptedTermsVersion: CURRENT_TERMS_VERSION },
+  });
+  expect(acceptanceWrite.data.consentAt).toEqual(expect.any(String));
 });
 it('selects ownership from verified identity, never from the payload', async () => {
   expect(

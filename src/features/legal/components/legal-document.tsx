@@ -5,13 +5,12 @@ import styles from '../styles/legal.module.css';
  * Moldura de um documento legal público (termos e privacidade).
  *
  * O chrome — header, rodapé e âncoras absolutas — vem do layout de `(public)`;
- * aqui vive só o miolo: sobretítulo, título, linha de versão, o aviso de que a
- * versão é provisória e o corpo. Documento se lê; não tem reveal nem movimento,
+ * aqui vive só o miolo: sobretítulo, título, linha de versão, aviso de vigência
+ * ou contexto e o corpo. Documento se lê; não tem reveal nem movimento,
  * e por isso nada aqui depende do IntersectionObserver da landing.
  *
- * O aviso entra como propriedade (e não como texto fixo) porque cada página
- * declara a provisoriedade na própria voz: os termos no topo, antes da primeira
- * cláusula; a política no fecho do corpo, junto das demais ressalvas.
+ * O aviso entra como propriedade (e não como texto fixo) porque cada documento
+ * declara sua própria situação e data antes da primeira cláusula.
  *
  * O corpo carrega `data-testid` porque a medida de leitura é contratual
  * (`experience-boundary.spec.ts`): o nome da classe é hasheado pelo CSS Module

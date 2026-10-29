@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import type { Client } from 'node-appwrite';
+import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
 
 /**
  * A regressão do defeito encontrado no staging pelo Sprint 8.
@@ -55,7 +56,7 @@ async function run() {
   );
   vi.stubEnv('APPWRITE_FUNCTION_API_ENDPOINT', INJECTED);
   vi.stubEnv('APPWRITE_FUNCTION_PROJECT_ID', 'isolated-test');
-  vi.stubEnv('NUY_TERMS_VERSION', 'test-v1');
+  vi.stubEnv('NUY_TERMS_VERSION', CURRENT_TERMS_VERSION);
   vi.stubEnv('NUY_MINIMUM_AGE', '18');
 
   const handler = (await import('../../functions/complete-onboarding/main')).default;

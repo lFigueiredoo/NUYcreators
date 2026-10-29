@@ -46,8 +46,8 @@
 }
 
 /*
- * O aviso de versão provisória fica no topo, antes de qualquer cláusula: quem
- * lê precisa saber o que está lendo antes de ler, não depois.
+ * O aviso de vigência ou contexto fica no topo, antes de qualquer cláusula:
+ * quem lê precisa saber qual documento está lendo antes de prosseguir.
  */
 .notice {
   margin-top: 18px;

@@ -9,8 +9,8 @@
  *   · o documento CABE na largura em que é lido (sem rolagem horizontal);
  *   · a coluna tem medida de leitura (largura × tamanho de fonte medidos no
  *     DOM, com a largura média de caractere medida em canvas — não estimada);
- *   · o aviso de versão provisória está no TOPO dos termos e no FECHO da
- *     política, e o contraste dele é medido no par de cores COMPOSTO (o
+ *   · o aviso de vigência oficial está no TOPO dos dois documentos, e o
+ *     contraste dele é medido no par de cores COMPOSTO (o
  *     `rgba()` do texto sobre o creme da página, não sobre branco);
  *   · o aceite do cadastro traz os dois links legais reais e clicar num deles
  *     navega SEM marcar a caixa (o `<label>` não pode capturar o clique).
@@ -240,19 +240,13 @@ try {
           titulo: document.querySelector('h1')?.textContent ?? null,
           sobretitulo: document.querySelector('article p')?.textContent ?? null,
           secoes: Array.from(document.querySelectorAll('article h2')).map((el) => el.textContent),
-          // O aviso do topo é ESTRUTURAL, não uma coincidência de texto: os
-          // termos trazem três parágrafos no cabeçalho (sobretítulo, versão,
-          // aviso) e a política traz dois (sobretítulo, versão). O `startsWith`
-          // no último parágrafo impede que o "Versão provisória" do subtítulo
-          // da política passe por aviso.
+          // O aviso do topo é ESTRUTURAL, não uma coincidência solta de texto:
+          // os dois documentos trazem sobretítulo, versão e aviso de vigência.
           headerParagrafos: document.querySelectorAll('article header p').length,
           avisoNoTopo: (() => {
             const ps = document.querySelectorAll('article header p');
             const ultimo = ps[ps.length - 1]?.textContent ?? '';
-            return (
-              ps.length >= 3 &&
-              (ultimo.startsWith('Versão provisória') || ultimo.startsWith('Minuta revisada'))
-            );
+            return ps.length >= 3 && ultimo.startsWith('Documento oficial vigente');
           })(),
           avisoNoFecho: (
             Array.from(document.querySelectorAll('article div:last-child p')).pop()?.textContent ??
@@ -277,10 +271,7 @@ try {
       await page.screenshot({ path: `${OUT}/${nome}-${w}.png`, fullPage: true });
 
       // O aviso e o cabeçalho, ampliados: texto pequeno não se julga em
-      // miniatura. O segundo alvo segue o que a página REALMENTE tem — nos
-      // termos é o aviso de provisoriedade; na política, que fecha o corpo com
-      // o mesmo aviso, é a linha de versão. Rotular o subtítulo de "aviso"
-      // seria evidência mentirosa.
+      // miniatura. Os dois documentos agora têm aviso oficial no topo.
       const alvos = [
         ['topo', 'article header'],
         geo.avisoNoTopo

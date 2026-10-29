@@ -23,6 +23,7 @@ import {
   verificationSchema,
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
+import { CURRENT_TERMS_VERSION } from '@/features/legal/versions';
 import { signedInRoute } from './onboarding-gate';
 import { failureMessage, refusalMessage } from './onboarding-refusal';
 
@@ -100,7 +101,14 @@ export async function signupAction(_previous: FormState, form: FormData): Promis
       name: parsed.data.name,
     });
     const session = await saveSession(parsed.data.email, parsed.data.password);
-    await createAccount(session.secret).createVerification({
+    const account = createAccount(session.secret);
+    await account.updatePrefs({
+      prefs: {
+        acceptedTermsVersion: CURRENT_TERMS_VERSION,
+        termsConsentAt: new Date().toISOString(),
+      },
+    });
+    await account.createVerification({
       url: `${getEnvironment().APP_URL}/verificar-email`,
     });
   } catch {

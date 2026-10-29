@@ -112,23 +112,21 @@ test('nenhum link público é morto: sem "#" solto e sem destino quebrado', asyn
   expect(destinations.size).toBeGreaterThan(5);
 });
 
-test('as páginas legais usam a chrome pública e mantêm o aviso honesto', async ({ page }) => {
+test('as páginas legais usam a chrome pública e informam a vigência oficial', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
 
-  // Os documentos continuam marcados como minutas: os termos avisam no topo e a
-  // política fecha o corpo dizendo o mesmo. O gate protege a honestidade do aviso.
+  // Os documentos identificam versão e vigência no topo. O gate impede que uma
+  // publicação oficial volte a exibir texto de minuta ou política provisória.
   for (const [route, title, notice] of [
-    ['/termos', 'Termos de Uso — NUY Creators', /Minuta revisada para validação jurídica\./],
-    [
-      '/privacidade',
-      'Política de Privacidade — NUY Creators',
-      /Esta versão é provisória para validação operacional e deverá ser revisada antes da abertura definitiva ao público\./,
-    ],
+    ['/termos', 'Termos de Uso — NUY Creators', /Documento oficial vigente\./],
+    ['/privacidade', 'Política de Privacidade — NUY Creators', /Documento oficial vigente\./],
   ] as const) {
     await page.goto(route);
     await page.evaluate(() => document.fonts.ready);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
     await expect(page.getByText(notice)).toBeVisible();
+    await expect(page.getByText('SIRMIONE COMERCIO E DISTRIBUICAO LTDA')).toBeVisible();
+    await expect(page.getByText(/Minuta|versão provisória/i)).toHaveCount(0);
     // A versão anterior destas páginas não tinha coluna: o texto transbordava a
     // viewport. O documento precisa caber na largura em que está sendo lido.
     expect(
@@ -205,8 +203,8 @@ test('a coluna dos documentos legais mantém a medida de leitura', async ({ page
         corpo,
         `${route}: coluna do corpo acima da medida de leitura — o texto voltou à faixa`,
       ).toBeLessThanOrEqual(640);
-      // E a coluna para ANTES da moldura: título, linha de versão e aviso do
-      // topo continuam na largura cheia. Se os dois empatarem, o `max-width`
+      // E a coluna para ANTES da moldura: título, linha de versão e aviso de
+      // vigência continuam na largura cheia. Se os dois empatarem, o `max-width`
       // saiu do corpo e a medida foi embora com ele.
       expect(corpo, `${route}: o corpo deve ser mais estreito que a moldura`).toBeLessThan(
         moldura ?? Infinity,
