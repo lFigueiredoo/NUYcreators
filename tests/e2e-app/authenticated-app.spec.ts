@@ -89,6 +89,13 @@ test('sessão com onboarding entra na área e vê a própria jornada', async ({ 
   await expect(page.locator('h1')).toHaveText('Olá, Ana.');
   const nav = page.locator('nav[aria-label="Navegação principal"]').first();
   await expect(nav.getByRole('link', { name: 'Recompensas' })).toBeVisible();
+  const desafios = nav.getByRole('link', { name: 'Desafios' });
+  const termos = nav.getByRole('link', { name: 'Termos' });
+  await expect(termos).toBeVisible();
+  await expect(desafios.locator('xpath=following-sibling::a[1]')).toHaveAttribute(
+    'href',
+    '/termos',
+  );
   // Sidebar e barra inferior marcam o destino atual; a primeira é a da sidebar.
   await expect(page.locator('a[aria-current="page"]').first()).toContainText('Início');
 });
@@ -218,6 +225,10 @@ test('mobile: sem sidebar, barra inferior com cinco destinos', async ({ browser 
   for (const label of ['Início', 'Desafios', 'Conteúdos', 'Pontos', 'Perfil']) {
     await expect(bottom.getByRole('link', { name: label })).toBeVisible();
   }
+  await bottom.getByRole('button', { name: 'Mais' }).click();
+  await expect(page.getByRole('navigation', { name: 'Mais seções' })).toContainText('Termos');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('navigation', { name: 'Mais seções' })).toHaveCount(0);
   await bottom.getByRole('link', { name: 'Desafios' }).click();
   await expect(page).toHaveURL(/\/app\/desafios$/);
   await context.close();

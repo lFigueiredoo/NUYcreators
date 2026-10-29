@@ -66,9 +66,10 @@ export function SidebarNav({ unread }: { unread: number | null }) {
 /**
  * Barra inferior do mobile: cinco destinos fixos mais "Mais".
  *
- * O sexto lugar abre a folha com o que não cabe (Recompensas, Ranking,
- * Notificações) e com a saída. É estado local do componente: nenhuma rota nova,
- * nenhum destino inventado — são os mesmos links da sidebar do desktop.
+ * O sexto lugar abre a folha com o que não cabe (Termos, Academia,
+ * Recompensas, Ranking e Notificações) e com a saída. É estado local do
+ * componente: nenhuma rota nova, nenhum destino inventado — são os mesmos links
+ * da sidebar do desktop.
  *
  * Os cinco primeiros não podem sair nem mudar de nome: são a navegação de
  * polegar, e a barra não é lugar de esconder o que a creator mais usa.
