@@ -10,6 +10,7 @@ import {
 
 const publication = {
   promoterLegalName: null,
+  promoterTradeName: null,
   promoterAddress: null,
   promoterCnpj: null,
   participationStartsAt: null,
@@ -17,6 +18,18 @@ const publication = {
   viralViewsGoal: null,
   supportEmail: null,
   authorizationCertificate: null,
+};
+
+const officialPublication = {
+  ...publication,
+  promoterLegalName: 'SIRMIONE COMERCIO E DISTRIBUICAO LTDA',
+  promoterTradeName: 'NSN COMERCIO E DISTRIBUICAO',
+  promoterAddress: 'Rua Projetada, S/N, Distrito Mecânico, Pedras de Fogo - PB, CEP 58.328-000',
+  promoterCnpj: '36.120.044/0001-00',
+  participationStartsAt: '03/11/2026',
+  participationEndsAt: '03/11/2027 (12 meses)',
+  viralViewsGoal: '20.000 (vinte mil) visualizações',
+  supportEmail: 'mundonuy@gmail.com',
 };
 
 describe('página do regulamento NUY Creators', () => {
@@ -54,5 +67,24 @@ describe('página do regulamento NUY Creators', () => {
     const rankingIndex = primaryNav.findIndex((entry) => entry.href === '/app/ranking');
     expect(primaryNav[rankingIndex + 1]?.href).toBe('/app/regulamento');
     expect(primaryNav[rankingIndex + 2]?.href).toBe('/termos');
+  });
+
+  it('exibe os dados institucionais fornecidos sem preencher o certificado pendente', () => {
+    const html = renderToStaticMarkup(
+      createElement(RegulationScreen, { publication: officialPublication }),
+    );
+
+    for (const value of [
+      'SIRMIONE COMERCIO E DISTRIBUICAO LTDA',
+      'NSN COMERCIO E DISTRIBUICAO',
+      '36.120.044/0001-00',
+      '03/11/2026',
+      '03/11/2027 (12 meses)',
+      '20.000 (vinte mil) visualizações',
+      'mundonuy@gmail.com',
+    ]) {
+      expect(html).toContain(value);
+    }
+    expect(html).toContain('Certificado de autorização, quando exigível');
   });
 });

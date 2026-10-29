@@ -111,6 +111,9 @@ test('sessão com onboarding entra na área e vê a própria jornada', async ({ 
     page.getByRole('heading', { name: 'Regulamento do programa', level: 1 }),
   ).toBeVisible();
   await expect(page.getByText('Minuta não vigente').first()).toBeVisible();
+  await expect(page.locator('main')).toContainText('SIRMIONE COMERCIO E DISTRIBUICAO LTDA');
+  await expect(page.locator('main')).toContainText('36.120.044/0001-00');
+  await expect(page.locator('main')).toContainText('03/11/2027 (12 meses)');
 });
 
 test('saldo disponível e pontos de jornada são números diferentes', async ({ page }) => {

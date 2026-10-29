@@ -327,7 +327,12 @@ export function RegulationScreen({ publication }: { publication: RegulationPubli
               value={publication.promoterLegalName}
               fallback="Razão Social da NUY"
             />
-            , situada em{' '}
+            , nome fantasia{' '}
+            <PublicationValue
+              value={publication.promoterTradeName}
+              fallback="Nome de fantasia da NUY"
+            />
+            , com sede em{' '}
             <PublicationValue
               value={publication.promoterAddress}
               fallback="Endereço completo da sede"
