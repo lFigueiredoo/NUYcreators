@@ -62,7 +62,7 @@ const labelLayer = (boardW, titles) => {
   );
 };
 
-const captionLayer = (boardW, text, boardH) =>
+const captionLayer = (boardW, text) =>
   Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${boardW}" height="${CAPTION_H}"><text x="${MARG}" y="24" ${FONT} font-size="17" fill="#777">${text}</text></svg>`,
   );

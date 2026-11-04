@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import { readFileSync } from 'node:fs';
 
 // R8 — grade+zooms do hero de referência a 1920 com UMA única rasterização:
 // o recorte vai embutido como data-URI dentro do próprio SVG (o composite
@@ -18,7 +17,7 @@ const base = await sharp(SRC)
 const b64 = base.toString('base64');
 const H = Math.round((410 / 864) * TARGET_W); // 911
 
-function sliceSVG({ name, left, top, w, h, grid = true, step = 25, labelEvery = 50 }) {
+function sliceSVG({ left, top, w, h, grid = true, step = 25, labelEvery = 50 }) {
   const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}">`,
     `<image href="data:image/png;base64,${b64}" x="${-left}" y="${-top}" width="${TARGET_W}" height="${H}"/>`,

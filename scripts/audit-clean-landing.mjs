@@ -86,7 +86,6 @@ for (const [label, w, h, dpr] of VIEWPORTS) {
     };
     const bgOf = (el) => {
       let node = el;
-      let acc = { r: 0, g: 0, b: 0, a: 0 };
       const layers = [];
       while (node && node !== document.documentElement) {
         const c = parse(getComputedStyle(node).backgroundColor);

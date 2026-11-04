@@ -2,7 +2,7 @@
 // this reads the site exactly as shipped: fonts ready, images eager+decoded,
 // reveals triggered by a scroll walk, then a settle wait before fullPage shots.
 import { chromium } from '@playwright/test';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 
 const OUT = 'artifacts/round6/review';
 mkdirSync(OUT, { recursive: true });

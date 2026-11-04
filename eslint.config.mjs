@@ -6,6 +6,9 @@ export default defineConfig([
   ...nextTs,
   globalIgnores([
     '.next/**',
+    // Evidências e scripts descartáveis de revisões visuais. Não fazem parte do
+    // produto, do build nem da infraestrutura executável.
+    'artifacts/**',
     'test-results/**',
     'playwright-report/**',
     'next-env.d.ts',

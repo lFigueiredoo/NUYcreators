@@ -107,7 +107,11 @@ export function AcademyCatalog({
             <p>Encontre um tema para o seu momento.</p>
           </div>
         </div>
-        <form className={`${styles.toolbar} ${styles.catalogToolbar}`} action="/app/academia" method="get">
+        <form
+          className={`${styles.toolbar} ${styles.catalogToolbar}`}
+          action="/app/academia"
+          method="get"
+        >
           <label className={styles.search}>
             <Search size={18} aria-hidden="true" />
             <span className="sr-only">Buscar conteúdo</span>
@@ -145,7 +149,10 @@ export function AcademyCatalog({
               >
                 <div className={styles.courseArt}>
                   {course.authorizedCoverUrl ? (
-                    // A URL só pode ser preenchida após autorização por curso e sessão.
+                    // A URL só é preenchida após autorização por curso e sessão. O otimizador do
+                    // Next não encaminha os headers de autenticação ao buscar a origem privada;
+                    // servir a URL autorizada diretamente evita transformar uma capa válida em 401.
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       className={styles.courseCover}
                       src={course.authorizedCoverUrl}
@@ -310,15 +317,23 @@ export function AcademyCourseDetail({
         <aside className={styles.stack}>
           <section className={styles.panel}>
             <h2>Seu progresso</h2>
-            <p>{progress.state === 'ok' && lessons.state === 'ok'
-              ? `${completed} de ${lessons.items.length} aulas concluídas.`
-              : 'Não foi possível carregar seu progresso agora.'}</p>
-            {nextLesson ? <Link className={styles.button}
-              href={`/app/academia/${encodeURIComponent(course.slug)}/aulas/${encodeURIComponent(nextLesson.id)}`}>
-              Continuar aprendendo
-            </Link> : <button className={styles.button} type="button" disabled>
-              {completed ? 'Treinamento concluído' : 'Continuar aprendendo'}
-            </button>}
+            <p>
+              {progress.state === 'ok' && lessons.state === 'ok'
+                ? `${completed} de ${lessons.items.length} aulas concluídas.`
+                : 'Não foi possível carregar seu progresso agora.'}
+            </p>
+            {nextLesson ? (
+              <Link
+                className={styles.button}
+                href={`/app/academia/${encodeURIComponent(course.slug)}/aulas/${encodeURIComponent(nextLesson.id)}`}
+              >
+                Continuar aprendendo
+              </Link>
+            ) : (
+              <button className={styles.button} type="button" disabled>
+                {completed ? 'Treinamento concluído' : 'Continuar aprendendo'}
+              </button>
+            )}
           </section>
           <section className={styles.panel}>
             <h2>Materiais</h2>
@@ -440,7 +455,12 @@ export function AcademyLessonDetail({
               <p>Nenhum material complementar publicado.</p>
             )}
           </section>
-          <CommunityComments target="aula" targetId={lesson.id} comments={comments} viewerId={viewerId} />
+          <CommunityComments
+            target="aula"
+            targetId={lesson.id}
+            comments={comments}
+            viewerId={viewerId}
+          />
         </div>
         <aside className={styles.stack}>
           <section className={styles.panel}>

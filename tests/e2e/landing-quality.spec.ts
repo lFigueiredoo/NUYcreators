@@ -189,7 +189,6 @@ test('a página pública não inventa números, datas, perfis nem métricas', as
       document.querySelector<HTMLElement>(selector)?.innerText ?? '';
     const community = text('#comunidade');
     const whatIs = text('#o-que-e');
-    const howTo = text('#como-participar');
     const faq = text('#faq');
     const ctaFinal = text('#cta-final');
     const footer = text('footer');

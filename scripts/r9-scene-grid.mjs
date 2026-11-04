@@ -12,8 +12,6 @@ for (let y = 0; y <= H; y += 100)
   h.push(
     `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="yellow" stroke-width="2"/><text x="6" y="${y + 22}" fill="yellow" font-size="20">${y}</text>`,
   );
-const grid = Buffer.from(`<svg width="${W}" height="${H}">${v.join('')}${h.join('')}</svg>`);
-
 // sharp aplica resize ANTES do composite: primeiro redimensionar para buffer
 const art = await sharp('public/brand/v2/hero-scene-v2.webp')
   .resize({ width: 840 })

@@ -320,3 +320,25 @@ test('every workspace URL and legacy operational URL requires a server session',
     await expect(page.getByText('Área preparada · integração pendente')).toHaveCount(0);
   }
 });
+
+test('headers de segurança e arquivos de crawler protegem as rotas privadas', async ({
+  request,
+}) => {
+  const home = await request.get('/');
+  expect(home.ok()).toBe(true);
+  expect(home.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+  expect(home.headers()['content-security-policy']).toContain("object-src 'none'");
+  expect(home.headers()['permissions-policy']).toContain('camera=()');
+  expect(home.headers()['cross-origin-opener-policy']).toBe('same-origin');
+
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Disallow: /admin');
+  expect(robots).toContain('Disallow: /app');
+  expect(robots).toContain('Sitemap: https://nuycreators.mundonuy.com.br/sitemap.xml');
+
+  const sitemap = await (await request.get('/sitemap.xml')).text();
+  expect(sitemap).toContain('<loc>https://nuycreators.mundonuy.com.br</loc>');
+  expect(sitemap).toContain('<loc>https://nuycreators.mundonuy.com.br/termos</loc>');
+  expect(sitemap).not.toContain('/admin');
+  expect(sitemap).not.toContain('/app');
+});

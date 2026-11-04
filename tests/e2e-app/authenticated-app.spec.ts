@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { periodKey, periodLabel } from '../../src/features/workspace/domain/ranking';
 import { startStack, type StackHandle } from '../support/stack.mjs';
 
 /**
@@ -146,7 +147,7 @@ test('ranking é do ciclo, por pontos ganhos, e não vaza contato', async ({ pag
   await expect(main).toContainText('11º');
   await expect(main).toContainText('300 pontos ganhos');
   await expect(page.locator('h1')).toContainText('Ranking');
-  await expect(main).toContainText('Outubro de 2026');
+  await expect(main).toContainText(periodLabel(periodKey(new Date())));
   // Empate divide posição (1, 2, 2, 4): duas linhas em 8º.
   await expect(main.locator('[class*="rankPosition"]', { hasText: '8º' })).toHaveCount(2);
   // Privacidade: nada de e-mail, telefone ou cidade na tela pública.

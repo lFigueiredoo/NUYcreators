@@ -48,7 +48,7 @@ for (const y of [140, 160, 180])
 
 // base dos frascos (mesa): linha com transição clara→navy, para fixar escala vertical
 console.log('=== base/mesa: última linha de conteúdo vivo (lum>90, janela dos frascos) ===');
-const bottomEdge = ({ px, w, h }, x0, x1) => {
+const bottomEdge = ({ px, h }, x0, x1) => {
   for (let y = h - 1; y > 0; y--) {
     let bright = 0;
     for (let x = x0; x < x1; x += 3) if (lum(px(x, y)) > 90) bright++;
@@ -56,10 +56,6 @@ const bottomEdge = ({ px, w, h }, x0, x1) => {
   }
   return -1;
 };
-const artArt = await sharp('public/brand/v2/hero-scene-v2.webp')
-  .png()
-  .raw()
-  .toBuffer({ resolveWithObject: true });
 console.log(
   'art bottomEdge (janela frascos x300-900):',
   bottomEdge({ px: art.px, w: art.w, h: art.h }, 300, 900),

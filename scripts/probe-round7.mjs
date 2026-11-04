@@ -16,7 +16,7 @@ const px = (x, y) => {
 const hex = ([r, g, b]) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 
 // Dominante de uma região: só pixels que passam o filtro, clusterizado grosso.
-function dominant(x0, y0, w, h, filter, label, conv = 1) {
+function dominant(x0, y0, w, h, filter, label) {
   const buckets = new Map();
   for (let y = y0; y < y0 + h; y++)
     for (let x = x0; x < x0 + w; x++) {
@@ -40,14 +40,14 @@ function dominant(x0, y0, w, h, filter, label, conv = 1) {
 }
 
 const lilac = ([r, g, b]) => b > 150 && r > 110 && b > g + 12 && r > g + 6 && b - g < 90;
-const navyish = ([r, g, b]) => b > 60 && r < 90 && b < 130 && b > r + 10;
+const navyish = ([r, , b]) => b > 60 && r < 90 && b < 130 && b > r + 10;
 const gold = ([r, g, b]) => r > 150 && g > 100 && b < 170 && r > b + 30 && g > b - 10;
 
 // 1. accent do h2 "novas experiências." (lilás na ref) — linha 2 do h2
 console.log('=== EXPERIÊNCIAS ===');
 dominant(900, 318, 220, 30, lilac, 'h2 em (lilás) y318-348');
 // linha 1 do h2 (creme/lavanda neutra?)
-dominant(900, 282, 160, 26, ([r, g, b]) => r > 150, 'h2 linha1 claro y282-308');
+dominant(900, 282, 160, 26, ([r]) => r > 150, 'h2 linha1 claro y282-308');
 // chips navy
 dominant(900, 370, 260, 44, navyish, 'chips navy y370-414');
 // cenário/dourado da cena
@@ -59,7 +59,7 @@ dominant(470, 450, 120, 60, gold, 'sparkle região (470,450,120,60)');
 // curvas do topo
 dominant(40, 396, 420, 40, gold, 'curvas topo y396-436');
 // flor inf-esq: tom médio
-dominant(10, 500, 140, 60, ([r, g, b]) => r > 120, 'flor inf-esq claros y500-560');
+dominant(10, 500, 140, 60, ([r]) => r > 120, 'flor inf-esq claros y500-560');
 
 // 3. dourados genéricos do navy (para-quem/benefícios/hero)
 console.log('=== NAVY GENERICOS ===');
@@ -124,7 +124,7 @@ const extra = [
   ['exp-h2-mag', 892, 274, 260, 76],
   ['exp-chips-mag', 892, 358, 300, 62],
 ];
-for (const [name, left, top, width, height, note] of [...finals, ...extra]) {
+for (const [name, left, top, width, height] of [...finals, ...extra]) {
   if (!top && top !== 0) continue;
   await sharp(REF)
     .extract({ left, top, width, height })

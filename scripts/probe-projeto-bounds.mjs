@@ -7,7 +7,7 @@ const px = (x, y) => {
   const i = (y * info.width + x) * info.channels;
   return [data[i], data[i + 1], data[i + 2]];
 };
-const isCream = ([r, g, b]) => r > 180 && g > 160; // cream ~#f8f0e6; navy ~#040f26
+const isCream = ([r, g]) => r > 180 && g > 160; // cream ~#f8f0e6; navy ~#040f26
 let runs = [];
 let cur = null;
 for (let y = 340; y < 680; y++) {

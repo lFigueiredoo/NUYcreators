@@ -10,7 +10,7 @@ import type { Loaded } from '../services/read';
 import type { RankingView } from '../services/ranking';
 import { redemptionEnabled, type CatalogView } from '../services/rewards';
 import { ChallengeCard, ChallengeRow } from './challenge-card';
-import { RewardCard, RewardRow } from './reward-card';
+import { RewardRow } from './reward-card';
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import { Block } from './ui/screen';

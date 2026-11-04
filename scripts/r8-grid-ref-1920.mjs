@@ -17,26 +17,6 @@ const upscaled = await sharp('artifacts/r8/reference/source-mockup.png')
   .toBuffer();
 const meta = await sharp(upscaled).metadata();
 const W = meta.width;
-const H = meta.height;
-
-function grid(lines, step = 25) {
-  const out = [];
-  for (let x = 0; x <= W; x += step) {
-    out.push(
-      `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="lime" stroke-width="1" opacity="0.7"/>`,
-    );
-    if (x % 100 === 0)
-      out.push(`<text x="${x + 3}" y="706" fill="yellow" font-size="26">${x}</text>`);
-  }
-  for (let y = 0; y <= H; y += step) {
-    out.push(
-      `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="lime" stroke-width="1" opacity="0.7"/>`,
-    );
-    if (y % 100 === 0)
-      out.push(`<text x="${x + 3}" y="${y + 30}" fill="yellow" font-size="26">${y}</text>`);
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${lines.join('')}</svg>`;
-}
 
 const steps = [
   { name: 'grid-ref-header', y0: 0, y1: 130 },

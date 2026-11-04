@@ -1,7 +1,11 @@
+import type { Metadata } from 'next';
 import { PublicLanding } from '@/features/public-landing/public-landing';
 import { currentUser } from '@/lib/appwrite/server';
 
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 /**
  * Home pública — PROPOSTA C "Entre Casa & Creators".

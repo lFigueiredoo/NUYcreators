@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { execSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 const PORT = '3126';
 const U = `http://localhost:${PORT}/`;

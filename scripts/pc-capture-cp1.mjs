@@ -120,12 +120,10 @@ async function colourCensus(file, exclude, scale) {
   let claro = 0;
   let navy = 0;
   let detalhe = 0;
-  let ignorado = 0;
   let total = 0;
   for (let y = 0; y < info.height; y++) {
     for (let x = 0; x < info.width; x++) {
       if (box && x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1) {
-        ignorado++;
         continue;
       }
       const i = (y * info.width + x) * info.channels;

@@ -8,7 +8,7 @@
  * Não presume: mede create/update/delete pela sessão, tentativa de escalada de
  * permissão na criação, e a leitura cruzada entre duas criadoras. Limpa tudo.
  */
-import { Account, Client, ID, Permission, Role, TablesDB, Users } from 'node-appwrite';
+import { Account, Client, Permission, Role, TablesDB, Users } from 'node-appwrite';
 import { randomBytes } from 'node:crypto';
 
 const databaseId = process.env.APPWRITE_DATABASE_ID ?? 'nuy-creators';

@@ -226,7 +226,7 @@ try {
       ])
       .png()
       .toBuffer();
-    const canvas = await sharp({
+    await sharp({
       create: { width: 1920, height: totalH, channels: 3, background: { r: 10, g: 12, b: 30 } },
     })
       .composite([

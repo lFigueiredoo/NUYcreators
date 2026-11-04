@@ -169,7 +169,7 @@ const sceneCols = [];
 for (let x = 150; x < W; x++) {
   let n = 0;
   for (let y = HERO_TOP + 40; y < HERO_BOTTOM; y++) {
-    const [r, g, b] = P(x, y);
+    const [r, , b] = P(x, y);
     if (lum(x, y) > 70 || r - b > 12) n++;
   }
   if (n > 12) sceneCols.push(x);
