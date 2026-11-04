@@ -36,7 +36,9 @@ for (const { w, h } of viewports) {
     await page.evaluate(() => document.fonts.ready);
 
     // 1) Hero: copy verbatim do brief, em HTML real.
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Bem-vinda à\s*NUY Creators/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      /Bem vindos ao\s*NUY Creators/,
+    );
 
     // 2) Header pill flutuante: logo real + acessos.
     const header = page.locator('header');

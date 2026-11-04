@@ -75,7 +75,7 @@ export function Hero() {
         <h1 id="pl-hero-title" className={styles.headline}>
           <span className={styles.headlineLine}>
             <span className={styles.headlineText} data-pl-reveal data-pl-index="1">
-              Bem-vinda à{' '}
+              Bem vindos ao{' '}
             </span>
           </span>
           <span className={styles.headlineLine}>
@@ -106,7 +106,12 @@ export function Hero() {
               `transform` do elemento que anima, e a luz centra a si mesma por
               `translate(-50%, -50%)` — se as duas coisas morassem no mesmo
               nó, o halo pousaria fora do lugar (a 200px à direita do grupo). */}
-          <span className={styles.heroLightField} aria-hidden="true" data-pl-reveal data-pl-index="0">
+          <span
+            className={styles.heroLightField}
+            aria-hidden="true"
+            data-pl-reveal
+            data-pl-index="0"
+          >
             <span className={styles.heroLight} />
           </span>
           <div className={styles.heroGroup}>
