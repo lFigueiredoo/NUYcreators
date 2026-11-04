@@ -19,7 +19,9 @@ beforeAll(async () => {
   creator = { tables, databaseId: 'nuy-creators', actor: {
     id: 'viewer-ana', manage: false, moderate: false } };
 });
-afterAll(async () => { await stub.close(); });
+afterAll(async () => {
+  if (stub) await stub.close();
+});
 
 it('completa o fluxo local e recusa operações adversas sem tocar no Appwrite remoto', async () => {
   const input = { title: 'Treinamento funcional', slug: 'treinamento-funcional',

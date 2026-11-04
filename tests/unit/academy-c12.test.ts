@@ -59,7 +59,9 @@ beforeAll(async () => {
   anonymousTables = new TablesDB(new Client().setEndpoint(stub.endpoint)
     .setProject('nuy-stub').setSelfSigned(true));
 });
-afterAll(async () => { await stub.close(); });
+afterAll(async () => {
+  if (stub) await stub.close();
+});
 
 it.each([0, 1, 50, 100, 500, 1000])(
   'archives %i private comments without per-comment writes', async (count) => {

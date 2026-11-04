@@ -25,7 +25,9 @@ beforeAll(async () => {
   viewerTables = new TablesDB(new Client().setEndpoint(stub.endpoint).setProject('nuy-stub')
     .setSession(session.secret).setSelfSigned(true));
 });
-afterAll(async () => { await stub.close(); });
+afterAll(async () => {
+  if (stub) await stub.close();
+});
 
 it('prepara cinco seeds estáveis e idempotentes sem execução automática', () => {
   expect(academyCategorySeeds).toHaveLength(5);
