@@ -16,8 +16,8 @@ function mapLevel(document: Document): Level {
 }
 
 /**
- * Níveis publicados — `creator_levels` é leitura pública de configuração
- * (docs/database.md §Permissões), então não depende de documento da usuária.
+ * Níveis publicados — `creator_levels` é configuração legível por qualquer
+ * sessão autenticada, então não depende de documento próprio da usuária.
  *
  * Se a leitura não estiver disponível devolvemos lista vazia e a UI
  * simplesmente não mostra progresso de nível: melhor não exibir nada do que

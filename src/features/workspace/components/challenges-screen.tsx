@@ -2,15 +2,22 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
   CalendarClock,
+  Camera,
+  Clock3,
   Coins,
   Compass,
   Inbox,
+  PlaySquare,
   Search,
+  ShoppingBag,
   Sparkles,
 } from 'lucide-react';
+import { dailyChallenges } from '@/features/regulation/daily-challenges';
 import {
   deadlineLabel,
+  deadlinePassed,
   longDate,
   notStarted,
   plural,
@@ -22,6 +29,7 @@ import { formatPoints } from '../domain/points';
 import { configEntries, requirementLabel } from '../domain/requirements';
 import {
   COMING_VIEW,
+  ENDED_VIEW,
   challengeBucket,
   challengeTabs,
   participationView,
@@ -61,6 +69,89 @@ const EMPTY: Record<ChallengeTab, EmptyCopy> = {
     text: 'Os desafios aprovados ficam registrados nesta aba com os pontos conquistados.',
   },
 };
+
+const dailyPlatformIcons = {
+  Instagram: Camera,
+  TikTok: PlaySquare,
+  Shopee: ShoppingBag,
+} as const;
+
+/**
+ * Regras recorrentes do programa, compartilhadas com o Regulamento.
+ *
+ * Este painel é informativo: o catálogo atual continua responsável por dizer
+ * quando um envio está disponível. Assim, a interface não promete uma operação
+ * automática que ainda dependa de liberação ou de aprovação da equipe NUY.
+ */
+function DailyChallengesPanel() {
+  return (
+    <section
+      className={`${styles.dailyChallenges} ${styles.enter} ${styles.i1}`}
+      aria-labelledby="daily-challenges-title"
+    >
+      <header className={styles.dailyChallengesHead}>
+        <div className={styles.dailyChallengesTitleGroup}>
+          <span className={styles.dailyChallengesIcon} aria-hidden="true">
+            <CalendarDays size={20} />
+          </span>
+          <div>
+            <h2 id="daily-challenges-title">Desafios diários</h2>
+            <p>Atividades frequentes para criar, publicar e acumular Pontos NUY.</p>
+          </div>
+        </div>
+        <span className={styles.dailyChallengesBadge}>
+          <Clock3 size={14} aria-hidden="true" /> Limites renovados a cada dia
+        </span>
+      </header>
+
+      <div className={styles.dailyChallengesTableWrap}>
+        <table className={styles.dailyChallengesTable}>
+          <caption className={styles.visuallyHidden}>
+            Pontuação e limites das atividades diárias do NUY Creators
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Plataforma</th>
+              <th scope="col">Formato ou ação</th>
+              <th scope="col">Pontuação</th>
+              <th scope="col">Limite diário e regras</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dailyChallenges.map((item) => {
+              const Icon = dailyPlatformIcons[item.platform];
+              return (
+                <tr key={item.id}>
+                  <td data-label="Plataforma">
+                    <span className={styles.dailyChallengesPlatform}>
+                      <Icon size={16} aria-hidden="true" /> {item.platform}
+                    </span>
+                  </td>
+                  <td data-label="Formato ou ação">{item.format}</td>
+                  <td data-label="Pontuação">
+                    <strong className={styles.dailyChallengesPoints}>{item.points}</strong>
+                  </td>
+                  <td data-label="Limite diário e regras">{item.rule}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <footer className={styles.dailyChallengesFoot}>
+        <p>
+          A pontuação é aplicada após aprovação da equipe NUY e quando a atividade estiver
+          disponível no painel.
+        </p>
+        <Link href="/app/regulamento" className={styles.blockLink}>
+          Ver regulamento completo
+          <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </footer>
+    </section>
+  );
+}
 
 /**
  * O vazio de "Disponíveis" sabe o que já existe no histórico.
@@ -127,15 +218,17 @@ export function ChallengesScreen({
         className={styles.enter}
       />
 
+      <DailyChallengesPanel />
+
       <Tabs
         items={counts}
         current={tab}
         href={(id) => `/app/desafios?aba=${id}`}
         label="Filtrar desafios"
-        className={`${styles.enter} ${styles.i1}`}
+        className={`${styles.enter} ${styles.i2}`}
       />
 
-      <Block className={`${styles.enter} ${styles.i2}`}>
+      <Block className={`${styles.enter} ${styles.i3}`}>
         {view === null ? (
           <UnavailableState what="os desafios" />
         ) : items.length > 0 ? (
@@ -209,12 +302,15 @@ function SubmissionPanel({
   participationEnabled,
   returnTo,
   coming,
+  ended,
 }: {
   challenge: ChallengeView;
   participationEnabled: boolean;
   returnTo: string;
   /** Janela ainda fechada: quem não está dentro não tem envio a fazer. */
   coming: boolean;
+  /** Janela encerrada: leitura e histórico continuam, novas escritas não. */
+  ended: boolean;
 }) {
   const submission = challenge.submission;
   return (
@@ -257,15 +353,18 @@ function SubmissionPanel({
                   ? 'O envio de conteúdo fica disponível a partir daí.'
                   : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa.'
               }`
-            : participationEnabled
-              ? 'Você ainda não enviou conteúdo para este desafio.'
-              : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa. Enquanto isso, os envios não são registrados por aqui.'}
+            : ended
+              ? 'O prazo deste desafio terminou. Novos envios não estão mais disponíveis.'
+              : participationEnabled
+                ? 'Você ainda não enviou conteúdo para este desafio.'
+                : 'O envio de conteúdo pela plataforma será liberado quando a integração com as redes estiver ativa. Enquanto isso, os envios não são registrados por aqui.'}
         </p>
       )}
       {/* Envio real: com a operação configurada, para quem já entrou e sem nada
           em análise. Reenvio aparece quando a equipe pediu revisão — o servidor
           confere participação, prazo e o ciclo inteiro de novo antes de gravar. */}
       {participationEnabled &&
+      !ended &&
       challenge.participation &&
       (!submission || submission.status === 'revision_requested') ? (
         <SubmitContentForm challengeId={challenge.id} returnTo={returnTo} />
@@ -325,6 +424,7 @@ export function ChallengeDetailScreen({
 
   const deadline = deadlineLabel(challenge.endsAt, now);
   const coming = notStarted(challenge.startsAt, now);
+  const ended = deadlinePassed(challenge.endsAt, now);
   const bucket = challengeBucket(challenge);
   const pill = challenge.submission
     ? submissionView(challenge.submission.status)
@@ -332,7 +432,9 @@ export function ChallengeDetailScreen({
       ? participationView(challenge.participation.status)
       : coming
         ? COMING_VIEW
-        : null;
+        : ended
+          ? ENDED_VIEW
+          : null;
   const rules = [
     challenge.platform ? ['Plataforma', platformLabel(challenge.platform)] : null,
     challenge.hashtags ? ['Hashtags', challenge.hashtags] : null,
@@ -466,7 +568,7 @@ export function ChallengeDetailScreen({
               entrar é ocupado pela data em que ele abre. Antes, esta tela oferecia
               a entrada e o servidor devolvia "não está mais no prazo" — recusa por
               um prazo que, para quem lê, ainda nem começou. */}
-          {bucket === 'available' && coming ? (
+          {bucket === 'available' && coming && !ended ? (
             <Card>
               <h2 className={styles.blockTitle}>Ainda não começou</h2>
               <p className={styles.noteText}>
@@ -487,7 +589,17 @@ export function ChallengeDetailScreen({
             </Card>
           ) : null}
 
-          {bucket === 'available' && !coming && !participationEnabled ? (
+          {bucket === 'available' && ended ? (
+            <Card>
+              <h2 className={styles.blockTitle}>Prazo encerrado</h2>
+              <p className={styles.noteText}>
+                Este desafio continua disponível para consulta, mas não aceita novas participações
+                nem envios.
+              </p>
+            </Card>
+          ) : null}
+
+          {bucket === 'available' && !coming && !ended && !participationEnabled ? (
             <Card>
               <h2 className={styles.blockTitle}>Como participar</h2>
               <p className={styles.noteText}>
@@ -499,7 +611,11 @@ export function ChallengeDetailScreen({
 
           {/* Entrada real no desafio: uma escrita transacional no servidor, com
               limite de vagas conferido no commit — nunca no cliente. */}
-          {bucket === 'available' && !coming && participationEnabled && !challenge.participation ? (
+          {bucket === 'available' &&
+          !coming &&
+          !ended &&
+          participationEnabled &&
+          !challenge.participation ? (
             <Card>
               <h2 className={styles.blockTitle}>Como participar</h2>
               <p className={styles.noteText}>
@@ -515,10 +631,16 @@ export function ChallengeDetailScreen({
             participationEnabled={participationEnabled}
             returnTo={`/app/desafios/${slug}`}
             coming={coming}
+            ended={ended}
           />
         </aside>
       </div>
-      <CommunityComments target="desafio" targetId={challenge.id} comments={comments} viewerId={viewerId} />
+      <CommunityComments
+        target="desafio"
+        targetId={challenge.id}
+        comments={comments}
+        viewerId={viewerId}
+      />
     </>
   );
 }

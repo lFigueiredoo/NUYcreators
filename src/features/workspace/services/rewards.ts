@@ -4,6 +4,7 @@ import { functionsOnline } from './commands';
 import { isVisibleToCreators } from '../domain/catalog';
 import { rewardEligibility, type RewardEligibility } from '../domain/rewards';
 import {
+  countSession,
   integer,
   listSession,
   optionalText,
@@ -91,6 +92,36 @@ export type CatalogView = {
   redemptions: Loaded<Redemption>;
 };
 
+const COUNT_BATCH = 10;
+
+/**
+ * Contagens exatas para os limites por pessoa. O cartão não pode concluir que
+ * ainda há resgate disponível olhando apenas a página recente do histórico:
+ * o backend decide pelo `total` completo. Só recompensas com limite precisam
+ * da contagem, e as consultas são feitas em lotes para não abrir dezenas de
+ * conexões simultâneas.
+ */
+export async function exactRedemptionCounts(
+  rewards: readonly Pick<Reward, 'id' | 'perUserLimit'>[],
+  count: (rewardId: string) => Promise<number | null>,
+): Promise<Map<string, number> | null> {
+  const ids = [
+    ...new Set(
+      rewards.filter((reward) => reward.perUserLimit > 0).map((reward) => reward.id),
+    ),
+  ];
+  const result = new Map<string, number>();
+  for (let offset = 0; offset < ids.length; offset += COUNT_BATCH) {
+    const batch = ids.slice(offset, offset + COUNT_BATCH);
+    const totals = await Promise.all(batch.map(async (id) => [id, await count(id)] as const));
+    for (const [id, total] of totals) {
+      if (total === null) return null;
+      result.set(id, total);
+    }
+  }
+  return result;
+}
+
 /**
  * Catálogo operacional + resgates da própria usuária.
  *
@@ -128,10 +159,23 @@ export async function loadCatalog(
       redemptions,
     };
 
+  const counts = await exactRedemptionCounts(rewards.items, (rewardId) =>
+    countSession(secret, SCOPE, 'reward_redemptions', [
+      Query.equal('userId', userId),
+      Query.equal('rewardId', rewardId),
+    ]),
+  );
+  if (!counts)
+    return {
+      accountState: journey.accountState,
+      hasAccount: journey.summary.hasAccount,
+      balance: journey.summary.availableBalance,
+      rewards: unavailable<RewardView>(),
+      redemptions,
+    };
+
   const latest = new Map<string, Redemption>();
-  const counts = new Map<string, number>();
   for (const redemption of redemptions.items) {
-    counts.set(redemption.rewardId, (counts.get(redemption.rewardId) ?? 0) + 1);
     if (!latest.has(redemption.rewardId)) latest.set(redemption.rewardId, redemption);
   }
 

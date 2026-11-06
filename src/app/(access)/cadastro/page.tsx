@@ -12,7 +12,10 @@ import { registrationConfigured } from '@/lib/appwrite/server';
  * validação — fora do escopo "somente camada visual".
  */
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Fazer parte' };
+export const metadata = {
+  title: 'Fazer parte',
+  alternates: { canonical: '/cadastro' },
+};
 
 export default function Signup() {
   return (

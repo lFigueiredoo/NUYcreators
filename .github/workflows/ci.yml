@@ -9,10 +9,25 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/*/package-lock.json
       - run: npm ci
+      - run: npm audit
+      - name: Install and audit Appwrite Functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for directory in functions/*; do
+            test -f "$directory/package-lock.json" || continue
+            npm ci --prefix "$directory" --ignore-scripts
+            npm audit --prefix "$directory" --omit=dev
+          done
+      - run: npm run functions:bundle
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run test:e2e:app

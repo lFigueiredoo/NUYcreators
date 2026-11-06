@@ -10,7 +10,10 @@ import { authConfigured } from '@/lib/appwrite/server';
  * componente de cliente porque trocam quando o envio conclui.
  */
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Recuperar acesso' };
+export const metadata = {
+  title: 'Recuperar acesso',
+  robots: { index: false, follow: false },
+};
 
 export default function Recovery() {
   return (

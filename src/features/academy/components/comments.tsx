@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { MessageCircle, ShieldAlert } from 'lucide-react';
-import type { AcademyComment, AcademyLoad } from '../domain';
+import { academyDateLabel, type AcademyComment, type AcademyLoad } from '../domain';
 import {
   editAcademyCommentAction, hideAcademyCommentAction, postAcademyCommentAction,
   reportAcademyCommentAction,
@@ -47,7 +47,7 @@ export function CommunityComments({ target, targetId, comments, viewerId }: {
             <article className={styles.comment} key={comment.id}>
               <strong>{comment.authorId === viewerId ? 'Você' : 'Creator NUY'}</strong>
               <p>{comment.body}</p>
-              <small>{new Date(comment.createdAt).toLocaleDateString('pt-BR')}</small>
+              <small>{academyDateLabel(comment.createdAt)}</small>
               <div className={styles.editorActions}>
                 <button className={`${styles.button} ${styles.buttonSecondary}`} type="button"
                   disabled={pending} onClick={() => { setReplyTo(comment.id); setEditing(null); setBody(''); }}>

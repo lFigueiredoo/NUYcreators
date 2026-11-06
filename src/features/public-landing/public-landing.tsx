@@ -21,7 +21,7 @@ import styles from './styles/landing.module.css';
  * só o reveal discreto de fade/translateY herdado do `landing-reveal.css`
  * (desfeito por `<noscript>`).
  */
-export function PublicLanding({ authenticated = false }: { authenticated?: boolean }) {
+export function PublicLanding({ authenticated }: { authenticated?: boolean }) {
   return (
     <div id="topo" className={`pl-landing ${styles.landing} ${landingFontVariables}`}>
       <noscript>
@@ -31,7 +31,7 @@ export function PublicLanding({ authenticated = false }: { authenticated?: boole
       <LandingDepth />
       <PublicHeader authenticated={authenticated} />
       <main id="main">
-        <Hero />
+        <Hero authenticated={authenticated} />
         <Community />
         <WhatIs />
         <HowToParticipate />

@@ -3,6 +3,7 @@ import { Account, Client, Query, TablesDB, Teams } from 'node-appwrite';
 import type { CoreContext, CoreCode, CoreResult } from '../../src/features/workspace/core';
 import { confirmedRoles } from '../../src/lib/security/memberships';
 import type { AdminRole } from '../../src/lib/security/permissions';
+import { CURRENT_LEGAL_CONSENT_VERSION } from '../../src/features/legal/versions';
 
 /**
  * Hospedeiro Appwrite Function do núcleo operacional.
@@ -182,7 +183,7 @@ async function rolesFor(
 
 export async function hosted(
   event: FunctionEvent,
-  options: { requireUser?: boolean; roles?: boolean } = {},
+  options: { requireUser?: boolean; roles?: boolean; currentTerms?: boolean } = {},
 ): Promise<Hosted> {
   const project = process.env.APPWRITE_FUNCTION_PROJECT_ID;
   const key = event.req.headers['x-appwrite-key'];
@@ -210,10 +211,28 @@ export async function hosted(
   if (options.requireUser && !userId) {
     return { ready: false, response: event.res.json({ error: 'unauthenticated' }, 401) };
   }
+  const tables = new TablesDB(client);
+  if (options.currentTerms && userId) {
+    try {
+      const record = await tables.getRow({ databaseId, tableId: 'users', rowId: userId });
+      const owner = typeof record.authUserId === 'string' ? record.authUserId : record.userId;
+      if (
+        owner !== userId ||
+        record.status !== 'active' ||
+        record.acceptedTermsVersion !== CURRENT_LEGAL_CONSENT_VERSION
+      )
+        return { ready: false, response: event.res.json({ error: 'terms_required' }, 409) };
+    } catch (error) {
+      if ((error as { code?: number }).code === 404)
+        return { ready: false, response: event.res.json({ error: 'terms_required' }, 409) };
+      event.error('terms_unreadable');
+      return { ready: false, response: event.res.json({ error: 'unavailable' }, 503) };
+    }
+  }
   return {
     ready: true,
     ctx: {
-      tables: new TablesDB(client),
+      tables,
       databaseId,
       // Papéis só quando a entrada PEDE (`roles: true`): ler equipe exige
       // `teams.read` na chave dinâmica, e escopo a mais é escopo a mais.
@@ -223,7 +242,8 @@ export async function hosted(
       },
       now: new Date(),
       correlationId: event.req.headers['x-appwrite-trigger'] ?? 'function',
-      academyCommentsReady: process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
+      academyCommentsReady:
+        process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' ||
         process.env.APPWRITE_ACADEMY_ENABLED === 'true',
       challengeCommentsPrivateReady:
         process.env.APPWRITE_ACADEMY_SCHEMA_READY === 'true' &&

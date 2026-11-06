@@ -78,6 +78,10 @@ function requireModerate(ctx: Context) {
 function assertEnabled(status: unknown) {
   if (status !== 'published') throw new AcademyError('missing', 'Conteúdo não publicado.');
 }
+function assertChallengeEnabled(status: unknown) {
+  if (status !== 'published' && status !== 'active')
+    throw new AcademyError('missing', 'Conteúdo não publicado.');
+}
 function isAbsent(error: unknown) { return (error as { code?: number }).code === 404; }
 function isConflict(error: unknown) { return (error as { code?: number }).code === 409; }
 function mapFailure(error: unknown): never {
@@ -521,7 +525,9 @@ async function publishedTarget(ctx: Context, type: 'lesson' | 'challenge', targe
     assertEnabled(parent.status);
   } else {
     const challenge = await get(ctx, 'challenges', targetId, tx);
-    assertEnabled(challenge.status);
+    // `active` é o status legado que o catálogo ainda reconhece como visível.
+    // Cursos e aulas continuam estritamente em `published`.
+    assertChallengeEnabled(challenge.status);
   }
 }
 /** A neutral same-value write detects conflicts without restoring an archived status. */

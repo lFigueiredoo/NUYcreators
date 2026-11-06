@@ -1450,6 +1450,10 @@
   height: 268px;
   border-radius: var(--app-radius);
 }
+.routeLoading {
+  display: grid;
+  gap: var(--app-5);
+}
 @keyframes skeletonShift {
   from {
     background-position: 160% 0;
@@ -1636,6 +1640,141 @@
 }
 
 /* ------------------------------------------------------- desafios/cards -- */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.dailyChallenges {
+  overflow: hidden;
+  margin-top: var(--app-section);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+.dailyChallengesHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-4);
+  padding: var(--app-5);
+  border-bottom: 1px solid var(--app-line);
+  background: linear-gradient(120deg, var(--app-surface), var(--app-surface-soft));
+}
+.dailyChallengesTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--app-3);
+  min-width: 0;
+}
+.dailyChallengesTitleGroup h2,
+.dailyChallengesTitleGroup p {
+  margin: 0;
+}
+.dailyChallengesTitleGroup p {
+  max-width: 62ch;
+  margin-top: 4px;
+  color: var(--app-navy-soft);
+  font-size: 0.88rem;
+}
+.dailyChallengesIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--app-navy);
+  color: #ead898;
+}
+.dailyChallengesBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: var(--app-gold-wash);
+  color: var(--app-gold-ink);
+  font-size: 0.76rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.dailyChallengesTableWrap {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.dailyChallengesTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+.dailyChallengesTable th,
+.dailyChallengesTable td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--app-line);
+  text-align: left;
+  vertical-align: top;
+}
+.dailyChallengesTable th {
+  background: var(--app-surface-soft);
+  color: var(--app-navy-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.dailyChallengesTable td {
+  color: var(--app-ink);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+.dailyChallengesTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+.dailyChallengesPlatform {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--app-navy);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.dailyChallengesPlatform svg {
+  color: var(--app-gold-ink);
+}
+.dailyChallengesPoints {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--app-gold-wash);
+  color: var(--app-gold-ink);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.dailyChallengesFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-4);
+  padding: 13px 18px;
+  border-top: 1px solid var(--app-line);
+  background: var(--app-surface-soft);
+}
+.dailyChallengesFoot p {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--app-navy-soft);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
 
 .challengeGrid {
   display: grid;
@@ -2902,6 +3041,57 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--app-4);
+  }
+  .dailyChallengesHead,
+  .dailyChallengesFoot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dailyChallengesHead {
+    padding: var(--app-4);
+  }
+  .dailyChallengesTitleGroup {
+    align-items: flex-start;
+  }
+  .dailyChallengesTableWrap {
+    overflow: visible;
+  }
+  .dailyChallengesTable,
+  .dailyChallengesTable tbody,
+  .dailyChallengesTable tr,
+  .dailyChallengesTable td {
+    display: block;
+    width: 100%;
+  }
+  .dailyChallengesTable {
+    min-width: 0;
+  }
+  .dailyChallengesTable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .dailyChallengesTable tr {
+    padding: var(--app-4);
+  }
+  .dailyChallengesTable tr + tr {
+    border-top: 1px solid var(--app-line);
+  }
+  .dailyChallengesTable td {
+    display: grid;
+    grid-template-columns: minmax(6.8rem, 0.45fr) minmax(0, 1fr);
+    gap: var(--app-3);
+    padding: 5px 0;
+    border: 0;
+  }
+  .dailyChallengesTable td::before {
+    color: var(--app-navy-soft);
+    content: attr(data-label);
+    font-size: 0.74rem;
+    font-weight: 700;
   }
   .tabs {
     width: 100%;

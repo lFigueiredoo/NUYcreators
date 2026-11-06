@@ -984,10 +984,10 @@ describe('rebuild-ranking (runtime)', () => {
     });
     // A projeção corrompida (999999) é reescrita com a soma do ledger: 40 + 60.
     expect(repaired.earnedPoints).toBe(100);
-    // Empate é desempatado por quem chegou primeiro: o carimbo é o do PRIMEIRO
-    // crédito (o mais antigo), nunca o do último. A conferência é por INSTANTE:
+    // A projeção ao vivo atualiza o carimbo a cada crédito; o rebuild precisa
+    // produzir o ÚLTIMO crédito também. A conferência é por INSTANTE:
     // o Appwrite devolve datetime como `+00:00`, não como `Z`.
-    expect(new Date(String(repaired.lastEarnedAt)).getTime()).toBe(new Date(earnedAt).getTime());
+    expect(new Date(String(repaired.lastEarnedAt)).getTime()).toBe(new Date(secondAt).getTime());
 
     // Sessão sem papel não entra: a plataforma fecha antes do container.
     const outsider = actors.get('rival')!;

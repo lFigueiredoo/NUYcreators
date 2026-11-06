@@ -119,7 +119,7 @@ const challenge = (name: string): ChallengeDraft => ({
   requirements: [{ type: 'link', required: true, configJson: '{"value":"link"}' }],
 });
 
-const live = [Permission.read(Role.any())];
+const live = [Permission.read(Role.users())];
 const challengeRow = (status: string, version: number, permissions = live): Row[] => [
   {
     $id: challengeId,

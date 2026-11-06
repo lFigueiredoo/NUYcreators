@@ -48,12 +48,7 @@ const passos = [
 export function HowToParticipate() {
   return (
     <section id="como-participar" className={styles.howTo} aria-labelledby="pl-how-to-title">
-      <span
-        className={styles.divider}
-        aria-hidden="true"
-        data-pl-reveal="line"
-        data-pl-index="0"
-      />
+      <span className={styles.divider} aria-hidden="true" data-pl-reveal="line" data-pl-index="0" />
 
       <h2 id="pl-how-to-title" className={styles.sectionTitle} data-pl-reveal data-pl-index="1">
         Como participar
@@ -75,7 +70,16 @@ export function HowToParticipate() {
           data-pl-reveal="line"
           data-pl-index="5"
         />
-        <ol className={styles.steps}>
+        <p id="pl-steps-instructions" className={styles.visuallyHidden}>
+          Em telas pequenas, deslize horizontalmente ou use as setas do teclado para ver todos os
+          passos.
+        </p>
+        <ol
+          className={styles.steps}
+          tabIndex={0}
+          aria-label="Passos para participar"
+          aria-describedby="pl-steps-instructions"
+        >
           {passos.map((passo, index) => (
             <li
               key={passo.numero}

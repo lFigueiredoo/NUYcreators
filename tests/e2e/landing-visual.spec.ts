@@ -45,7 +45,7 @@ for (const { w, h } of viewports) {
     const pill = header.locator('[class*=headerPill]').first();
     await expect(pill).toBeVisible();
     await expect(header.getByRole('link', { name: 'NUY Creators início' })).toBeVisible();
-    await expect(header.getByRole('link', { name: 'CRIAR CONTA', exact: true })).toBeVisible();
+    await expect(header.getByRole('link', { name: 'ACESSAR', exact: true })).toBeVisible();
     // As âncoras discretas só existem onde cabem.
     if (w >= 900) {
       for (const label of ['O que é', 'Como participar', 'FAQ'])
@@ -54,7 +54,6 @@ for (const { w, h } of viewports) {
       await header.getByRole('button', { name: 'Abrir menu' }).click();
       const panel = page.locator('#pl-mobile-nav');
       await expect(panel.getByRole('link', { name: 'Como participar', exact: true })).toBeVisible();
-      await expect(panel.getByRole('link', { name: 'ENTRAR', exact: true })).toBeVisible();
       await header.getByRole('button', { name: 'Fechar menu' }).click();
       await expect(page.locator('#pl-mobile-nav')).toHaveCount(0);
     }
@@ -205,7 +204,7 @@ for (const { w, h } of viewports) {
       }
     });
 
-    // 9) CTA final claro com logo real e dois caminhos.
+    // 9) CTA final claro com logo real e acesso neutro à rota protegida.
     const cta = await page.evaluate(() => {
       const section = document.querySelector<HTMLElement>('#cta-final')!;
       const logo = section.querySelector<HTMLImageElement>('img')!;
@@ -220,10 +219,7 @@ for (const { w, h } of viewports) {
     });
     expect(cta.background).toBe(CREAM);
     expect(cta.logoFile).toContain('/brand/nuy-creators-clean/logo/nuy-creators-logo.png');
-    expect(cta.actions).toEqual([
-      ['CRIAR MINHA CONTA', '/cadastro'],
-      ['ENTRAR', '/login'],
-    ]);
+    expect(cta.actions).toEqual([['ACESSAR O NUY CREATORS', '/app']]);
 
     // 10) Rodapé mínimo, logo real, links legais — nada de mega footer.
     const footer = await page.evaluate(() => {
@@ -243,7 +239,7 @@ for (const { w, h } of viewports) {
       ['FAQ', '#faq'],
       ['Termos', '/termos'],
       ['Privacidade', '/privacidade'],
-      ['Entrar', '/login'],
+      ['Acessar', '/app'],
     ]);
     expect(footer.last, 'nada pode vir depois do rodapé').toBe(true);
 

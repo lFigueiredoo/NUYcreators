@@ -46,6 +46,13 @@ async function perform(run: (ctx: Context) => Promise<unknown>): Promise<Academy
       moduleIds: row.moduleIds, lessonIds: row.lessonIds, materialIds: row.materialIds };
   } catch (error) {
     if (error instanceof AcademyError) return { ok: false, message: error.message };
+    const details = error as { name?: unknown; code?: unknown };
+    console.error('[academy:action] falha inesperada', {
+      name: typeof details?.name === 'string' ? details.name : 'UnknownError',
+      code: typeof details?.code === 'number' || typeof details?.code === 'string'
+        ? details.code
+        : undefined,
+    });
     return { ok: false, message: 'Não foi possível confirmar a gravação. Recarregue e tente novamente.' };
   }
 }

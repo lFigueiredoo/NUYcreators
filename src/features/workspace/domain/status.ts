@@ -33,6 +33,9 @@ const PARTICIPATION: Record<string, StatusView> = {
  */
 export const COMING_VIEW: StatusView = { label: 'Em breve', tone: 'progress' };
 
+/** Desafio cuja janela terminou, mesmo quando o catálogo ainda não foi fechado pela equipe. */
+export const ENDED_VIEW: StatusView = { label: 'Encerrado', tone: 'muted' };
+
 /** `requested -> processing -> shipped -> delivered` (docs/flows.md §Resgate). */
 const REDEMPTION: Record<string, StatusView> = {
   requested: { label: 'Solicitado', tone: 'progress' },

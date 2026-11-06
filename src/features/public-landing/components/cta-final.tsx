@@ -13,7 +13,7 @@ import styles from '../styles/landing.module.css';
  * rolagem da própria seção (`data-pl-depth="view"`). É a mesma luz do hero
  * respondendo ao desfecho, e a última coisa que se move na página.
  */
-export function CtaFinal({ authenticated = false }: { authenticated?: boolean }) {
+export function CtaFinal({ authenticated }: { authenticated?: boolean }) {
   return (
     <section
       id="cta-final"
@@ -28,12 +28,7 @@ export function CtaFinal({ authenticated = false }: { authenticated?: boolean })
         <span className={styles.ctaGlow} />
       </span>
 
-      <span
-        className={styles.divider}
-        aria-hidden="true"
-        data-pl-reveal="line"
-        data-pl-index="0"
-      />
+      <span className={styles.divider} aria-hidden="true" data-pl-reveal="line" data-pl-index="0" />
 
       <Image
         src="/brand/nuy-creators-clean/logo/nuy-creators-logo.png"
@@ -46,12 +41,7 @@ export function CtaFinal({ authenticated = false }: { authenticated?: boolean })
         data-pl-index="1"
       />
 
-      <h2
-        id="pl-cta-final-title"
-        className={styles.sectionTitle}
-        data-pl-reveal
-        data-pl-index="2"
-      >
+      <h2 id="pl-cta-final-title" className={styles.sectionTitle} data-pl-reveal data-pl-index="2">
         Pronta para fazer parte
         <br />
         da NUY Creators?
@@ -62,11 +52,11 @@ export function CtaFinal({ authenticated = false }: { authenticated?: boolean })
       </p>
 
       <div className={styles.ctaActions} data-pl-reveal data-pl-index="4">
-        {authenticated ? (
+        {authenticated === true ? (
           <Link href="/app" className={styles.primaryButton}>
             IR PARA MEU PAINEL
           </Link>
-        ) : (
+        ) : authenticated === false ? (
           <>
             <Link href="/cadastro" className={styles.primaryButton}>
               CRIAR MINHA CONTA
@@ -75,6 +65,10 @@ export function CtaFinal({ authenticated = false }: { authenticated?: boolean })
               ENTRAR
             </Link>
           </>
+        ) : (
+          <Link href="/app" className={styles.primaryButton}>
+            ACESSAR O NUY CREATORS
+          </Link>
         )}
       </div>
     </section>

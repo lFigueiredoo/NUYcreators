@@ -10,7 +10,7 @@ import { hosted, integer, refuse, text, type FunctionEvent } from '../shared/hos
  * pedido em caso de repetição — não existe resgate pago duas vezes.
  */
 export default async function main(event: FunctionEvent) {
-  const run = await hosted(event, { requireUser: true });
+  const run = await hosted(event, { requireUser: true, currentTerms: true });
   if (!run.ready) return run.response;
   const result = await redeemReward(run.ctx, {
     rewardId: text(run.body.rewardId),

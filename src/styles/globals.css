@@ -86,7 +86,23 @@ section[id] {
   min-height: 60vh;
 }
 .fallback-page {
+  display: grid;
+  align-content: center;
+  min-height: 100vh;
+  max-width: 760px;
+  margin-inline: auto;
   padding: 100px 8%;
+}
+.fallback-page a {
+  width: fit-content;
+  color: var(--foreground);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.fallback-page a:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 4px;
 }
 @media (max-width: 760px) {
   .public-inner {

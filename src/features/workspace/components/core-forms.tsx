@@ -12,6 +12,7 @@ import {
   type FormState,
 } from '../services/actions';
 import { creatorTypeLabel, nicheLabel } from '../domain/labels';
+import { latestEligibleBirthDate } from '../../profiles/domain/age';
 import { notificationReadTarget } from '../domain/status';
 import styles from '../styles/app.module.css';
 
@@ -334,6 +335,8 @@ export function ProfileEditForm({
             name="birthDate"
             type="date"
             defaultValue={initial.birthDate}
+            min="1900-01-01"
+            max={latestEligibleBirthDate()}
             required
           />
         </div>

@@ -41,7 +41,7 @@ export function AuthLayout({
             sizes="152px"
             className={styles.lockupImage}
             loading="eager"
-            priority
+            fetchPriority="high"
           />
         </Link>
         <Link href="/" className={styles.back}>

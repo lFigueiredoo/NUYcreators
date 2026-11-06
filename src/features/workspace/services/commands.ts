@@ -328,22 +328,34 @@ export async function commandReadAllNotifications() {
 export async function commandUpdateProfile(input: ProfileInput) {
   const ctx = await workspaceContext();
   if (!ctx) return { ok: false as const, message: OPERATIONS_OFFLINE };
+  // Privacidade primeiro: ao retirar o consentimento, a projeção pública precisa
+  // desaparecer ANTES de confirmarmos a alteração privada. Se essa limpeza
+  // falhar, nada é apresentado como sucesso e o nome antigo não é deixado para
+  // uma segunda etapa silenciosa.
+  if (!input.publicProfile) {
+    const hidden = await syncPublicProfile(ctx, {
+      displayName: input.name,
+      publicProfile: false,
+    });
+    if (!hidden.ok) return describe(hidden, '');
+  }
   const result = await updateOwnProfile(ctx, input);
   if (!result.ok) return describe(result, '');
+  if (!input.publicProfile)
+    return {
+      ok: true as const,
+      message: 'Perfil atualizado. Seu nome não aparece em áreas públicas.',
+      value: { ...result.value, published: false },
+    };
   const projection = await syncPublicProfile(ctx, {
     displayName: input.name,
-    publicProfile: result.value.publicProfile,
+    publicProfile: true,
   });
-  const published = projection.ok ? projection.value.published : null;
+  if (!projection.ok) return describe(projection, '');
   return {
     ok: true as const,
-    message:
-      published === null
-        ? 'Perfil atualizado. A exibição pública não pôde ser atualizada agora.'
-        : published
-          ? 'Perfil atualizado e nome público ativado no ranking.'
-          : 'Perfil atualizado. Seu nome não aparece em áreas públicas.',
-    value: { ...result.value, published },
+    message: 'Perfil atualizado e nome público ativado no ranking.',
+    value: { ...result.value, published: true },
   };
 }
 

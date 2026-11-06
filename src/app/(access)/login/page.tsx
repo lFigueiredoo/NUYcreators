@@ -13,7 +13,10 @@ import { authConfigured } from '@/lib/appwrite/server';
  * lógica de sessão é tocado aqui.
  */
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Entrar' };
+export const metadata = {
+  title: 'Entrar',
+  robots: { index: false, follow: false },
+};
 
 export default function Login() {
   return (

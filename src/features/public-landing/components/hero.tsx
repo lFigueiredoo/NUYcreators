@@ -56,7 +56,7 @@ const HERO_PRODUCTS = [
   },
 ] as const;
 
-export function Hero() {
+export function Hero({ authenticated }: { authenticated?: boolean }) {
   return (
     <section
       className={styles.hero}
@@ -92,9 +92,19 @@ export function Hero() {
         </p>
 
         <div className={styles.actions} data-pl-reveal data-pl-index="4">
-          <Link href="/cadastro" className={styles.primaryButton}>
-            FAÇA PARTE
-          </Link>
+          {authenticated === true ? (
+            <Link href="/app" className={styles.primaryButton}>
+              IR PARA MEU PAINEL
+            </Link>
+          ) : authenticated === false ? (
+            <Link href="/cadastro" className={styles.primaryButton}>
+              FAÇA PARTE
+            </Link>
+          ) : (
+            <Link href="/app" className={styles.primaryButton}>
+              ACESSAR O NUY CREATORS
+            </Link>
+          )}
         </div>
       </div>
 
@@ -137,7 +147,8 @@ export function Hero() {
                   height={product.height}
                   sizes={product.sizes}
                   className={product.imageClass}
-                  priority
+                  loading="eager"
+                  fetchPriority={index === 1 ? 'high' : undefined}
                 />
               </span>
             ))}

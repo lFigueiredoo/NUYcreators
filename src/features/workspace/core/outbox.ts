@@ -22,10 +22,14 @@ export type OutboxOutcome = {
   processed: number;
   failed: number;
   skipped: number;
+  /** Falhas terminais incluídas em `failed`, retiradas da fila de retry. */
+  deadLettered: number;
 };
 
 /** Teto por execução: o job é idempotente, então rodar de novo continua de onde parou. */
 const BATCH = 50;
+/** Depois desta quantidade de falhas o evento exige intervenção, não retry infinito. */
+export const OUTBOX_MAX_ATTEMPTS = 5;
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';
@@ -96,6 +100,7 @@ export async function processOutbox(
     tableId: 'outbox_events',
     queries: [
       Query.equal('status', 'pending'),
+      Query.lessThanEqual('nextAttemptAt', ctx.now.toISOString()),
       Query.orderAsc('nextAttemptAt'),
       Query.limit(limit),
     ],
@@ -103,6 +108,7 @@ export async function processOutbox(
   let processed = 0;
   let failed = 0;
   let skipped = 0;
+  let deadLettered = 0;
   for (const event of pending.rows) {
     const id = String(event.$id);
     const type = text(event.type);
@@ -110,10 +116,18 @@ export async function processOutbox(
     const payload = payloadOf(event);
     const userId = text(payload.userId);
     const copy = message(type, payload);
+    const attempts = Math.max(0, Math.trunc(Number(event.attempts) || 0));
+    // Compatibilidade com eventos que já chegaram ao teto antes desta versão.
+    if (attempts >= OUTBOX_MAX_ATTEMPTS) {
+      await settle(ctx, id, 'dead_letter', attempts);
+      failed += 1;
+      deadLettered += 1;
+      continue;
+    }
     if (!copy || !userId) {
       // Evento sem destinatário ou sem texto conhecido: marcado como processado
       // para não travar a fila, mas contado como ignorado — não fingimos entrega.
-      await settle(ctx, id, 'processed', Number(event.attempts ?? 0));
+      await settle(ctx, id, 'processed', attempts);
       skipped += 1;
       continue;
     }
@@ -126,21 +140,27 @@ export async function processOutbox(
         body: copy.body,
         referenceId: text(payload.submissionId) || text(payload.redemptionId) || null,
       });
-      await settle(ctx, id, 'processed', Number(event.attempts ?? 0));
+      await settle(ctx, id, 'processed', attempts);
       processed += 1;
     } catch {
-      await settle(ctx, id, 'pending', Number(event.attempts ?? 0) + 1).catch(() => undefined);
+      const nextAttempts = attempts + 1;
+      const exhausted = nextAttempts >= OUTBOX_MAX_ATTEMPTS;
+      const settled = await settle(ctx, id, exhausted ? 'dead_letter' : 'pending', nextAttempts)
+        .then(() => true)
+        .catch(() => false);
       failed += 1;
+      // Só anuncia dead-letter quando a transição foi realmente persistida.
+      if (exhausted && settled) deadLettered += 1;
     }
   }
-  return done({ processed, failed, skipped });
+  return done({ processed, failed, skipped, deadLettered });
 }
 
 /** Fecha o evento. A espera cresce com as tentativas — falha não vira laço quente. */
 async function settle(
   ctx: CoreContext,
   id: string,
-  status: 'pending' | 'processed',
+  status: 'pending' | 'processed' | 'dead_letter',
   attempts: number,
 ): Promise<void> {
   await updateTableRow(ctx.tables, {
@@ -150,7 +170,10 @@ async function settle(
     data: {
       status,
       attempts,
-      nextAttemptAt: new Date(ctx.now.getTime() + attempts * 60_000).toISOString(),
+      nextAttemptAt:
+        status === 'pending'
+          ? new Date(ctx.now.getTime() + attempts * 60_000).toISOString()
+          : ctx.now.toISOString(),
     },
   });
 }

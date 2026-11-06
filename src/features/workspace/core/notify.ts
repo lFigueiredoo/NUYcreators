@@ -65,20 +65,36 @@ export async function markAllNotificationsRead(
   ctx: CoreContext,
 ): Promise<CoreResult<{ updated: number }>> {
   if (!ctx.actor.userId) return failure('unauthenticated');
-  const pending = await listTableRows(ctx.tables, {
-    databaseId: ctx.databaseId,
-    tableId: 'notifications',
-    queries: [Query.equal('userId', ctx.actor.userId), Query.isNull('readAt'), Query.limit(500)],
-  });
   let updated = 0;
-  for (const row of pending.rows) {
-    await updateTableRow(ctx.tables, {
+  const pageSize = 100;
+  const cutoff = ctx.now.toISOString();
+  // A cada página as linhas atualizadas deixam de satisfazer `isNull(readAt)`.
+  // Por isso a próxima leitura recomeça no início, sem offset que pudesse pular
+  // registros. O cutoff congela o conjunto lógico no instante do clique: uma
+  // notificação que chega enquanto o laço trabalha continua não lida.
+  while (true) {
+    const pending = await listTableRows(ctx.tables, {
       databaseId: ctx.databaseId,
       tableId: 'notifications',
-      rowId: String(row.$id),
-      data: { readAt: ctx.now.toISOString() },
+      queries: [
+        Query.equal('userId', ctx.actor.userId),
+        Query.isNull('readAt'),
+        Query.lessThanEqual('$createdAt', cutoff),
+        Query.orderAsc('$id'),
+        Query.limit(pageSize),
+      ],
     });
-    updated += 1;
+    if (!pending.rows.length) break;
+    for (const row of pending.rows) {
+      await updateTableRow(ctx.tables, {
+        databaseId: ctx.databaseId,
+        tableId: 'notifications',
+        rowId: String(row.$id),
+        data: { readAt: ctx.now.toISOString() },
+      });
+      updated += 1;
+    }
+    if (pending.rows.length < pageSize) break;
   }
   return done({ updated });
 }

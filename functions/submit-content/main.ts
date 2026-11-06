@@ -9,7 +9,7 @@ import { hosted, refuse, text, type FunctionEvent } from '../shared/host';
  * como `fileId`.
  */
 export default async function main(event: FunctionEvent) {
-  const run = await hosted(event, { requireUser: true });
+  const run = await hosted(event, { requireUser: true, currentTerms: true });
   if (!run.ready) return run.response;
   const result = await submitContent(run.ctx, {
     challengeId: text(run.body.challengeId),

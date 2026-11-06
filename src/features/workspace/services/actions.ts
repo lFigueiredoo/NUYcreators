@@ -1,8 +1,10 @@
 'use server';
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getEnvironment } from '@/lib/env/server';
+import { currentUser, SESSION_COOKIE } from '@/lib/appwrite/server';
+import { currentTermsState } from '@/features/legal/services/consent';
 import { flashHref, returnPath } from '../domain/flash';
 import {
   commandAdjustPoints,
@@ -36,10 +38,18 @@ import type { ModerationDecision, ProfileInput } from '../core';
 export type FormState = { message: string; success?: boolean };
 
 const DENIED = 'Requisição não reconhecida. Recarregue a página e tente novamente.';
+const TERMS_REQUIRED = 'Aceite a versão atual dos Termos de Uso para continuar.';
 
 async function allowedRequest() {
   const origin = (await headers()).get('origin');
   return origin === new URL(getEnvironment().APP_URL).origin;
+}
+
+async function acceptedCurrentTerms() {
+  const secret = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!secret) return false;
+  const user = await currentUser();
+  return Boolean(user && (await currentTermsState(secret, user.$id)) === 'accepted');
 }
 
 function field(data: FormData, key: string): string {
@@ -60,6 +70,7 @@ export async function joinChallengeAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const outcome = await commandJoin(field(data, 'challengeId'));
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/desafios');
@@ -73,6 +84,7 @@ export async function submitContentAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const outcome = await commandSubmit({
     challengeId: field(data, 'challengeId'),
     url: field(data, 'url'),
@@ -112,6 +124,7 @@ export async function redeemRewardAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const rewardId = field(data, 'rewardId');
   const idempotencyKey = field(data, 'idempotencyKey');
   if (!rewardId || !idempotencyKey || idempotencyKey.length > 64)
@@ -132,6 +145,7 @@ export async function notificationReadAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const outcome = await commandSetNotificationRead({
     notificationId: field(data, 'notificationId'),
     read: field(data, 'read') !== 'false',
@@ -148,6 +162,7 @@ export async function notificationReadAction(
  */
 export async function notificationsReadAllAction(): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const outcome = await commandReadAllNotifications();
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/app/notificacoes');
@@ -159,6 +174,7 @@ export async function updateProfileAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
   const input: ProfileInput = {
     name: field(data, 'name'),
     phone: field(data, 'phone'),

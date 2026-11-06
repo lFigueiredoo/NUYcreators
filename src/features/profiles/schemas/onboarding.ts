@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isAtLeastAge } from '../domain/age';
 const states = [
   'AC',
   'AL',
@@ -60,10 +61,8 @@ export const onboardingSchema = z.object({
   state: z.enum(states),
   birthDate: z.iso
     .date()
-    .refine(
-      (value) => value <= new Date().toISOString().slice(0, 10) && value >= '1900-01-01',
-      'Data inválida.',
-    ),
+    .refine((value) => value >= '1900-01-01', 'Data inválida.')
+    .refine(isAtLeastAge, 'Você precisa ter 18 anos ou mais.'),
   niche: z.enum(niches),
   creatorType: z.enum(creatorTypes),
   instagram: social('instagram.com'),

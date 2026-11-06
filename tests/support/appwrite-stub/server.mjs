@@ -15,6 +15,7 @@
  */
 import { createServer } from 'node:https';
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { readCertificate } from '../certs.mjs';
 import { buildDataset } from './fixtures.mjs';
 import { academyAdmin, academyFixtureTables } from './academy-fixtures.mjs';
@@ -22,6 +23,20 @@ import { MEDIA_FILES } from './media.mjs';
 
 /** Bucket de catálogo do manifesto: o único que o stub serve. */
 const MEDIA_BUCKET = 'community-media';
+const legalVersionsSource = readFileSync(
+  new URL('../../../src/features/legal/versions.ts', import.meta.url),
+  'utf8',
+);
+const CURRENT_TERMS_VERSION =
+  /CURRENT_TERMS_VERSION\s*=\s*'([^']+)'/.exec(legalVersionsSource)?.[1] ?? '';
+const CURRENT_PRIVACY_VERSION =
+  /CURRENT_PRIVACY_VERSION\s*=\s*'([^']+)'/.exec(legalVersionsSource)?.[1] ?? '';
+const CURRENT_LEGAL_CONSENT_VERSION =
+  CURRENT_TERMS_VERSION && CURRENT_PRIVACY_VERSION
+    ? `terms:${CURRENT_TERMS_VERSION}|privacy:${CURRENT_PRIVACY_VERSION}`
+    : '';
+if (!CURRENT_LEGAL_CONSENT_VERSION)
+  throw new Error('Versões vigentes dos documentos legais não encontradas.');
 
 /** Métodos de query implementados; o resto falha alto. */
 const SUPPORTED = new Set([
@@ -120,6 +135,14 @@ function withSystemFields(row, dataset, index, tableId) {
  */
 export async function startStub(options = {}) {
   const dataset = buildDataset(options.now ?? new Date());
+  dataset.tables.users ??= dataset.users.map((user) => ({
+    $id: user.id,
+    $permissions: [`read("user:${user.id}")`],
+    authUserId: user.id,
+    status: 'active',
+    acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
+    consentAt: new Date().toISOString(),
+  }));
   if (options.academyFixture) {
     dataset.users.push(academyAdmin);
     Object.assign(dataset.tables, academyFixtureTables);
@@ -241,7 +264,8 @@ export async function startStub(options = {}) {
       if (segments.length === 2 && request.method === 'POST') {
         const txId = randomUUID();
         transactions.set(txId, {
-          original: structuredClone(dataset.tables), working: structuredClone(dataset.tables),
+          original: structuredClone(dataset.tables),
+          working: structuredClone(dataset.tables),
           touched: new Map(),
         });
         return json(response, 201, { $id: txId, status: 'pending', ttl: body.ttl ?? 120 });
@@ -329,9 +353,18 @@ export async function startStub(options = {}) {
 
       if (!isAdmin && request.method !== 'GET')
         return failure(response, 401, 'user_unauthorized', 'Escrita só pelo servidor.');
-      if (!tableId.startsWith('academy_') && !tableId.startsWith('community_') && tableId !== 'notifications' &&
-          !(options.academyFixture && ['challenges', 'challenge_requirements',
-            'audit_logs', 'audit_log_snapshots'].includes(tableId)) && request.method !== 'GET')
+      if (
+        !tableId.startsWith('academy_') &&
+        !tableId.startsWith('community_') &&
+        tableId !== 'notifications' &&
+        !(
+          options.academyFixture &&
+          ['challenges', 'challenge_requirements', 'audit_logs', 'audit_log_snapshots'].includes(
+            tableId,
+          )
+        ) &&
+        request.method !== 'GET'
+      )
         return failure(response, 403, 'stub_write_forbidden', 'Escrita fora da Academia.');
       if (segments.length === 5 && request.method === 'POST') {
         const rowId = body.rowId;
@@ -346,8 +379,11 @@ export async function startStub(options = {}) {
         const rowId = decodeURIComponent(segments[5]);
         const index = table.findIndex((row) => row.$id === rowId);
         if (index < 0) return failure(response, 404, 'row_not_found', 'Linha ausente.');
-        table[index] = { ...table[index], ...body.data,
-          ...(body.permissions ? { $permissions: body.permissions } : {}) };
+        table[index] = {
+          ...table[index],
+          ...body.data,
+          ...(body.permissions ? { $permissions: body.permissions } : {}),
+        };
         if (tx) tx.touched.set(`${tableId}|${rowId}`, true);
         return json(response, 200, withSystemFields(table[index], dataset, index, tableId));
       }
@@ -368,8 +404,7 @@ export async function startStub(options = {}) {
 
         const cursorQuery = queries.find((query) => query.method === 'cursorAfter');
         const cursorId = cursorQuery?.values?.[0];
-        const cursorIndex = cursorQuery
-          ? sorted.findIndex((row) => row.$id === cursorId) : -1;
+        const cursorIndex = cursorQuery ? sorted.findIndex((row) => row.$id === cursorId) : -1;
         if (cursorQuery && cursorIndex < 0)
           return failure(response, 400, 'general_argument_invalid', 'Cursor ausente.');
         const afterCursor = cursorQuery ? sorted.slice(cursorIndex + 1) : sorted;

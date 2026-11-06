@@ -1,14 +1,15 @@
 import Link from 'next/link';
 import { ArrowRight, BookOpen, FolderOpen, MessageCircle, Plus, ShieldCheck } from 'lucide-react';
-import type {
-  AcademyCategory,
-  AcademyCommentStatus,
-  AcademyCourse,
-  AcademyLoad,
-  AcademyModerationComment,
-  AcademyPage,
-  AcademyProgressSummary,
-  AcademyReport,
+import {
+  academyDateLabel,
+  type AcademyCategory,
+  type AcademyCommentStatus,
+  type AcademyCourse,
+  type AcademyLoad,
+  type AcademyModerationComment,
+  type AcademyPage,
+  type AcademyProgressSummary,
+  type AcademyReport,
 } from '../domain';
 import styles from '../academy.module.css';
 import { AcademyNotice } from './creator';
@@ -250,7 +251,7 @@ export function AdminAcademyComments({
               <p>{comment.body}</p>
               <p className={styles.muted}>
                 {comment.authorName} · {moderationStatusLabel[comment.status]} ·{' '}
-                {new Date(comment.createdAt).toLocaleDateString('pt-BR')}
+                {academyDateLabel(comment.createdAt)}
               </p>
               {reports.items.some((report) => report.commentId === comment.id) ? (
                 <p className={styles.muted}>

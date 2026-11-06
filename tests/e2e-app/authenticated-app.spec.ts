@@ -72,6 +72,22 @@ test('sessão sem onboarding concluído volta para o onboarding', async ({ page 
   await expect(page.locator('nav[aria-label="Navegação principal"]')).toHaveCount(0);
 });
 
+test('versão antiga dos Termos bloqueia a participação e pede novo aceite', async ({ page }) => {
+  const consent = stack.stub.dataset.tables.users.find((row) => row.$id === 'viewer-ana');
+  if (!consent) throw new Error('Fixture de consentimento ausente.');
+  const current = consent.acceptedTermsVersion;
+  consent.acceptedTermsVersion = 'versao-anterior';
+  try {
+    await signIn(page, USERS.ana.email, USERS.ana.password);
+    await page.goto(`${stack.origin}/app`, { waitUntil: 'domcontentloaded' });
+    await expect(page).toHaveURL(/\/aceitar-termos/);
+    await expect(page.getByRole('heading', { name: /Termos atualizados/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Aceitar e continuar' })).toBeVisible();
+  } finally {
+    consent.acceptedTermsVersion = current;
+  }
+});
+
 test('sem membership em nuy-admins, o /admin nega — e nada do painel é montado', async ({
   page,
 }) => {

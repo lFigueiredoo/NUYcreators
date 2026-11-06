@@ -1,8 +1,14 @@
 import { Query } from 'node-appwrite';
-import { createTableRow, listTableRows, updateTableRow } from '../../../lib/appwrite/data/contract';
+import {
+  createTableRow,
+  listTableRows,
+  updateTableRow,
+  type Row,
+} from '../../../lib/appwrite/data/contract';
 import { Permission, Role } from 'node-appwrite';
 import { done, requiresStaff, type CoreContext, type CoreResult } from './context';
 import { periodKey, rowId } from './ids';
+import { inTransaction } from './transaction';
 import { rankingTimeZone } from '../domain/ranking';
 
 /**
@@ -23,12 +29,37 @@ import { rankingTimeZone } from '../domain/ranking';
 export type RebuildResult = {
   periods: { periodKey: string; entries: number; earnedPoints: number }[];
   scanned: number;
-  /** `true` quando o teto de leitura foi atingido — o job é reprocessável. */
+  /** Mantido no contrato da Function; paginação completa agora sempre devolve `false`. */
   truncated: boolean;
 };
 
-/** Teto de leitura por execução (o job é idempotente: rodar de novo continua). */
-const ROOF = 2000;
+const PAGE = 100;
+
+/**
+ * Percorre a tabela inteira com ordem estável. Não existe “continuação” falsa:
+ * a projeção só é chamada reconstruída depois de a fonte e o destino terminarem.
+ */
+async function allRows(ctx: CoreContext, tableId: string, transactionId: string): Promise<Row[]> {
+  const rows: Row[] = [];
+  let cursor: string | null = null;
+  while (true) {
+    const page = await listTableRows(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId,
+      queries: [
+        Query.orderAsc('$id'),
+        Query.limit(PAGE),
+        ...(cursor ? [Query.cursorAfter(cursor)] : []),
+      ],
+      transactionId,
+    });
+    rows.push(...page.rows);
+    if (page.rows.length < PAGE) return rows;
+    const next = page.rows.at(-1)?.$id;
+    if (typeof next !== 'string' || next === cursor) return rows;
+    cursor = next;
+  }
+}
 
 export async function rebuildRanking(
   ctx: CoreContext,
@@ -37,21 +68,12 @@ export async function rebuildRanking(
   const blocked = requiresStaff<RebuildResult>(ctx, 'manage-catalog');
   if (blocked) return blocked;
 
-  const totals = new Map<string, Map<string, { points: number; last: string }>>();
-  let scanned = 0;
-  let truncated = false;
-  for (let offset = 0; offset < ROOF; offset += 100) {
-    const page = await listTableRows(ctx.tables, {
-      databaseId: ctx.databaseId,
-      tableId: 'point_transactions',
-      queries: [
-        Query.orderAsc('createdAt'),
-        Query.limit(100),
-        ...(offset > 0 ? [Query.offset(offset)] : []),
-      ],
-    });
-    for (const row of page.rows) {
-      scanned += 1;
+  return inTransaction(ctx, async (tx) => {
+    const transactionId = tx.transactionId;
+    if (!transactionId) throw new Error('rebuild_transaction_missing');
+    const totals = new Map<string, Map<string, { points: number; last: string }>>();
+    const ledger = await allRows(ctx, 'point_transactions', transactionId);
+    for (const row of ledger) {
       const delta = typeof row.rankingDelta === 'number' ? row.rankingDelta : 0;
       if (delta <= 0) continue;
       const createdAt = typeof row.createdAt === 'string' ? new Date(row.createdAt) : null;
@@ -62,54 +84,90 @@ export async function rebuildRanking(
       const perUser = totals.get(key) ?? new Map();
       const current = perUser.get(userId) ?? { points: 0, last: '' };
       const stamp = createdAt.toISOString();
-      // Empate é desempatado por quem chegou primeiro (docs/database.md), então
-      // guardamos o PRIMEIRO crédito do período, não o último.
+      // A projeção ao vivo atualiza `lastEarnedAt` a cada crédito. O rebuild precisa
+      // produzir o MESMO estado a partir do ledger, portanto conserva o mais recente.
       perUser.set(userId, {
         points: current.points + delta,
-        last: current.last && current.last < stamp ? current.last : stamp,
+        last: current.last && current.last > stamp ? current.last : stamp,
       });
       totals.set(key, perUser);
     }
-    if (page.rows.length < 100) break;
-    if (offset + 100 >= ROOF) truncated = true;
-  }
 
-  const periods: RebuildResult['periods'] = [];
-  for (const [key, perUser] of [...totals.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    for (const [userId, total] of perUser) {
-      const id = rowId('rank', key, userId);
-      const data = {
-        periodKey: key,
-        userId,
-        earnedPoints: total.points,
-        lastEarnedAt: total.last,
-      };
-      const existing = await listTableRows(ctx.tables, {
-        databaseId: ctx.databaseId,
-        tableId: 'ranking_entries',
-        queries: [Query.equal('periodKey', key), Query.equal('userId', userId), Query.limit(1)],
-      });
-      if (existing.rows[0])
-        await updateTableRow(ctx.tables, {
-          databaseId: ctx.databaseId,
-          tableId: 'ranking_entries',
-          rowId: String(existing.rows[0].$id),
-          data,
-        });
-      else
-        await createTableRow(ctx.tables, {
-          databaseId: ctx.databaseId,
-          tableId: 'ranking_entries',
-          rowId: id,
-          data,
-          permissions: [Permission.read(Role.users())],
-        });
+    const projected = await allRows(ctx, 'ranking_entries', transactionId);
+    const existingByPeriod = new Map<string, Row[]>();
+    for (const row of projected) {
+      const key = typeof row.periodKey === 'string' ? row.periodKey : '';
+      if (!key || (input.period && key !== input.period)) continue;
+      const entries = existingByPeriod.get(key) ?? [];
+      entries.push(row);
+      existingByPeriod.set(key, entries);
     }
-    periods.push({
-      periodKey: key,
-      entries: perUser.size,
-      earnedPoints: [...perUser.values()].reduce((sum, entry) => sum + entry.points, 0),
-    });
-  }
-  return done({ periods, scanned, truncated });
+    // Período explícito também precisa ser reconciliado quando não há nenhum
+    // crédito: nesse caso todas as linhas existentes são projeções órfãs.
+    const keys = input.period
+      ? [input.period]
+      : [...new Set([...totals.keys(), ...existingByPeriod.keys()])].sort((a, b) =>
+          a.localeCompare(b),
+        );
+    const periods: RebuildResult['periods'] = [];
+    for (const key of keys) {
+      const perUser = totals.get(key) ?? new Map<string, { points: number; last: string }>();
+      const existing = existingByPeriod.get(key) ?? [];
+      const existingByUser = new Map<string, Row>();
+      for (const row of existing) {
+        const userId = typeof row.userId === 'string' ? row.userId : '';
+        if (!userId) continue;
+        const current = existingByUser.get(userId);
+        // Prefere a chave canônica, caso dados legados tenham criado duplicatas.
+        if (!current || String(row.$id) === rowId('rank', key, userId))
+          existingByUser.set(userId, row);
+      }
+      const survivorIds = new Set([...existingByUser.values()].map((row) => String(row.$id)));
+      for (const [userId, total] of perUser) {
+        const id = rowId('rank', key, userId);
+        const data = {
+          periodKey: key,
+          userId,
+          earnedPoints: total.points,
+          lastEarnedAt: total.last,
+        };
+        const current = existingByUser.get(userId);
+        if (current)
+          await updateTableRow(ctx.tables, {
+            databaseId: ctx.databaseId,
+            tableId: 'ranking_entries',
+            rowId: String(current.$id),
+            data,
+            transactionId,
+          });
+        else
+          await createTableRow(ctx.tables, {
+            databaseId: ctx.databaseId,
+            tableId: 'ranking_entries',
+            rowId: id,
+            data,
+            permissions: [Permission.read(Role.users())],
+            transactionId,
+          });
+      }
+      // Rebuild é reconciliação, não apenas upsert: linha sem crédito elegível no
+      // ledger, inclusive duplicata antiga do mesmo usuário, não pode sobreviver.
+      for (const row of existing) {
+        const userId = typeof row.userId === 'string' ? row.userId : '';
+        if (userId && perUser.has(userId) && survivorIds.has(String(row.$id))) continue;
+        await ctx.tables.deleteRow({
+          databaseId: ctx.databaseId,
+          tableId: 'ranking_entries',
+          rowId: String(row.$id),
+          transactionId,
+        });
+      }
+      periods.push({
+        periodKey: key,
+        entries: perUser.size,
+        earnedPoints: [...perUser.values()].reduce((sum, entry) => sum + entry.points, 0),
+      });
+    }
+    return done({ periods, scanned: ledger.length, truncated: false });
+  });
 }

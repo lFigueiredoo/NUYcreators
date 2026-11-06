@@ -51,10 +51,7 @@ test('a landing pública contém só blocos editoriais e links de aquisição', 
       header.getByRole('link', { name: label, exact: true }).filter({ visible: true }).first(),
     ).toBeVisible();
   }
-  await expect(header.getByRole('link', { name: 'Ir para meu painel' })).toHaveCount(0);
-  await expect(
-    header.getByRole('link', { name: 'CRIAR CONTA', exact: true }).first(),
-  ).toBeVisible();
+  await expect(header.getByRole('link', { name: 'ACESSAR', exact: true }).first()).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -67,8 +64,7 @@ test('o rodapé fecha a página pública com rotas reais', async ({ page }) => {
     'href',
     '/',
   );
-  // Rodapé mínimo: FAQ e as páginas legais, com o acesso no fim — deslogado,
-  // é o login.
+  // Rodapé mínimo: FAQ e páginas legais, com acesso neutro à rota protegida.
   expect(
     await footer
       .locator('nav[aria-label="Rodapé"] a')
@@ -77,7 +73,7 @@ test('o rodapé fecha a página pública com rotas reais', async ({ page }) => {
     ['FAQ', '#faq'],
     ['Termos', '/termos'],
     ['Privacidade', '/privacidade'],
-    ['Entrar', '/login'],
+    ['Acessar', '/app'],
   ]);
   await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
   await expect(footer.getByRole('link', { name: 'Privacidade' })).toHaveAttribute(
@@ -144,7 +140,7 @@ test('as páginas legais usam a chrome pública e informam a vigência oficial',
     ).toHaveAttribute('href', '/#faq');
     const footer = page.locator('footer');
     await expect(footer.getByRole('link', { name: 'FAQ' })).toHaveAttribute('href', '/#faq');
-    await expect(footer.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
+    await expect(footer.getByRole('link', { name: 'Acessar' })).toHaveAttribute('href', '/app');
     await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
   }
 });

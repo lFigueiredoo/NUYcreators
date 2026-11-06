@@ -18,13 +18,14 @@ export const landingFooterLinks = [
   ['Privacidade', '/privacidade'],
 ] as const;
 
-export function landingAccountLinks(authenticated: boolean) {
-  return authenticated
-    ? [{ label: 'Meu painel', href: '/app', primary: true }]
-    : [
-        { label: 'ENTRAR', href: '/login', primary: false },
-        { label: 'CRIAR CONTA', href: '/cadastro', primary: true },
-      ];
+export function landingAccountLinks(authenticated?: boolean) {
+  if (authenticated === true) return [{ label: 'Meu painel', href: '/app', primary: true }];
+  if (authenticated === false)
+    return [
+      { label: 'ENTRAR', href: '/login', primary: false },
+      { label: 'CRIAR CONTA', href: '/cadastro', primary: true },
+    ];
+  return [{ label: 'ACESSAR', href: '/app', primary: true }];
 }
 
 /** Âncora relativa vira absoluta quando a página não é a própria landing. */

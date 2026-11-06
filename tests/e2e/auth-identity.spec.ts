@@ -102,8 +102,8 @@ test('acesso e landing são o mesmo produto: marca, botão e régua medidos nas 
 
   await page.goto('/');
   const landingLockup = await readBrand();
-  // O CTA do hero é, palavra por palavra, o do brief: "FAÇA PARTE".
-  const landingButton = await read('a[href="/cadastro"]:has-text("FAÇA PARTE")');
+  // A página estática usa um destino neutro: a rota protegida decide login ou painel.
+  const landingButton = await read('a[href="/app"]:has-text("ACESSAR O NUY CREATORS")');
   const landingGutter = await page
     .locator('header')
     .evaluate((element) => getComputedStyle(element).paddingLeft);

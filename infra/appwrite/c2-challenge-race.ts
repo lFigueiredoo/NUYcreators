@@ -29,7 +29,7 @@ try {
     data: { slug: challengeId, name: 'Desafio corrida C2', description: 'Sintético',
       platform: 'instagram', startsAt, endsAt, points: 10, participantCount: 0,
       status: 'published', version: 1 },
-    permissions: [Permission.read(Role.any())] });
+    permissions: [Permission.read(Role.users())] });
   const delayed = new Proxy(server, {
     get(target, property) {
       if (property === 'getRow' && holdBeforeTouch) return async (params: {

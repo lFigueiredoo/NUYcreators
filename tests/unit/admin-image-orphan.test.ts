@@ -26,6 +26,7 @@ const arquivos = new Map<string, string>();
 const exclusoes: string[] = [];
 let sequencia = 0;
 const leituras: string[] = [];
+const clientesDeLeitura: unknown[] = [];
 /** Faz a leitura do catálogo falhar, para medir a política quando ela é impossível. */
 let catalogoIndisponivel = false;
 /** Ids que alguma linha do catálogo ainda usa. */
@@ -50,20 +51,17 @@ vi.mock('@/lib/appwrite/media', () => ({
 
 vi.mock('@/lib/appwrite/data', () => ({
   databaseId: () => 'nuy-creators',
-  sessionTables: (secret: string) => ({ secret }),
+  opsTables: () => ({ access: 'ops' }),
   // A assinatura real leva as tabelas como PRIMEIRO argumento (a sessão de quem
   // opera); o alvo da consulta vem no segundo.
   listTableRows: async (_tables: unknown, { tableId }: { tableId: string }) => {
+    clientesDeLeitura.push(_tables);
     leituras.push(tableId);
     if (catalogoIndisponivel) throw new Error('catálogo fora do ar');
     // O dublê não lê a query: ele responde conforme o cenário, e é o cenário que
     // o teste declara ("outra linha ainda aponta" ou não).
     return { rows: [], total: referenciados.size > 0 ? 1 : 0 };
   },
-}));
-
-vi.mock('next/headers', () => ({
-  cookies: async () => ({ get: () => ({ value: 'sessao-de-quem-opera' }) }),
 }));
 
 const { discardUploaded, imageForForm, retireReplaced } =
@@ -83,6 +81,7 @@ beforeEach(() => {
   arquivos.clear();
   exclusoes.length = 0;
   leituras.length = 0;
+  clientesDeLeitura.length = 0;
   sequencia = 0;
   catalogoIndisponivel = false;
   referenciados = new Set();
@@ -132,6 +131,7 @@ describe('troca de imagem: apagar só depois de conferir', () => {
     // A conferência ACONTECEU. Ela para na primeira tabela que responde "usa"
     // (curto-circuito), e é isso que a lista de leituras mostra.
     expect(leituras).toEqual(['challenges']);
+    expect(clientesDeLeitura).toEqual([{ access: 'ops' }]);
   });
 
   it('ninguém mais aponta → o arquivo antigo sai', async () => {

@@ -23,9 +23,18 @@ import {
   verificationSchema,
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
-import { CURRENT_TERMS_VERSION } from '@/features/legal/versions';
+import { CURRENT_LEGAL_CONSENT_VERSION } from '@/features/legal/versions';
 import { signedInRoute } from './onboarding-gate';
 import { failureMessage, refusalMessage } from './onboarding-refusal';
+import {
+  definitiveActionTokenError,
+  parseActionToken,
+  RESET_TOKEN_COOKIE,
+  RESET_TOKEN_PATH,
+  VERIFICATION_TOKEN_COOKIE,
+  VERIFICATION_TOKEN_PATH,
+  type ActionToken,
+} from './action-token';
 
 export type FormState = { message: string; success?: boolean };
 async function allowedRequest() {
@@ -104,7 +113,7 @@ export async function signupAction(_previous: FormState, form: FormData): Promis
     const account = createAccount(session.secret);
     await account.updatePrefs({
       prefs: {
-        acceptedTermsVersion: CURRENT_TERMS_VERSION,
+        acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
         termsConsentAt: new Date().toISOString(),
       },
     });
@@ -140,34 +149,64 @@ export async function recoveryAction(_previous: FormState, form: FormData): Prom
 export async function resetAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest()) || !authConfigured())
     return { message: 'A recuperação ainda não está disponível.' };
-  const parsed = resetSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success)
-    return { message: 'Confira o link recebido e use uma senha com pelo menos 8 caracteres.' };
-  try {
-    await createAccount().updateRecovery(parsed.data);
-  } catch {
+  const store = await cookies();
+  const token = parseActionToken(store.get(RESET_TOKEN_COOKIE)?.value);
+  if (!token) {
+    store.delete({ name: RESET_TOKEN_COOKIE, path: RESET_TOKEN_PATH });
     return { message: 'Link inválido ou expirado. Solicite outro email.' };
   }
+  const parsed = resetSchema.safeParse({
+    userId: token.userId,
+    secret: token.secret,
+    password: form.get('password'),
+  });
+  if (!parsed.success) return { message: 'Use uma senha com pelo menos 8 caracteres.' };
+  try {
+    await createAccount().updateRecovery(parsed.data);
+  } catch (error) {
+    if (definitiveActionTokenError(error)) {
+      store.delete({ name: RESET_TOKEN_COOKIE, path: RESET_TOKEN_PATH });
+      return { message: 'Link inválido ou expirado. Solicite outro email.' };
+    }
+    return {
+      message: 'Não foi possível redefinir a senha agora. Tente novamente em instantes.',
+    };
+  }
+  store.delete({ name: RESET_TOKEN_COOKIE, path: RESET_TOKEN_PATH });
   return { success: true, message: 'Senha redefinida. Você já pode entrar.' };
 }
-export async function verifyAction(_previous: FormState, form: FormData): Promise<FormState> {
+export async function verifyAction(_previous: FormState, _form: FormData): Promise<FormState> {
+  void _previous;
+  void _form;
   if (!(await allowedRequest()) || !authConfigured())
     return { message: 'A verificação ainda não está disponível.' };
-  const result = await verifyEmailToken(form);
+  const store = await cookies();
+  const token = parseActionToken(store.get(VERIFICATION_TOKEN_COOKIE)?.value);
+  const result = await verifyEmailToken(token);
+  if (result.discardToken)
+    store.delete({ name: VERIFICATION_TOKEN_COOKIE, path: VERIFICATION_TOKEN_PATH });
   if (result.success) redirect('/onboarding?verification=verified');
-  return result;
+  return { message: result.message };
 }
 
-export async function verifyEmailToken(form: FormData): Promise<FormState> {
-  if (!authConfigured()) return { message: 'A verificação ainda não está disponível.' };
-  const parsed = verificationSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { message: 'Link inválido.' };
+type TokenAttempt = FormState & { discardToken: boolean };
+
+async function verifyEmailToken(token: ActionToken | null): Promise<TokenAttempt> {
+  if (!authConfigured())
+    return { message: 'A verificação ainda não está disponível.', discardToken: false };
+  const parsed = verificationSchema.safeParse(token);
+  if (!parsed.success) return { message: 'Link inválido.', discardToken: true };
   try {
     await createAccount().updateVerification(parsed.data);
-  } catch {
-    return { message: 'Link inválido ou expirado.' };
+  } catch (error) {
+    if (definitiveActionTokenError(error))
+      return { message: 'Link inválido ou expirado.', discardToken: true };
+    return {
+      message: 'Não foi possível confirmar o email agora. Tente novamente em instantes.',
+      discardToken: false,
+    };
   }
-  return { success: true, message: 'Email verificado.' };
+  return { success: true, message: 'Email verificado.', discardToken: true };
 }
 export async function resendAction(): Promise<void> {
   if (!(await allowedRequest()) || !authConfigured()) return;

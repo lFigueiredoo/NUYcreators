@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { currentUser } from '@/lib/appwrite/server';
 import { PublicHeader } from '@/features/public-landing/components/public-header';
 import { PublicFooter } from '@/features/public-landing/components/public-footer';
 import { landingFontVariables } from '@/features/public-landing/landing-fonts';
@@ -16,15 +15,12 @@ import styles from '@/features/public-landing/styles/landing.module.css';
  * Sem reveal aqui: o `<LandingReveal />` só existe na landing, então nenhuma
  * peça destas telas usa `data-pl-reveal` (ficaria invisível).
  */
-export default async function Layout({ children }: { children: ReactNode }) {
-  const user = await currentUser();
-  const authenticated = Boolean(user);
-
+export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className={`pl-landing ${styles.landing} ${styles.publicShell} ${landingFontVariables}`}>
-      <PublicHeader authenticated={authenticated} rootAnchors />
+      <PublicHeader rootAnchors />
       <main id="main">{children}</main>
-      <PublicFooter authenticated={authenticated} rootAnchors />
+      <PublicFooter rootAnchors />
     </div>
   );
 }

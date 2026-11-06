@@ -14,7 +14,7 @@ import { anchorFor, landingFooterLinks } from '../landing-navigation';
  * para sempre. Rodapé entra por último, um degrau depois do CTA.
  */
 export function PublicFooter({
-  authenticated = false,
+  authenticated,
   rootAnchors = false,
   reveal = false,
 }: {
@@ -22,8 +22,9 @@ export function PublicFooter({
   rootAnchors?: boolean;
   reveal?: boolean;
 }) {
-  const accountHref = authenticated ? '/app' : '/login';
-  const step = (index: number) => (reveal ? { 'data-pl-reveal': '', 'data-pl-index': String(index) } : {});
+  const accountHref = authenticated === false ? '/login' : '/app';
+  const step = (index: number) =>
+    reveal ? { 'data-pl-reveal': '', 'data-pl-index': String(index) } : {};
 
   return (
     <footer className={styles.footer}>
@@ -45,7 +46,7 @@ export function PublicFooter({
           </Link>
         ))}
         <Link href={accountHref} className={styles.navLink}>
-          {authenticated ? 'Meu painel' : 'Entrar'}
+          {authenticated === true ? 'Meu painel' : authenticated === false ? 'Entrar' : 'Acessar'}
         </Link>
       </nav>
 

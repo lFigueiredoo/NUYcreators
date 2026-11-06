@@ -139,3 +139,25 @@ it('uma de duas edições concorrentes vence; a outra recebe conflito', async ()
   expect(results.find((result) => result.status === 'rejected'))
     .toMatchObject({ reason: { code: 'conflict' } });
 });
+
+it('desafio legado active aceita conversa, sem relaxar a regra de cursos', async () => {
+  const targetId = 'challenge-legado-active';
+  stub.dataset.tables.challenges.push({
+    $id: targetId,
+    slug: targetId,
+    name: 'Desafio legado',
+    status: 'active',
+    participantCount: 0,
+    version: 1,
+    $permissions: ['read("users")'],
+  });
+
+  const comment = await createComment(creator, {
+    targetType: 'challenge',
+    targetId,
+    parentId: null,
+    body: 'Comentário em desafio legado ativo.',
+  });
+
+  expect(comment).toMatchObject({ targetType: 'challenge', targetId, status: 'pending' });
+});

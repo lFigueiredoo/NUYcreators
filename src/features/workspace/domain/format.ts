@@ -39,12 +39,19 @@ export function longDate(iso: string | null | undefined) {
 export function deadlineLabel(iso: string | null | undefined, now: Date) {
   const date = parse(iso);
   if (!date) return null;
-  const days = Math.ceil((date.getTime() - now.getTime()) / 86_400_000);
-  if (days < 0) return 'Encerrado';
+  const remaining = date.getTime() - now.getTime();
+  if (remaining < 0) return 'Encerrado';
+  const days = Math.ceil(remaining / 86_400_000);
   if (days === 0) return 'Último dia';
   if (days === 1) return 'Termina amanhã';
   if (days <= 7) return `Termina em ${days} dias`;
   return `Até ${longDate(iso)}`;
+}
+
+/** Mesma fronteira do servidor: a janela só termina quando `now` ultrapassa `endsAt`. */
+export function deadlinePassed(iso: string | null | undefined, now: Date) {
+  const date = parse(iso);
+  return date !== null && date.getTime() < now.getTime();
 }
 
 /**

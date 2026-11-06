@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import { getEnvironment } from '@/lib/env/server';
+import { requireStaff } from '@/lib/security/authorization';
 import { rankingTimeZone } from '@/features/workspace/domain/ranking';
 import {
   campaignIssues,
@@ -128,6 +129,7 @@ export async function challengeSaveAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const draft = challengeDraft(data);
   const invalid = problems(challengeIssues(draft));
   if (invalid) return invalid;
@@ -146,18 +148,24 @@ export async function challengeSaveAction(
   const publish = field(data, 'intent') === 'publish';
   // O id do desafio é derivado do slug no núcleo: o formulário manda o conteúdo, e
   // o identificador volta na resposta — é ele que diz qual página revalidar.
-  const outcome = await commandSaveChallenge(
-    {
-      draft,
-      expectedVersion: numberField(data, 'expectedVersion'),
-      timeZone: rankingTimeZone,
-    },
-    publish,
-  );
-  if (!outcome.ok) {
-    await discardUploaded(image.uploaded);
-    return { message: outcome.message };
-  }
+  let persisted = false;
+  const outcome = await (async () => {
+    try {
+      const saved = await commandSaveChallenge(
+        {
+          draft,
+          expectedVersion: numberField(data, 'expectedVersion'),
+          timeZone: rankingTimeZone,
+        },
+        publish,
+      );
+      if (saved.ok) persisted = true;
+      return saved;
+    } finally {
+      if (!persisted) await discardUploaded(image.uploaded);
+    }
+  })();
+  if (!outcome.ok) return { message: outcome.message };
   await retireReplaced(image.replaced, image.fileId);
   revalidatePath('/admin/desafios');
   revalidatePath(`/admin/desafios/${outcome.value.challengeId}`);
@@ -171,6 +179,7 @@ export async function challengeStatusAction(
   data: FormData,
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const intent = field(data, 'intent');
   if (intent !== 'publish' && intent !== 'close') return { message: 'Ação não reconhecida.' };
   const challengeId = field(data, 'challengeId');
@@ -189,9 +198,15 @@ export async function challengeStatusAction(
 
 export async function rewardSaveAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const draft = rewardDraft(data);
   const invalid = problems(rewardIssues(draft));
   if (invalid) return invalid;
+  const rewardId = field(data, 'rewardId');
+  // A chave é sorteada pela tela no clique: repetir o envio não cria duas vezes.
+  const key = field(data, 'key');
+  if (!rewardId && (key.length < 8 || key.length > 120))
+    return { message: 'Recarregue a página antes de salvar.' };
   const image = await imageForForm({
     file: fileField(data, 'image'),
     keep: draft.imageFileId,
@@ -199,25 +214,26 @@ export async function rewardSaveAction(_previous: FormState, data: FormData): Pr
   });
   if (!image.ok) return { message: image.message };
   draft.imageFileId = image.fileId;
-  const rewardId = field(data, 'rewardId');
-  // A chave é sorteada pela tela no clique: repetir o envio não cria duas vezes.
-  const key = field(data, 'key');
-  if (!rewardId && (key.length < 8 || key.length > 120))
-    return { message: 'Recarregue a página antes de salvar.' };
-  const outcome = await commandSaveReward(
-    {
-      key,
-      rewardId: rewardId || '',
-      draft,
-      expectedVersion: numberField(data, 'expectedVersion'),
-      timeZone: rankingTimeZone,
-    },
-    field(data, 'intent') === 'publish',
-  );
-  if (!outcome.ok) {
-    await discardUploaded(image.uploaded);
-    return { message: outcome.message };
-  }
+  let persisted = false;
+  const outcome = await (async () => {
+    try {
+      const saved = await commandSaveReward(
+        {
+          key,
+          rewardId: rewardId || '',
+          draft,
+          expectedVersion: numberField(data, 'expectedVersion'),
+          timeZone: rankingTimeZone,
+        },
+        field(data, 'intent') === 'publish',
+      );
+      if (saved.ok) persisted = true;
+      return saved;
+    } finally {
+      if (!persisted) await discardUploaded(image.uploaded);
+    }
+  })();
+  if (!outcome.ok) return { message: outcome.message };
   await retireReplaced(image.replaced, image.fileId);
   revalidatePath('/admin/recompensas');
   revalidatePath(`/admin/recompensas/${outcome.value.rewardId}`);
@@ -228,6 +244,7 @@ export async function rewardSaveAction(_previous: FormState, data: FormData): Pr
 
 export async function rewardStatusAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const intent = field(data, 'intent');
   if (intent !== 'publish' && intent !== 'close') return { message: 'Ação não reconhecida.' };
   const rewardId = field(data, 'rewardId');
@@ -242,6 +259,7 @@ export async function rewardStatusAction(_previous: FormState, data: FormData): 
 
 export async function rewardStockAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const rewardId = field(data, 'rewardId');
   const stock = numberField(data, 'stock');
   const reason = field(data, 'reason');
@@ -264,6 +282,7 @@ export async function rewardStockAction(_previous: FormState, data: FormData): P
 
 export async function campaignSaveAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
   const draft = campaignDraft(data);
   const invalid = problems(campaignIssues(draft));
   if (invalid) return invalid;

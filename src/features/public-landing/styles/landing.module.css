@@ -79,6 +79,17 @@
   width: min(var(--nuy-max), calc(100% - 2 * var(--nuy-ruler)));
 }
 
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /*
  * Foco de teclado: um anel de 2px com 3px de folga, na cor do bloco — navy
  * sobre o claro, branco sobre o navy. Vale para link, botão e `<summary>`, e
@@ -634,21 +645,21 @@
        70px, e não os 54 de antes: na altura antiga a peça lia como fita e não
        como plano. A queda acompanha a altura nova. */
     linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.62) 0%,
-      rgba(255, 255, 255, 0.34) 50%,
-      rgba(255, 255, 255, 0.08) 100%
-    );
-  background-size: 100% 1px, 100% 7px, 100% 100%;
-  background-position: left top, left bottom, left top;
+        180deg,
+        rgba(255, 255, 255, 0.62) 0%,
+        rgba(255, 255, 255, 0.34) 50%,
+        rgba(255, 255, 255, 0.08) 100%
+      );
+  background-size:
+    100% 1px,
+    100% 7px,
+    100% 100%;
+  background-position:
+    left top,
+    left bottom,
+    left top;
   background-repeat: no-repeat;
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 15%,
-    #000 85%,
-    transparent 100%
-  );
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
   pointer-events: none;
 }
@@ -985,7 +996,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
-  color: rgba(8, 43, 85, 0.62);
+  color: rgba(8, 43, 85, 0.68);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.24em;
@@ -1150,6 +1161,10 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.steps:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.9);
 }
 
 .stepCard {
@@ -1421,12 +1436,7 @@
   inset: 0 0 auto;
   z-index: -1;
   height: 32px;
-  background: linear-gradient(
-    180deg,
-    #082b55 0%,
-    #061f3d 32%,
-    rgba(248, 244, 236, 0) 100%
-  );
+  background: linear-gradient(180deg, #082b55 0%, #061f3d 32%, rgba(248, 244, 236, 0) 100%);
   pointer-events: none;
 }
 

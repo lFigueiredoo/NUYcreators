@@ -2,7 +2,10 @@ import { LegalDocument } from '@/features/legal/components/legal-document';
 import { CURRENT_PRIVACY_VERSION, LEGAL_EFFECTIVE_DATE } from '@/features/legal/versions';
 
 /** Política de Privacidade oficial vinculada aos Termos de Uso vigentes. */
-export const metadata = { title: 'Política de Privacidade — NUY Creators' };
+export const metadata = {
+  title: 'Política de Privacidade',
+  alternates: { canonical: '/privacidade' },
+};
 
 export default function Privacy() {
   return (

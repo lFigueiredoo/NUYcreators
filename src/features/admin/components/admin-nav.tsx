@@ -90,7 +90,7 @@ export function AdminTopbar({
             width={640}
             height={149}
             sizes="92px"
-            priority
+            loading="eager"
           />
         </Link>
         <p className={appStyles.topbarKicker}>{adminSectionLabel(pathname)}</p>

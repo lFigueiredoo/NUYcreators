@@ -55,10 +55,13 @@ function ledger(seed: Record<string, Row[]> = {}) {
           const current = row[query.attribute];
           if (query.method === 'equal') return (query.values ?? []).includes(current);
           if (query.method === 'isNull') return current === null || current === undefined;
+          if (query.method === 'lessThanEqual') return String(current) <= String(query.values?.[0]);
           return true;
         }),
       );
-      return { rows: kept, total: kept.length };
+      const limit = filters(queries).find((query) => query.method === 'limit')?.values?.[0];
+      const size = typeof limit === 'number' ? limit : kept.length;
+      return { rows: kept.slice(0, size), total: kept.length };
     },
     updateRow: async (params: Write) => {
       writes.push(params);
@@ -222,6 +225,7 @@ describe('Fase C — o que a edição de perfil pode gravar', () => {
       { ...validInput, name: 'A' },
       { ...validInput, state: 'XX' },
       { ...validInput, birthDate: '1899-12-31' },
+      { ...validInput, birthDate: '2020-01-01' },
       { ...validInput, phone: 'telefone' },
       { ...validInput, niche: 'moda' },
     ]) {
@@ -233,8 +237,14 @@ describe('Fase C — o que a edição de perfil pode gravar', () => {
   });
 });
 
-const aviso = (id: string, userId: string, readAt: string | null = null): Row => ({
+const aviso = (
+  id: string,
+  userId: string,
+  readAt: string | null = null,
+  createdAt = '2026-10-07T14:00:00.000Z',
+): Row => ({
   $id: id,
+  $createdAt: createdAt,
   userId,
   title: 'Pontos creditados',
   body: 'Você ganhou 50 pontos.',
@@ -317,6 +327,36 @@ describe('Fase D — o que a leitura de avisos pode gravar', () => {
     expect(banco.row('notifications', 'outra-1')?.readAt).toBeNull();
     expect(banco.row('notifications', 'outra-2')?.readAt).toBeNull();
     expect(banco.row('notifications', 'ana-lido')?.readAt).toBe('2026-10-05T08:00:00.000Z');
+  });
+
+  it('marcar TODAS percorre mais de 500 avisos sem truncar a operação', async () => {
+    const notifications = Array.from({ length: 650 }, (_, index) =>
+      aviso(`ana-${String(index).padStart(3, '0')}`, ANA),
+    );
+    const banco = ledger({ notifications });
+
+    const resultado = await markAllNotificationsRead(context(banco.api));
+
+    expect(resultado.ok && resultado.value.updated).toBe(650);
+    expect(banco.writes('notifications')).toHaveLength(650);
+    expect(notifications.every((row) => banco.row('notifications', String(row.$id))?.readAt)).toBe(
+      true,
+    );
+  });
+
+  it('não marca uma notificação que chegou depois do clique', async () => {
+    const banco = ledger({
+      notifications: [
+        aviso('antes-do-clique', ANA),
+        aviso('depois-do-clique', ANA, null, '2026-10-07T15:00:01.000Z'),
+      ],
+    });
+
+    const resultado = await markAllNotificationsRead(context(banco.api));
+
+    expect(resultado.ok && resultado.value.updated).toBe(1);
+    expect(banco.row('notifications', 'antes-do-clique')?.readAt).toBe('2026-10-07T15:00:00.000Z');
+    expect(banco.row('notifications', 'depois-do-clique')?.readAt).toBeNull();
   });
 
   it('o botão manda o estado PEDIDO, não o estado atual', () => {

@@ -132,9 +132,17 @@ export function AuthAccessForm({
         </label>
       )}
 
-      <button type="submit" className={styles.submit} disabled={pending || !configured}>
+      <button
+        type="submit"
+        className={styles.submit}
+        disabled={pending || !configured}
+        aria-busy={pending}
+      >
         {pending ? (
-          <LoaderCircle className={styles.spin} size={18} aria-hidden="true" />
+          <>
+            <LoaderCircle className={styles.spin} size={18} aria-hidden="true" />
+            {mode === 'login' ? 'Entrando…' : 'Criando conta…'}
+          </>
         ) : (
           <>
             {mode === 'login' ? 'Entrar' : 'Criar minha conta'}

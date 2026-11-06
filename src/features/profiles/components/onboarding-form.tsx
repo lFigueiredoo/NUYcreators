@@ -3,6 +3,7 @@ import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleCheck, Info, LoaderCircle } from 'lucide-react';
 import { onboardingAction } from '@/features/auth/services/actions';
+import { latestEligibleBirthDate } from '../domain/age';
 import { brazilianStates } from '../schemas/onboarding';
 import styles from '@/features/auth/components/auth-access.module.css';
 
@@ -175,7 +176,7 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           type="date"
           autoComplete="bday"
           required
-          max={new Date().toISOString().slice(0, 10)}
+          max={latestEligibleBirthDate()}
           min="1900-01-01"
         />
       </div>

@@ -241,7 +241,7 @@ try {
           tableId: 'creator_levels',
           rowId: id,
           data: fields,
-          permissions: [Permission.read(Role.any())],
+          permissions: [Permission.read(Role.users())],
         });
       else if (seedAction === 'UPDATE' || seedAction === 'DRIFT_SECURITY') {
         await db.updateRow({
@@ -249,7 +249,7 @@ try {
           tableId: 'creator_levels',
           rowId: id,
           data: fields,
-          permissions: [Permission.read(Role.any())],
+          permissions: [Permission.read(Role.users())],
         });
         if (seedAction === 'DRIFT_SECURITY') console.log(`RECONCILED_SECURITY seed ${id}`);
       }

@@ -14,46 +14,15 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { dailyChallenges } from '@/features/regulation/daily-challenges';
 import type { RegulationPublication } from '@/features/workspace/services/regulation';
 import styles from '../styles/regulation.module.css';
 
-const dailyScores = [
-  {
-    platform: 'Instagram',
-    icon: Camera,
-    format: 'Reels ou vídeo no Feed',
-    points: '10 pontos',
-    rule: 'Por publicação aprovada no feed.',
-  },
-  {
-    platform: 'Instagram',
-    icon: Camera,
-    format: 'Foto ou carrossel',
-    points: '10 pontos',
-    rule: 'Por publicação aprovada no feed.',
-  },
-  {
-    platform: 'Instagram',
-    icon: Camera,
-    format: 'Stories',
-    points: '1 ponto',
-    rule: 'Teto de 10 pontos por dia.',
-  },
-  {
-    platform: 'TikTok',
-    icon: PlaySquare,
-    format: 'Postagem colaborativa',
-    points: '15 pontos',
-    rule: 'Máximo de 2 posts por dia. A collab com a NUY deve ser aceita.',
-  },
-  {
-    platform: 'Shopee',
-    icon: ShoppingBag,
-    format: 'Shopee Vídeo',
-    points: '20 pontos',
-    rule: 'Máximo de 2 vídeos por dia, com link do produto NUY.',
-  },
-];
+const dailyPlatformIcons = {
+  Instagram: Camera,
+  TikTok: PlaySquare,
+  Shopee: ShoppingBag,
+} as const;
 
 const performanceScores = [
   ['Venda convertida', '20 pontos', 'Venda aprovada com cupom ou link exclusivo.'],
@@ -224,10 +193,10 @@ export function RegulationScreen({ publication }: { publication: RegulationPubli
                 </tr>
               </thead>
               <tbody>
-                {dailyScores.map((item) => {
-                  const Icon = item.icon;
+                {dailyChallenges.map((item) => {
+                  const Icon = dailyPlatformIcons[item.platform];
                   return (
-                    <tr key={`${item.platform}-${item.format}`}>
+                    <tr key={item.id}>
                       <td>
                         <span className={styles.platform}>
                           <Icon size={16} aria-hidden="true" /> {item.platform}

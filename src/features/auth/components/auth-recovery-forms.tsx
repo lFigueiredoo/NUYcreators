@@ -22,8 +22,8 @@ import styles from './auth-access.module.css';
  * Telas de recuperação, redefinição e verificação na identidade da Proposta C.
  *
  * Mesma fiação de sempre — exatamente as mesmas server actions
- * (`recoveryAction`, `resetAction`, `verifyAction`), os mesmos `name` de campo
- * (`email`, `password`, `userId`, `secret`) e as mesmas validações nativas. A
+ * (`recoveryAction`, `resetAction`, `verifyAction`) e as mesmas validações
+ * nativas. Tokens ficam em cookies HttpOnly curtos e nunca entram no DOM. A
  * camada nova é visual: título e texto de apoio trocam quando a ação conclui
  * (estado de enviado / de senha atualizada), reusando a casca e o painel de
  * `/login`.
@@ -74,9 +74,12 @@ function Submit({
   children: ReactNode;
 }) {
   return (
-    <button type="submit" className={styles.submit} disabled={disabled}>
+    <button type="submit" className={styles.submit} disabled={disabled} aria-busy={pending}>
       {pending ? (
-        <LoaderCircle className={styles.spin} size={18} aria-hidden="true" />
+        <>
+          <LoaderCircle className={styles.spin} size={18} aria-hidden="true" />
+          Processando…
+        </>
       ) : (
         <>
           {children}
@@ -176,18 +179,11 @@ export function RecoveryScreen({ configured }: { configured: boolean }) {
  * mostra o estado honesto e as duas saídas que existem de verdade (pedir novo
  * link ou voltar para entrar).
  */
-export function ResetScreen({
-  configured,
-  token,
-}: {
-  configured: boolean;
-  token: { userId: string; secret: string };
-}) {
+export function ResetScreen({ configured, hasToken }: { configured: boolean; hasToken: boolean }) {
   const [state, action, pending] = useActionState(resetAction, { message: '' });
   const passwordId = useId();
   const helpId = useId();
   const [visible, setVisible] = useState(false);
-  const hasToken = Boolean(token.userId && token.secret);
 
   if (state.success)
     return (
@@ -250,9 +246,6 @@ export function ResetScreen({
           <Notice>O acesso está temporariamente indisponível. Tente novamente mais tarde.</Notice>
         )}
 
-        <input type="hidden" name="userId" value={token.userId} />
-        <input type="hidden" name="secret" value={token.secret} />
-
         <div className={styles.field}>
           <label className={styles.label} htmlFor={passwordId}>
             Nova senha
@@ -307,24 +300,13 @@ export function ResetScreen({
 /**
  * 03 — Verificação de e-mail.
  *
- * Com os tokens do link, a confirmação acontece automaticamente no carregamento
- * e a pessoa segue para o próximo passo válido. O formulário continua como
- * fallback para links expirados ou falhas transitórias. Sem tokens, a tela
- * orienta a pessoa a conferir a caixa de entrada.
+ * Com um token protegido recebido do link, a página pede a confirmação
+ * deliberada. Só o POST do botão consome o token; scanners e pré-visualizadores
+ * que apenas abrem o GET não verificam a conta. Sem token, a tela orienta a
+ * pessoa a conferir a caixa de entrada.
  */
-export function VerifyScreen({
-  configured,
-  token,
-  initialError = '',
-}: {
-  configured: boolean;
-  token: { userId: string; secret: string };
-  initialError?: string;
-}) {
-  const [state, action, pending] = useActionState(verifyAction, {
-    message: initialError,
-  });
-  const hasToken = Boolean(token.userId && token.secret);
+export function VerifyScreen({ configured, hasToken }: { configured: boolean; hasToken: boolean }) {
+  const [state, action, pending] = useActionState(verifyAction, { message: '' });
 
   if (state.success)
     return (
@@ -362,9 +344,6 @@ export function VerifyScreen({
           {!configured && (
             <Notice>O acesso está temporariamente indisponível. Tente novamente mais tarde.</Notice>
           )}
-
-          <input type="hidden" name="userId" value={token.userId} />
-          <input type="hidden" name="secret" value={token.secret} />
 
           <Submit pending={pending} disabled={pending || !configured}>
             Confirmar meu e-mail

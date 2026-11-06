@@ -1,8 +1,14 @@
 import Link from 'next/link';
 import { Coins } from 'lucide-react';
-import { deadlineLabel, notStarted, shortDate, startLabel } from '../domain/format';
+import { deadlineLabel, deadlinePassed, notStarted, shortDate, startLabel } from '../domain/format';
 import { formatPoints } from '../domain/points';
-import { COMING_VIEW, challengeBucket, participationView, submissionView } from '../domain/status';
+import {
+  COMING_VIEW,
+  ENDED_VIEW,
+  challengeBucket,
+  participationView,
+  submissionView,
+} from '../domain/status';
 import type { ChallengeView } from '../services/challenges';
 import { CardMedia, CoverFallback } from './ui/card';
 import { Pill } from './ui/pill';
@@ -59,6 +65,7 @@ function ChallengeBody({
   pill,
   deadline,
   coming,
+  ended,
   feature,
 }: {
   challenge: ChallengeView;
@@ -66,13 +73,15 @@ function ChallengeBody({
   deadline: string | null;
   /** Janela ainda fechada: o selo e a data do rodapé trocam de assunto. */
   coming: boolean;
+  /** Janela encerrada: o catálogo continua legível, sem parecer disponível. */
+  ended: boolean;
   feature: boolean;
 }) {
   const href = `/app/desafios/${challenge.slug}`;
   // O selo de estado é o do desfecho real (envio/participação); sem desfecho e
   // com a janela fechada, o estado É "Em breve" — nunca um cartão mudo que se lê
   // como disponível para entrar agora.
-  const badge = pill ?? (coming ? COMING_VIEW : null);
+  const badge = pill ?? (coming ? COMING_VIEW : ended ? ENDED_VIEW : null);
   // No rodapé, o que interessa a quem ainda não pode entrar é QUANDO abre; a data
   // final continua na página do desafio, no bloco de prazo.
   const when = coming ? startLabel(challenge.startsAt) : deadline;
@@ -117,6 +126,7 @@ export function ChallengeCard({
 }) {
   const deadline = deadlineLabel(challenge.endsAt, now);
   const coming = notStarted(challenge.startsAt, now);
+  const ended = deadlinePassed(challenge.endsAt, now);
   const pill = statePill(challenge);
   const href = `/app/desafios/${challenge.slug}`;
   // A composição institucional vale para os dois casos de ausência de foto: a
@@ -138,6 +148,7 @@ export function ChallengeCard({
           pill={pill}
           deadline={deadline}
           coming={coming}
+          ended={ended}
           feature
         />
       </article>
@@ -156,6 +167,7 @@ export function ChallengeCard({
         pill={pill}
         deadline={deadline}
         coming={coming}
+        ended={ended}
         feature={false}
       />
     </article>
@@ -165,14 +177,17 @@ export function ChallengeCard({
 /** Linha compacta usada nas listas de "continuar participando". */
 export function ChallengeRow({ challenge, now }: { challenge: ChallengeView; now: Date }) {
   const coming = notStarted(challenge.startsAt, now);
+  const ended = deadlinePassed(challenge.endsAt, now);
   const pill =
     statePill(challenge) ??
     (coming
       ? COMING_VIEW
-      : {
-          label: challengeBucket(challenge) === 'available' ? 'Disponível' : 'Participando',
-          tone: 'neutral' as const,
-        });
+      : ended
+        ? ENDED_VIEW
+        : {
+            label: challengeBucket(challenge) === 'available' ? 'Disponível' : 'Participando',
+            tone: 'neutral' as const,
+          });
   const when = coming ? startLabel(challenge.startsAt) : deadlineLabel(challenge.endsAt, now);
   return (
     <li className={styles.item}>

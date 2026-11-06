@@ -351,7 +351,7 @@ test('rascunho → editar → publicar, com a linha conferida e a concorrência 
     status: 'published',
     version: 2,
   });
-  expect(published.$permissions).toContain(Permission.read(Role.any()));
+  expect(published.$permissions).toContain(Permission.read(Role.users()));
 
   // A tela concorda com a linha: recarregada, ela já oferece ENCERRAR (só o que
   // está no ar encerra) em vez de publicar de novo.
@@ -452,7 +452,7 @@ test('rascunho → editar → publicar, com a linha conferida e a concorrência 
     status: 'published',
     version: 2,
   });
-  expect(rewardLive.$permissions).toContain(Permission.read(Role.any()));
+  expect(rewardLive.$permissions).toContain(Permission.read(Role.users()));
 
   // ------------------------- 7. prova: quem decidiu cada escrita desta corrida
   // A pergunta que esta seção responde não é "a tela funcionou", é "QUEM estava

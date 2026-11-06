@@ -3,6 +3,7 @@ import { AppShell } from '@/features/workspace/components/app-shell';
 import { loadLevelName } from '@/features/workspace/services/journey';
 import { loadUnreadCount } from '@/features/workspace/services/notifications';
 import { workspaceSession } from '@/features/workspace/services/viewer';
+import { currentTermsState } from '@/features/legal/services/consent';
 import { sessionRoles } from '@/lib/security/authorization';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,8 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
     if ((await sessionRoles(secret, viewer.id)).length) redirect('/admin');
     redirect('/onboarding');
   }
+  if ((await currentTermsState(secret, viewer.id)) !== 'accepted')
+    redirect('/aceitar-termos?returnTo=/app');
   // Nível do cabeçalho: `loadLevelName` é `cache`ado e compartilha as duas
   // leituras com o painel — nas telas que já leem a jornada ele não lê de novo.
   const [unread, level] = await Promise.all([

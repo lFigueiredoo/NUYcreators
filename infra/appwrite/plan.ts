@@ -480,13 +480,13 @@ export async function buildPlan(
       continue;
     }
     const found = remote.value as unknown as Record<string, unknown> & { $permissions: string[] };
-    if (JSON.stringify(found.$permissions) !== JSON.stringify([`read("any")`])) {
+    if (JSON.stringify(found.$permissions) !== JSON.stringify([`read("users")`])) {
       entries.push({
         action: 'DRIFT_SECURITY',
         kind: 'seed',
         id,
         detail: 'permissões do nível',
-        expected: `read("any")`,
+        expected: `read("users")`,
         found: `[${found.$permissions.join(', ')}]`,
       });
       continue;

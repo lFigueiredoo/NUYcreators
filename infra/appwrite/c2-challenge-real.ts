@@ -67,7 +67,7 @@ async function fixture(server: TablesDB, id: string) {
       status: 'published',
       version: 1,
     },
-    permissions: [Permission.read(Role.any())],
+    permissions: [Permission.read(Role.users())],
   });
 }
 

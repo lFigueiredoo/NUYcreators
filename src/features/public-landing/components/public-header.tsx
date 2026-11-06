@@ -25,7 +25,7 @@ import { anchorFor, landingAccountLinks, landingNavigation } from '../landing-na
  * existe e não se vê. Quem compõe as duas é o CSS; aqui só se escrevem números.
  */
 export function PublicHeader({
-  authenticated = false,
+  authenticated,
   rootAnchors = false,
 }: {
   authenticated?: boolean;
@@ -92,7 +92,6 @@ export function PublicHeader({
             sizes="(max-width: 899px) 104px, 152px"
             className={styles.lockupImage}
             loading="eager"
-            priority
           />
         </Link>
 

@@ -3,7 +3,10 @@ import { LegalDocument } from '@/features/legal/components/legal-document';
 import { CURRENT_TERMS_VERSION, LEGAL_EFFECTIVE_DATE } from '@/features/legal/versions';
 
 /** Termos de Uso oficiais do NUY Creators. */
-export const metadata = { title: 'Termos de Uso — NUY Creators' };
+export const metadata = {
+  title: 'Termos de Uso',
+  alternates: { canonical: '/termos' },
+};
 
 export default function Terms() {
   return (

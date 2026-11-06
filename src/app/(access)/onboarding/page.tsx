@@ -19,7 +19,10 @@ import styles from '@/features/auth/components/auth-access.module.css';
  * server actions `resendAction` e `logoutAction`.
  */
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Seu perfil' };
+export const metadata = {
+  title: 'Seu perfil',
+  robots: { index: false, follow: false },
+};
 
 export default async function Onboarding({
   searchParams,

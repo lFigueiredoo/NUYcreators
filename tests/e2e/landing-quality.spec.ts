@@ -92,7 +92,13 @@ for (const [width, widthName] of viewportWidths) {
         document.querySelectorAll<HTMLElement>('main h1, main h2, main p, main li'),
       );
       return nodes
-        .filter((el) => el.offsetHeight > 0 && el.scrollHeight > el.clientHeight + 2 && hides(el))
+        .filter(
+          (el) =>
+            !el.className.includes('visuallyHidden') &&
+            el.offsetHeight > 0 &&
+            el.scrollHeight > el.clientHeight + 2 &&
+            hides(el),
+        )
         .map(
           (el) =>
             `${el.tagName}.${Array.from(el.classList).join('.')}: ${el.textContent?.slice(0, 40)}`,
@@ -108,6 +114,38 @@ for (const [width, widthName] of viewportWidths) {
     expect(visible).toEqual([]);
   });
 }
+
+test('a trilha horizontal de passos é nomeada e pode receber foco no mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  const steps = page.getByRole('list', { name: 'Passos para participar' });
+  await expect(steps).toHaveAttribute('tabindex', '0');
+  await expect(steps).toHaveAttribute('aria-describedby', 'pl-steps-instructions');
+  await steps.focus();
+  await expect(steps).toBeFocused();
+
+  const geometry = await steps.evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+    outline: getComputedStyle(element).outlineStyle,
+  }));
+  expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+  expect(geometry.outline).not.toBe('none');
+});
+
+test('somente o aromatizador LCP recebe prioridade alta no hero', async ({ page }) => {
+  await page.goto('/');
+  const images = page.locator('[class*=heroGroup] img');
+  await expect(images).toHaveCount(3);
+  expect(
+    await images.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('loading'))),
+  ).toEqual(['eager', 'eager', 'eager']);
+  expect(
+    await images.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('fetchpriority'))),
+  ).toEqual([null, 'high', null]);
+});
 
 test('tipografia resolve para as fontes web carregadas, não fallbacks', async ({ page }) => {
   test.skip(test.info().project.name === 'mobile', 'Budgets below are desktop measurements.');
@@ -215,6 +253,6 @@ test('a página pública não inventa números, datas, perfis nem métricas', as
   expect(audit.footerDigits, 'o rodapé só pode ter dígito no ano').toBe(false);
   expect(
     await page.locator('footer a[href="/app"]').count(),
-    'deslogado, o rodapé não oferece o painel',
-  ).toBe(0);
+    'o acesso neutro usa a rota protegida, que decide entre login e painel',
+  ).toBe(1);
 });

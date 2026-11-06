@@ -66,6 +66,17 @@ export const academyModerationTransitions: Record<
 export function canModerateComment(from: AcademyCommentStatus, to: AcademyCommentStatus) {
   return academyModerationTransitions[from].includes(to);
 }
+
+const academyDate = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'short',
+  timeZone: 'America/Sao_Paulo',
+});
+
+/** Data civil única no servidor e no navegador; evita troca de dia na hidratação. */
+export function academyDateLabel(value: string): string {
+  const instant = new Date(value);
+  return Number.isNaN(instant.getTime()) ? 'Data indisponível' : academyDate.format(instant);
+}
 export type AcademyModerationComment = AcademyComment & {
   authorName: string;
   targetTitle: string;

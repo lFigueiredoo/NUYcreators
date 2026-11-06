@@ -14,6 +14,7 @@ import { inTransaction } from './transaction';
 import {
   campaignIssues,
   challengeIssues,
+  parseCivilDateTime,
   rewardIssues,
   type CampaignDraft,
   type ChallengeDraft,
@@ -27,8 +28,8 @@ import {
  *
  *  1. **Permissão de linha é a barreira de leitura.** Rascunho nasce com
  *     `permissions: []`: nenhuma sessão o enxerga, nem por engano de tela. Só
- *     quando o item é PUBLICADO a linha ganha `read("any")` e passa a existir para
- *     as creators. Esconder rascunho num filtro de tela não bastaria — a sessão
+ *     quando o item é PUBLICADO a linha ganha `read("users")` e passa a existir para
+ *     as creators autenticadas. Esconder rascunho num filtro de tela não bastaria — a sessão
  *     continuaria conseguindo ler a linha.
  *  2. **Versão é o controle de concorrência.** `expectedVersion` vem da tela e é
  *     conferida no banco dentro da transação: duas pessoas editando o mesmo
@@ -41,16 +42,18 @@ import {
  * como no resto do núcleo. O papel `manage-catalog` vem de membership confirmada
  * (`nuy-admins`), nunca do payload.
  */
-const PUBLIC_READ = [Permission.read(Role.any())];
+const CREATOR_READ = [Permission.read(Role.users())];
 
 /** Rascunho é da equipe: nem a sessão da própria criadora lê a linha. */
 function permissionsFor(status: string): string[] {
-  return status === 'draft' || status === 'archived' ? [] : PUBLIC_READ;
+  return status === 'draft' || status === 'archived' ? [] : CREATOR_READ;
 }
 
 /** Private mode is enabled only after the separate, complete ACL audit/migration. */
 async function refreshChallengeCommentPermissions(
-  ctx: CoreContext, tx: { transactionId: string | undefined }, challengeId: string,
+  ctx: CoreContext,
+  tx: { transactionId: string | undefined },
+  challengeId: string,
 ): Promise<CoreResult<null>> {
   if (ctx.challengeCommentsPrivateReady) {
     // A flag is an operational attestation, never inferred from a challenge's size.
@@ -64,7 +67,11 @@ async function refreshChallengeCommentPermissions(
     found = await listTableRows(ctx.tables, {
       databaseId: ctx.databaseId,
       tableId: 'community_comments',
-      queries: [Query.equal('targetType', 'challenge'), Query.equal('targetId', challengeId), Query.limit(41)],
+      queries: [
+        Query.equal('targetType', 'challenge'),
+        Query.equal('targetId', challengeId),
+        Query.limit(41),
+      ],
       transactionId: tx.transactionId,
     });
   } catch (error) {
@@ -110,20 +117,17 @@ function optionalId(value: string): string | null {
  * Valor com fuso explícito (`Z` ou `±hh:mm`) é respeitado como veio.
  */
 export function instantIn(local: string, timeZone: string): string | null {
-  const value = local.trim();
-  if (value === '') return null;
-  if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(value)) {
-    const explicit = new Date(value);
-    return Number.isNaN(explicit.getTime()) ? null : explicit.toISOString();
-  }
-  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
+  const parts = parseCivilDateTime(local);
   if (!parts) return null;
-  const [, year, month, day, hour, minute] = parts.map(Number);
-  const wall = Date.UTC(year, month - 1, day, hour, minute);
+  if (parts.zone) return new Date(parts.source).toISOString();
+  const wallDate = new Date(0);
+  wallDate.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  wallDate.setUTCHours(parts.hour, parts.minute, parts.second, parts.millisecond);
+  const wall = wallDate.getTime();
   // Deslocamento do fuso NO INSTANTE: usar o de hoje erraria em horário de verão.
   const formatted = new Intl.DateTimeFormat('en-CA', {
     timeZone,
-    hour12: false,
+    hourCycle: 'h23',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -132,15 +136,10 @@ export function instantIn(local: string, timeZone: string): string | null {
     second: '2-digit',
   }).formatToParts(new Date(wall));
   const field = (type: string) => Number(formatted.find((part) => part.type === type)?.value ?? 0);
-  const offset =
-    Date.UTC(
-      field('year'),
-      field('month') - 1,
-      field('day'),
-      field('hour'),
-      field('minute'),
-      field('second'),
-    ) - wall;
+  const represented = new Date(0);
+  represented.setUTCFullYear(field('year'), field('month') - 1, field('day'));
+  represented.setUTCHours(field('hour'), field('minute'), field('second'), 0);
+  const offset = represented.getTime() - (wall - parts.millisecond);
   return new Date(wall - offset).toISOString();
 }
 
@@ -477,8 +476,12 @@ async function transitionChallenge(
       const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId);
       if (!comments.ok) return failure(comments.failure.code);
       await recordAudit(ctx, tx, {
-        action: nextStatus === 'published' ? 'challenge.published'
-          : nextStatus === 'archived' ? 'challenge.archived' : 'challenge.closed',
+        action:
+          nextStatus === 'published'
+            ? 'challenge.published'
+            : nextStatus === 'archived'
+              ? 'challenge.archived'
+              : 'challenge.closed',
         entityType: 'challenges',
         entityId: challengeId,
         before: { status, version: integer(existing.version) },

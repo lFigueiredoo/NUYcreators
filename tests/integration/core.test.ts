@@ -1190,7 +1190,7 @@ describe('catálogo administrado pela equipe', () => {
     expect(published.ok && published.value).toMatchObject({ status: 'published', version: 2 });
 
     const row = await readRow('challenges', adminChallenge);
-    expect(row?.$permissions).toEqual([Permission.read(Role.any())]);
+    expect(row?.$permissions).toEqual([Permission.read(Role.users())]);
     expect(
       await responseCode(() =>
         sessionB().getRow({ databaseId, tableId: 'challenges', rowId: adminChallenge }),
@@ -1199,7 +1199,7 @@ describe('catálogo administrado pela equipe', () => {
     // Requisito publicado sem permissão seria exigência que a criadora não lê.
     for (const id of requirementIds) {
       const requirement = await readRow('challenge_requirements', id);
-      expect(requirement?.$permissions).toEqual([Permission.read(Role.any())]);
+      expect(requirement?.$permissions).toEqual([Permission.read(Role.users())]);
       expect(
         await responseCode(() =>
           sessionB().getRow({ databaseId, tableId: 'challenge_requirements', rowId: id }),
@@ -1271,7 +1271,7 @@ describe('catálogo administrado pela equipe', () => {
     const row = await readRow('challenges', adminChallenge);
     expect(row?.status).toBe('closed');
     // Encerrado continua legível: quem participou precisa reencontrar o desafio.
-    expect(row?.$permissions).toEqual([Permission.read(Role.any())]);
+    expect(row?.$permissions).toEqual([Permission.read(Role.users())]);
     // ...mas não aceita entrada nova.
     expect(codeOf(await joinChallenge(context(actorA.id), { challengeId: adminChallenge }))).toBe(
       'not_published',

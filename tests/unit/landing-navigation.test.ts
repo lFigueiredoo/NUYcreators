@@ -40,6 +40,10 @@ describe('navegação pública da landing clean', () => {
     ]);
   });
 
+  it('usa um acesso neutro quando a página estática ainda não conhece a sessão', () => {
+    expect(landingAccountLinks()).toEqual([{ label: 'ACESSAR', href: '/app', primary: true }]);
+  });
+
   it('âncora relativa vira absoluta fora da landing', () => {
     expect(anchorFor('#faq', false)).toBe('#faq');
     expect(anchorFor('#faq', true)).toBe('/#faq');

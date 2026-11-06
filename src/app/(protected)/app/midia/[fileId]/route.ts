@@ -26,9 +26,10 @@ export const dynamic = 'force-dynamic';
  *     porta é conferida aqui, não presumida;
  *  2. **o arquivo é referenciado pelo catálogo** — um `fileId` qualquer não é
  *     servido. Sem isto, a chave de mídia viraria um oráculo de leitura do bucket
- *     inteiro para qualquer sessão. As linhas de `challenges` e `rewards` têm
- *     leitura pública (`core/catalog.ts`), então a conferência vale igual para
- *     criadora e para a equipe, sem alargar permissão de ninguém.
+ *     inteiro para qualquer sessão. As linhas publicadas de `challenges` e
+ *     `rewards` têm leitura para usuários autenticados (`core/catalog.ts`), então
+ *     a conferência vale igual para criadora e para a equipe, sem alargar
+ *     permissão de ninguém.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ fileId: string }> }) {
   const { fileId } = await params;

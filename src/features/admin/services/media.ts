@@ -1,8 +1,6 @@
 import 'server-only';
 import { Query } from 'node-appwrite';
-import { cookies } from 'next/headers';
-import { SESSION_COOKIE } from '@/lib/appwrite/server';
-import { databaseId, listTableRows, sessionTables } from '@/lib/appwrite/data';
+import { databaseId, listTableRows, opsTables } from '@/lib/appwrite/data';
 import { createMediaFile, deleteMediaFile, mediaConfigured } from '@/lib/appwrite/media';
 import { mediaExtension, mediaIssue } from '@/features/workspace/domain/media';
 
@@ -123,29 +121,28 @@ export async function retireReplaced(replaced: string | null, newFileId: string)
 /**
  * Alguma linha do catálogo ainda usa este arquivo?
  *
- * Lê com a SESSÃO de quem opera: as linhas de catálogo têm leitura pública
- * (`core/catalog.ts`), então a conferência não precisa de chave nenhuma e não
- * depende de `APPWRITE_OPS_API_KEY`.
+ * Lê com a chave operacional, depois de a Server Action já ter exigido a
+ * capacidade administrativa. Rascunhos e itens arquivados não são visíveis à
+ * sessão comum, mas também podem compartilhar uma imagem e precisam entrar na
+ * conferência antes de qualquer exclusão.
  *
  * Falha FECHADA: se a leitura não puder ser feita, responde "sim, ainda usa" — e
  * o arquivo é mantido. O erro cai para o lado de não apagar.
  */
 async function stillReferenced(fileId: string): Promise<boolean> {
-  const secret = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!secret) return true;
-  const tables = sessionTables(secret);
-  const query = [Query.equal('imageFileId', fileId), Query.limit(1)];
-  for (const tableId of ['challenges', 'rewards'] as const) {
-    try {
+  try {
+    const tables = opsTables();
+    const query = [Query.equal('imageFileId', fileId), Query.limit(1)];
+    for (const tableId of ['challenges', 'rewards'] as const) {
       const found = await listTableRows(tables, {
         databaseId: databaseId(),
         tableId,
         queries: query,
       });
       if (found.total > 0) return true;
-    } catch {
-      return true;
     }
+  } catch {
+    return true;
   }
   return false;
 }

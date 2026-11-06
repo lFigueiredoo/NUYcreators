@@ -9,7 +9,10 @@ const mocks = vi.hoisted(() => ({
   deleteRow: vi.fn(),
 }));
 import handler from '../../functions/complete-onboarding/main';
-import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
+import {
+  CURRENT_LEGAL_CONSENT_VERSION,
+  CURRENT_TERMS_VERSION,
+} from '../../src/features/legal/versions';
 const main = (ctx: Parameters<typeof handler>[0]) =>
   handler(ctx, {
     account: () => ({ get: mocks.getUser }),
@@ -58,7 +61,7 @@ beforeEach(() => {
       ? {
           authUserId: 'trusted-user',
           status: 'active',
-          acceptedTermsVersion: CURRENT_TERMS_VERSION,
+          acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
         }
       : { userId: 'trusted-user' },
   );
@@ -107,7 +110,7 @@ it('records an explicit acceptance when an existing user submits a newer terms v
   )?.[0];
   expect(acceptanceWrite).toMatchObject({
     rowId: 'trusted-user',
-    data: { acceptedTermsVersion: CURRENT_TERMS_VERSION },
+    data: { acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION },
   });
   expect(acceptanceWrite.data.consentAt).toEqual(expect.any(String));
 });

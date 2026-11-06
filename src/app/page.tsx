@@ -1,18 +1,16 @@
 import type { Metadata } from 'next';
 import { PublicLanding } from '@/features/public-landing/public-landing';
-import { currentUser } from '@/lib/appwrite/server';
 
-export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
 /**
  * Home pública — PROPOSTA C "Entre Casa & Creators".
- * A camada visual anterior (navy/violeta) foi removida; a sessão continua
- * vindo do Appwrite para o header alternar Entrar / Ir para meu painel.
+ * A camada visual anterior (navy/violeta) foi removida. A página não consulta
+ * sessão: conteúdo público precisa ser cacheável e os destinos de acesso
+ * continuam funcionando para visitantes e contas já autenticadas.
  */
-export default async function Home() {
-  const user = await currentUser();
-  return <PublicLanding authenticated={Boolean(user)} />;
+export default function Home() {
+  return <PublicLanding />;
 }

@@ -50,8 +50,11 @@ export function isCatalogStatus(value: string): value is CatalogStatus {
 export function catalogView(value: string | null | undefined) {
   if (value && isCatalogStatus(value)) return catalogStatusView[value];
   if (value === 'archived')
-    return { label: 'Arquivado', tone: 'muted' as Tone,
-      hint: 'Preservado para auditoria e indisponível para creators.' };
+    return {
+      label: 'Arquivado',
+      tone: 'muted' as Tone,
+      hint: 'Preservado para auditoria e indisponível para creators.',
+    };
   if (value === 'active')
     return { label: 'Publicado', tone: 'success' as Tone, hint: catalogStatusView.published.hint };
   return { label: value || 'Sem estado', tone: 'neutral' as Tone, hint: '' };
@@ -140,20 +143,88 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /** Teto técnico de requisitos por desafio: a tela os apresenta em lista única. */
 export const REQUIREMENT_LIMIT = 20;
 
-function wallClock(value: string): Date | null {
-  const trimmed = value.trim();
-  if (trimmed === '') return null;
-  if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(trimmed)) {
-    const explicit = new Date(trimmed);
-    return Number.isNaN(explicit.getTime()) ? null : explicit;
+export type CivilDateTime = {
+  source: string;
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  millisecond: number;
+  /** `null` é hora de parede; os demais valores são um instante ISO explícito. */
+  zone: string | null;
+};
+
+const CIVIL_DATE_TIME =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:?\d{2})?$/;
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) {
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    return leap ? 29 : 28;
   }
-  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(trimmed);
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+/**
+ * Partes civis validadas sem deixar o `Date` normalizar 31/02 para março.
+ *
+ * O regex é deliberadamente ancorado: `datetime-local` não manda sufixo, e uma
+ * chamada direta à Action não pode esconder lixo depois de um prefixo válido.
+ */
+export function parseCivilDateTime(value: string): CivilDateTime | null {
+  const source = value.trim();
+  const match = CIVIL_DATE_TIME.exec(source);
+  if (!match) return null;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, msText, zone] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText ?? 0);
+  const millisecond = Number((msText ?? '').padEnd(3, '0') || 0);
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth(year, month) ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  )
+    return null;
+  // `Date` também valida o deslocamento explícito (por exemplo, recusa +99:00).
+  if (zone && Number.isNaN(new Date(source).getTime())) return null;
+  return {
+    source,
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+    millisecond,
+    zone: zone ?? null,
+  };
+}
+
+function utcDate(parts: CivilDateTime): Date {
+  // `Date.UTC(1, ...)` trata 1 como 1901. `setUTCFullYear` preserva o ano civil.
+  const date = new Date(0);
+  date.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  date.setUTCHours(parts.hour, parts.minute, parts.second, parts.millisecond);
+  return date;
+}
+
+function wallClock(value: string): Date | null {
+  const parts = parseCivilDateTime(value);
   if (!parts) return null;
-  const [, year, month, day, hour, minute] = parts.map(Number);
-  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return null;
+  if (parts.zone) return new Date(parts.source);
   // Comparação de JANELA não precisa de fuso: as duas pontas usam a mesma
   // convenção, e o que importa é a ordem entre elas.
-  return new Date(Date.UTC(year, month - 1, day, hour, minute));
+  return utcDate(parts);
 }
 
 /**

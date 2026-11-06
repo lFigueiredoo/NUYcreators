@@ -1,7 +1,11 @@
 import { Account, Client, TablesDB } from 'node-appwrite';
 import { ownerReadPermissions } from '../../src/lib/security/permissions';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
-import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
+import { isAtLeastAge } from '../../src/features/profiles/domain/age';
+import {
+  CURRENT_LEGAL_CONSENT_VERSION,
+  CURRENT_TERMS_VERSION,
+} from '../../src/features/legal/versions';
 import { resolveEndpoint } from '../shared/host';
 import { createHash } from 'node:crypto';
 type Context = {
@@ -34,15 +38,8 @@ export default async function main({ req, res, error }: Context, services: Servi
   const minimumAge = Number(process.env.NUY_MINIMUM_AGE);
   if (termsVersion !== CURRENT_TERMS_VERSION || !Number.isInteger(minimumAge) || minimumAge < 18)
     return res.json({ error: 'participation_policy_unconfigured' }, 503);
-  const birth = new Date(`${parsed.data.birthDate}T00:00:00Z`);
-  const today = new Date();
-  let age = today.getUTCFullYear() - birth.getUTCFullYear();
-  if (
-    today.getUTCMonth() < birth.getUTCMonth() ||
-    (today.getUTCMonth() === birth.getUTCMonth() && today.getUTCDate() < birth.getUTCDate())
-  )
-    age--;
-  if (age < minimumAge) return res.json({ error: 'age_requirement' }, 400);
+  if (!isAtLeastAge(parsed.data.birthDate, minimumAge))
+    return res.json({ error: 'age_requirement' }, 400);
   try {
     // Verify caller with Appwrite, never trust a supplied userId or role.
     const user = await services
@@ -89,13 +86,13 @@ export default async function main({ req, res, error }: Context, services: Servi
       });
       if (record.status !== 'active' || record.authUserId !== user.$id)
         return res.json({ error: 'account_disabled' }, 403);
-      if (record.acceptedTermsVersion !== termsVersion) {
+      if (record.acceptedTermsVersion !== CURRENT_LEGAL_CONSENT_VERSION) {
         await db.updateRow({
           databaseId,
           tableId: 'users',
           rowId: user.$id,
           data: {
-            acceptedTermsVersion: termsVersion,
+            acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
             consentAt: new Date().toISOString(),
           },
           permissions,
@@ -111,7 +108,7 @@ export default async function main({ req, res, error }: Context, services: Servi
           data: {
             authUserId: user.$id,
             status: 'active',
-            acceptedTermsVersion: termsVersion,
+            acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
             consentAt: new Date().toISOString(),
           },
           permissions,

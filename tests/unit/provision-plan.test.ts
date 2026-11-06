@@ -159,7 +159,7 @@ function provisioned(): Remote {
           id,
           {
             $id: id,
-            $permissions: ['read("any")'],
+            $permissions: ['read("users")'],
             ...data,
             order,
             active: true,
@@ -462,11 +462,25 @@ describe('plano remoto de provisionamento', () => {
     remote.seeds!.exploradora = { ...remote.seeds!.exploradora, maxPoints: 999 };
     remote.seeds!.criadora = {
       ...remote.seeds!.criadora,
-      $permissions: ['read("any")', 'write("any")'],
+      $permissions: ['read("users")', 'write("any")'],
     };
     const entries = await plan(remote);
     expect(entry(entries, 'seed', 'exploradora').action).toBe('UPDATE');
     expect(entry(entries, 'seed', 'criadora').action).toBe('DRIFT_SECURITY');
+  });
+
+  it('marca a ACL pública legada dos níveis para reconciliação autenticada', async () => {
+    const remote = provisioned();
+    remote.seeds!.exploradora = {
+      ...remote.seeds!.exploradora,
+      $permissions: ['read("any")'],
+    };
+
+    const entries = await plan(remote);
+    expect(entry(entries, 'seed', 'exploradora')).toMatchObject({
+      action: 'DRIFT_SECURITY',
+      expected: 'read("users")',
+    });
   });
 
   it('marca de identidade com outro projeto é divergência imutável', async () => {

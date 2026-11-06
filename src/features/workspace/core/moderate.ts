@@ -91,18 +91,26 @@ export async function moderationQueue(
     tableId: 'challenge_submissions',
     queries: [Query.equal('status', 'pending'), Query.orderAsc('submittedAt'), Query.limit(limit)],
   });
+  const challengeIds = [
+    ...new Set(page.rows.map((row) => text(row.challengeId)).filter(Boolean)),
+  ];
+  const challenges = new Map<string, Row>();
+  if (challengeIds.length) {
+    // Uma consulta cobre toda a página. A versão anterior fazia um `getRow`
+    // sequencial por submissão (até 100 idas extras ao Appwrite).
+    const related = await listTableRows(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId: 'challenges',
+      queries: [Query.equal('$id', challengeIds), Query.limit(challengeIds.length)],
+    }).catch(() => ({ rows: [], total: 0 }));
+    for (const challenge of related.rows) challenges.set(String(challenge.$id), challenge);
+  }
   const items: QueueItem[] = [];
   for (const row of page.rows) {
     const challengeId = text(row.challengeId);
     // O nome do desafio é contexto de leitura. Não podendo ler, a fila mostra o
     // identificador em vez de inventar um título.
-    const challenge = challengeId
-      ? await getTableRow(ctx.tables, {
-          databaseId: ctx.databaseId,
-          tableId: 'challenges',
-          rowId: challengeId,
-        }).catch(() => null)
-      : null;
+    const challenge = challenges.get(challengeId);
     items.push({
       submissionId: String(row.$id),
       challengeId,
