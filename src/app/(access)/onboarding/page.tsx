@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { Info } from 'lucide-react';
-import { currentUser, authConfigured } from '@/lib/appwrite/server';
+import { currentUser, authConfigured, readOwnProfile, SESSION_COOKIE } from '@/lib/appwrite/server';
 import { currentSessionRoles } from '@/lib/security/authorization';
 import { getEnvironment } from '@/lib/env/server';
 import { resendAction, logoutAction } from '@/features/auth/services/actions';
@@ -55,6 +56,8 @@ export default async function Onboarding({
   // para a sua área. É destino, não autorização: a porta do `/admin` continua
   // sendo o `requireStaff` de lá dentro.
   if ((await currentSessionRoles(user.$id)).length) redirect('/admin');
+  const secret = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (secret && (await readOwnProfile(secret, user.$id))?.onboardingCompletedAt) redirect('/app');
   const params = await searchParams;
 
   return (

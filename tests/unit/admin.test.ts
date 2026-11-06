@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { adminOverview, adminReport, type ReportSummary } from '../../src/features/workspace/core';
+import {
+  adminCreators,
+  adminOverview,
+  adminReport,
+  type ReportSummary,
+} from '../../src/features/workspace/core';
 import type { CoreContext } from '../../src/features/workspace/core/context';
 import { confirmedRoles, hasCapability, ownTeamRoles } from '../../src/lib/security/memberships';
 import { adminCapabilities, roleAllows, type AdminRole } from '../../src/lib/security/permissions';
@@ -83,6 +88,46 @@ function context(
     correlationId: 'unit',
   };
 }
+
+describe('saldos do diretório administrativo', () => {
+  it('carrega a conta de uma creator recente mesmo depois de mais de 100 contas antigas', async () => {
+    const result = await adminCreators(
+      context({
+        profiles: [
+          {
+            $id: 'profile-new',
+            userId: 'creator-new',
+            name: 'Nova creator',
+            onboardingCompletedAt: NOW.toISOString(),
+          },
+        ],
+        creator_levels: [{ $id: 'level-gold', name: 'Ouro' }],
+        point_accounts: [
+          ...Array.from({ length: 101 }, (_, index) => ({
+            $id: `old-${index}`,
+            userId: `old-${index}`,
+            availableBalance: 0,
+          })),
+          {
+            $id: 'creator-new',
+            userId: 'creator-new',
+            availableBalance: 240,
+            qualifyingPoints: 500,
+            levelId: 'level-gold',
+          },
+        ],
+      }),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        items: [
+          { userId: 'creator-new', availablePoints: 240, journeyPoints: 500, levelName: 'Ouro' },
+        ],
+      },
+    });
+  });
+});
 
 describe('autorização da administração', () => {
   it('nega antes de qualquer leitura: sem sessão é 401, sem papel é 403', async () => {

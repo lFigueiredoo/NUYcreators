@@ -49,6 +49,7 @@ export type Submission = {
   url: string | null;
   fileId: string | null;
   platform: string;
+  moderationReason: string | null;
 };
 
 export type Requirement = {
@@ -103,6 +104,12 @@ export function mapSubmission(document: Document): Submission {
     url: optionalText(document.canonicalUrl),
     fileId: optionalText(document.fileId),
     platform: text(document.platform),
+    // Apenas decisões que exigem uma ação da creator. Notas de aprovação
+    // continuam internas, como informa a moderação administrativa.
+    moderationReason:
+      document.status === 'revision_requested' || document.status === 'rejected'
+        ? optionalText(document.moderationReason)
+        : null,
   };
 }
 

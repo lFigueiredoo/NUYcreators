@@ -47,6 +47,23 @@ describe('tokens de recuperação e verificação', () => {
     expect(response.headers.get('set-cookie')).not.toContain('creator.1');
   });
 
+  it.each([
+    [RESET_TOKEN_PATH, RESET_TOKEN_COOKIE],
+    [VERIFICATION_TOKEN_PATH, VERIFICATION_TOKEN_COOKIE],
+  ])('invalida o token anterior no mesmo path ao abrir callback incompleto em %s', (path, name) => {
+    const prior = serializeActionToken({ userId: 'creator.1', secret: 'token-anterior' });
+    const response = proxy(
+      new NextRequest(`https://nuy.example${path}?secret=`, {
+        headers: { cookie: `${name}=${prior}` },
+      }),
+    );
+    const cleared = response.cookies.get(name);
+    expect(cleared?.value).toBe('');
+    expect(cleared?.path).toBe(path);
+    expect(new Date(cleared?.expires ?? -1).getTime()).toBe(0);
+    expect(response.headers.get('location')).toBe(`https://nuy.example${path}`);
+  });
+
   it('mantém o token em falhas retentáveis e descarta apenas erros definitivos', () => {
     for (const code of [400, 401, 404, 409, 410, 422])
       expect(definitiveActionTokenError({ code })).toBe(true);

@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { LogOut, Menu, ScanEye } from 'lucide-react';
 import { logoutAction } from '@/features/auth/services/actions';
 import type { AdminDestination } from './nav-items';
@@ -77,6 +78,28 @@ export function AdminTopbar({
   allowed: AdminDestination[];
 }) {
   const pathname = usePathname();
+  const mobileMenu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    mobileMenu.current?.removeAttribute('open');
+  }, [pathname]);
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const menu = mobileMenu.current;
+      if (event.key !== 'Escape' || !menu?.open) return;
+      menu.open = false;
+      menu.querySelector('summary')?.focus();
+    }
+    function onPointer(event: PointerEvent) {
+      const menu = mobileMenu.current;
+      if (menu?.open && !menu.contains(event.target as Node)) menu.open = false;
+    }
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer);
+    };
+  }, []);
   const displayName = name || email;
   const initial = displayName.trim().charAt(0).toLocaleUpperCase('pt-BR') || 'N';
   const entries = adminNavEntries.filter((entry) => allowed.includes(entry.id));
@@ -121,7 +144,15 @@ export function AdminTopbar({
             <LogOut size={17} aria-hidden="true" />
           </button>
         </form>
-        <details className={styles.mobileMenu}>
+        <details
+          className={styles.mobileMenu}
+          ref={mobileMenu}
+          onClick={(event) => {
+            // Também fecha ao escolher a seção atual, sem mudança de pathname.
+            if (event.target instanceof Element && event.target.closest('a'))
+              event.currentTarget.open = false;
+          }}
+        >
           <summary>
             <Menu size={19} aria-hidden="true" />
             <span>Menu</span>

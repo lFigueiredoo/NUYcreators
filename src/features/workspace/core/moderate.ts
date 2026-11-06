@@ -91,9 +91,7 @@ export async function moderationQueue(
     tableId: 'challenge_submissions',
     queries: [Query.equal('status', 'pending'), Query.orderAsc('submittedAt'), Query.limit(limit)],
   });
-  const challengeIds = [
-    ...new Set(page.rows.map((row) => text(row.challengeId)).filter(Boolean)),
-  ];
+  const challengeIds = [...new Set(page.rows.map((row) => text(row.challengeId)).filter(Boolean))];
   const challenges = new Map<string, Row>();
   if (challengeIds.length) {
     // Uma consulta cobre toda a página. A versão anterior fazia um `getRow`
@@ -225,7 +223,9 @@ export async function moderateSubmission(
         reason: reason || null,
       });
       await recordOutbox(ctx, tx, {
-        eventKey: `submission.${nextStatus}:${submissionId}`,
+        // A mesma publicação pode voltar para revisão mais de uma vez. Cada
+        // decisão pertence à revisão julgada, não só ao id lógico do envio.
+        eventKey: `submission.${nextStatus}:${submissionId}:r${revision}`,
         type: `submission.${nextStatus}`,
         aggregateId: submissionId,
         payload: {

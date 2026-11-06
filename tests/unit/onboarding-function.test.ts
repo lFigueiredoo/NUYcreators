@@ -93,6 +93,19 @@ it('rejects suspended users', async () => {
   mocks.getRow.mockResolvedValue({ authUserId: 'trusted-user', status: 'suspended' });
   expect(await main(context())).toMatchObject({ status: 403 });
 });
+it('preserves an already completed profile, public preference and social accounts on replay', async () => {
+  const publicProfile = {
+    userId: 'trusted-user', name: 'Nome público atual', publicProfile: true,
+    onboardingCompletedAt: '2026-10-20T10:00:00.000Z',
+  };
+  mocks.getRow.mockResolvedValue(publicProfile);
+  expect(await main(context(undefined, { ...body, name: 'Nome alterado pelo replay' })))
+    .toMatchObject({ status: 409, data: { error: 'profile_already_completed' } });
+  expect(mocks.updateRow).not.toHaveBeenCalled();
+  expect(mocks.createRow).not.toHaveBeenCalled();
+  expect(mocks.deleteRow).not.toHaveBeenCalled();
+  expect(publicProfile.publicProfile).toBe(true);
+});
 it('records an explicit acceptance when an existing user submits a newer terms version', async () => {
   mocks.getRow.mockImplementation(async ({ tableId }: { tableId: string }) =>
     tableId === 'users'

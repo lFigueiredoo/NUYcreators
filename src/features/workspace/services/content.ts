@@ -21,7 +21,11 @@ export type SubmissionContext = {
   challengePoints: number;
 };
 
-export type ContentEntry = Submission & SubmissionContext;
+export type ContentEntry = Submission &
+  SubmissionContext & {
+    /** Crédito efetivo do extrato; null quando ainda não há lançamento. */
+    awardedPoints: number | null;
+  };
 
 function mapContext(document: Document): SubmissionContext {
   return {
@@ -35,10 +39,9 @@ function mapContext(document: Document): SubmissionContext {
 /**
  * Meus conteúdos — as submissões da própria usuária.
  *
- * `moderationReason`, `reviewedBy` e `reviewedAt` existem no documento mas não
- * são mapeados aqui: nota interna de moderação não é conteúdo de creator. O que
- * aparece é o estado público da submissão e os pontos concedidos na aprovação
- * (via extrato), nunca a avaliação da equipe.
+ * O motivo de recusa/ajuste orienta a creator; notas de aprovação e identidade
+ * da revisora continuam internas. Pontos creditados vêm do extrato, pois o
+ * valor atual do desafio pode ter mudado depois da aprovação.
  */
 export async function loadContents(secret: string, userId: string): Promise<Loaded<ContentEntry>> {
   const [submissionResult, contextResult] = await Promise.all([
@@ -52,10 +55,48 @@ export async function loadContents(secret: string, userId: string): Promise<Load
   if (submissionResult.state !== 'ok' || contextResult.state !== 'ok')
     return unavailable<ContentEntry>();
 
+  const approvedIds = submissionResult.items
+    .filter((submission) => submission.status === 'approved')
+    .map((submission) => submission.id);
+  // Um crédito por aprovação. Restringir aos envios exibidos evita que ajustes
+  // ou resgates antigos ocupem a página e escondam créditos recentes.
+  const credits = approvedIds.length
+    ? await listSession(
+        secret,
+        SCOPE,
+        'point_transactions',
+        (document) => ({
+          submissionId: text(document.referenceId),
+          amount: integer(document.amount),
+          type: text(document.type),
+          referenceType: text(document.referenceType),
+        }),
+        {
+          queries: [
+            Query.equal('userId', userId),
+            Query.equal('referenceType', 'challenge_submission'),
+            Query.equal('referenceId', approvedIds),
+            Query.equal('type', 'earn'),
+          ],
+          limit: 100,
+        },
+      )
+    : loaded([]);
+  if (credits.state !== 'ok') return unavailable<ContentEntry>();
+
   const byChallenge = new Map(contextResult.items.map((entry) => [entry.challengeId, entry]));
+  const bySubmission = new Map<string, number>();
+  for (const credit of credits.items) {
+    if (credit.type !== 'earn' || credit.referenceType !== 'challenge_submission') continue;
+    bySubmission.set(
+      credit.submissionId,
+      (bySubmission.get(credit.submissionId) ?? 0) + credit.amount,
+    );
+  }
   return loaded(
     submissionResult.items.map((submission) => ({
       ...submission,
+      awardedPoints: bySubmission.get(submission.id) ?? null,
       ...(byChallenge.get(submission.challengeId) ?? {
         challengeId: submission.challengeId,
         challengeName: '',

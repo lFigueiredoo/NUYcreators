@@ -5,6 +5,8 @@ out/
 !.env.example
 coverage/
 playwright-report/
+.playwright-cli/
+output/playwright/
 test-results/
 *.tsbuildinfo
 next-env.d.ts

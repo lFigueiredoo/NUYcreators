@@ -37,6 +37,7 @@ export function AuthAccessForm({
   const passwordId = useId();
   const helpId = useId();
   const [visible, setVisible] = useState(false);
+  const [values, setValues] = useState({ name: '', email: '', password: '', terms: false });
 
   const isError = Boolean(state.message) && !state.success;
 
@@ -64,6 +65,8 @@ export function AuthAccessForm({
             required
             minLength={2}
             maxLength={100}
+            value={values.name}
+            onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
           />
         </div>
       )}
@@ -81,6 +84,8 @@ export function AuthAccessForm({
           required
           maxLength={254}
           placeholder="voce@exemplo.com"
+          value={values.email}
+          onChange={(event) => setValues((current) => ({ ...current, email: event.target.value }))}
         />
       </div>
 
@@ -99,6 +104,10 @@ export function AuthAccessForm({
             minLength={8}
             maxLength={256}
             aria-describedby={mode === 'signup' ? helpId : undefined}
+            value={values.password}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, password: event.target.value }))
+            }
           />
           <button
             type="button"
@@ -123,7 +132,15 @@ export function AuthAccessForm({
 
       {mode === 'signup' && (
         <label className={styles.terms}>
-          <input type="checkbox" name="terms" required />
+          <input
+            type="checkbox"
+            name="terms"
+            required
+            checked={values.terms}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, terms: event.target.checked }))
+            }
+          />
           <span>
             Declaro que tenho 18 anos ou mais e li e concordo com os{' '}
             <Link href="/termos">Termos de Uso</Link> e a{' '}

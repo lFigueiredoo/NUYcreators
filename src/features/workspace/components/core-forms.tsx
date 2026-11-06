@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useId, useRef } from 'react';
+import { useActionState, useId, useRef, useState } from 'react';
 import { CircleAlert, CircleCheck, LoaderCircle, Mail, MailOpen } from 'lucide-react';
 import {
   joinChallengeAction,
@@ -106,6 +106,7 @@ export function SubmitContentForm({
   returnTo: string;
 }) {
   const [state, action, pending] = useActionState(submitContentAction.bind(null, returnTo), EMPTY);
+  const [url, setUrl] = useState('');
   const urlId = useId();
   return (
     <form action={action} className={styles.form}>
@@ -122,8 +123,11 @@ export function SubmitContentForm({
         placeholder="https://www.instagram.com/p/..."
         maxLength={2048}
         required
+        value={url}
+        onChange={(event) => setUrl(event.target.value)}
+        aria-describedby={`${urlId}-hint`}
       />
-      <p className={styles.statHint}>
+      <p id={`${urlId}-hint`} className={styles.statHint}>
         O link entra na análise da equipe NUY. Um conteúdo por vez por desafio.
       </p>
       <button
@@ -260,6 +264,12 @@ export function ProfileEditForm({
   creatorTypes: string[];
 }) {
   const [state, action, pending] = useActionState(updateProfileAction, EMPTY);
+  // Campos controlados preservam a edição quando a action devolve uma recusa.
+  // O reset automático do React após uma action só alcança campos não controlados.
+  const [values, setValues] = useState(initial);
+  function set<K extends keyof typeof initial>(field: K, value: (typeof initial)[K]) {
+    setValues((current) => ({ ...current, [field]: value }));
+  }
   const nameId = useId();
   const phoneId = useId();
   const cityId = useId();
@@ -279,7 +289,9 @@ export function ProfileEditForm({
             id={nameId}
             className={styles.input}
             name="name"
-            defaultValue={initial.name}
+            value={values.name}
+            onChange={(event) => set('name', event.target.value)}
+            autoComplete="name"
             required
             minLength={2}
             maxLength={100}
@@ -293,8 +305,11 @@ export function ProfileEditForm({
             id={phoneId}
             className={styles.input}
             name="phone"
-            defaultValue={initial.phone}
+            value={values.phone}
+            onChange={(event) => set('phone', event.target.value)}
+            type="tel"
             inputMode="tel"
+            autoComplete="tel"
             required
             maxLength={20}
           />
@@ -307,7 +322,9 @@ export function ProfileEditForm({
             id={cityId}
             className={styles.input}
             name="city"
-            defaultValue={initial.city}
+            value={values.city}
+            onChange={(event) => set('city', event.target.value)}
+            autoComplete="address-level2"
             required
             minLength={2}
             maxLength={100}
@@ -317,7 +334,14 @@ export function ProfileEditForm({
           <label className={styles.fieldLabel} htmlFor={stateId}>
             UF
           </label>
-          <select id={stateId} className={styles.input} name="state" defaultValue={initial.state}>
+          <select
+            id={stateId}
+            className={styles.input}
+            name="state"
+            value={values.state}
+            onChange={(event) => set('state', event.target.value)}
+            autoComplete="address-level1"
+          >
             {states.map((uf) => (
               <option key={uf} value={uf}>
                 {uf}
@@ -334,7 +358,9 @@ export function ProfileEditForm({
             className={styles.input}
             name="birthDate"
             type="date"
-            defaultValue={initial.birthDate}
+            value={values.birthDate}
+            onChange={(event) => set('birthDate', event.target.value)}
+            autoComplete="bday"
             min="1900-01-01"
             max={latestEligibleBirthDate()}
             required
@@ -344,7 +370,13 @@ export function ProfileEditForm({
           <label className={styles.fieldLabel} htmlFor={nicheId}>
             Seu universo
           </label>
-          <select id={nicheId} className={styles.input} name="niche" defaultValue={initial.niche}>
+          <select
+            id={nicheId}
+            className={styles.input}
+            name="niche"
+            value={values.niche}
+            onChange={(event) => set('niche', event.target.value)}
+          >
             {niches.map((value) => (
               <option key={value} value={value}>
                 {nicheLabel(value)}
@@ -360,7 +392,8 @@ export function ProfileEditForm({
             id={creatorId}
             className={styles.input}
             name="creatorType"
-            defaultValue={initial.creatorType}
+            value={values.creatorType}
+            onChange={(event) => set('creatorType', event.target.value)}
           >
             {/* O `value` é o mesmo código de sempre: quem muda é a palavra lida. */}
             {creatorTypes.map((value) => (
@@ -378,7 +411,8 @@ export function ProfileEditForm({
           className={styles.checkbox}
           name="publicProfile"
           type="checkbox"
-          defaultChecked={initial.publicProfile}
+          checked={values.publicProfile}
+          onChange={(event) => set('publicProfile', event.target.checked)}
         />
         <label htmlFor={publicId} className={styles.checkLabel}>
           Exibir meu nome em áreas públicas, como o ranking. Só o nome — nunca e-mail, telefone ou

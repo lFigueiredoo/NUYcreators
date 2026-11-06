@@ -33,11 +33,15 @@ export function Topbar({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') {
+        setOpen(false);
+        trigger.current?.focus();
+      }
     }
     function onPointer(event: MouseEvent) {
       if (!wrap.current?.contains(event.target as Node)) setOpen(false);
@@ -86,8 +90,11 @@ export function Topbar({
         </Link>
         <div className={styles.menuWrap} ref={wrap}>
           <button
+            ref={trigger}
             type="button"
             className={styles.avatarButton}
+            aria-label={`Menu da conta de ${name}`}
+            aria-controls="account-menu"
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
           >
@@ -100,7 +107,7 @@ export function Topbar({
             </span>
           </button>
           {open ? (
-            <div className={styles.menuPanel} aria-label="Sua conta">
+            <div id="account-menu" className={styles.menuPanel} aria-label="Sua conta">
               <div className={styles.menuIdentity}>
                 <p className={styles.menuName}>{name}</p>
                 <p className={styles.menuEmail}>{email}</p>

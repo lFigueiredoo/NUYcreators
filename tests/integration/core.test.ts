@@ -459,7 +459,7 @@ describe('moderação e pontos', () => {
     if (!submission.ok) return;
     const submissionId = track('challenge_submissions', submission.value.submissionId);
     approvedSubmissionId = submissionId;
-    approvedEventKey = `submission.approved:${submissionId}`;
+    approvedEventKey = `submission.approved:${submissionId}:r1`;
 
     const approved = await moderateSubmission(staff(['moderator']), {
       submissionId,

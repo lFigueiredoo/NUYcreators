@@ -45,9 +45,8 @@ const EMPTY: Record<SubmissionTab, { title: string; text: string; action?: boole
 /**
  * Meus conteúdos — as submissões da própria usuária.
  *
- * O que aparece é o estado público do envio e o link da publicação. Nota,
- * motivo de moderação e quem avaliou não são exibidos: são registro interno da
- * equipe, não conteúdo de creator.
+ * Estado, publicação e orientação para ajustes pertencem à creator.
+ * Notas de aprovação e identidade da revisora continuam internas.
  */
 export function ContentsScreen({
   entries,
@@ -67,7 +66,7 @@ export function ContentsScreen({
   const approvedPoints = entries
     ? entries
         .filter((submission) => submission.status === 'approved')
-        .reduce((total, submission) => total + submission.challengePoints, 0)
+        .reduce((total, submission) => total + (submission.awardedPoints ?? 0), 0)
     : 0;
 
   return (
@@ -122,14 +121,32 @@ export function ContentsScreen({
                     <li className={styles.metaItem}>
                       Enviado em {shortDate(submission.submittedAt)}
                     </li>
-                    {submission.challengePoints > 0 ? (
+                    {submission.status === 'approved' ? (
                       <li className={styles.metaItem}>
-                        {submission.status === 'approved'
-                          ? `${formatPoints(submission.challengePoints)} Pontos NUY creditados`
-                          : `Vale ${formatPoints(submission.challengePoints)} Pontos NUY`}
+                        {submission.awardedPoints !== null
+                          ? `${formatPoints(submission.awardedPoints)} Pontos NUY creditados`
+                          : 'Consulte o crédito no extrato de pontos'}
+                      </li>
+                    ) : submission.challengePoints > 0 ? (
+                      <li className={styles.metaItem}>
+                        Vale {formatPoints(submission.challengePoints)} Pontos NUY
                       </li>
                     ) : null}
                   </ul>
+                  {submission.moderationReason ? (
+                    <div className={styles.moderationFeedback}>
+                      <h4>Orientação da equipe NUY</h4>
+                      <p>{submission.moderationReason}</p>
+                    </div>
+                  ) : null}
+                  {submission.status === 'revision_requested' && submission.challengeSlug ? (
+                    <Link
+                      href={`/app/desafios/${submission.challengeSlug}`}
+                      className={styles.blockLink}
+                    >
+                      Revisar e reenviar conteúdo <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
+                  ) : null}
                 </div>
                 <div className={styles.itemAside}>
                   {submission.url ? (

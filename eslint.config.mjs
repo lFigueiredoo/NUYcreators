@@ -11,6 +11,8 @@ export default defineConfig([
     'artifacts/**',
     'test-results/**',
     'playwright-report/**',
+    '.playwright-cli/**',
+    'output/playwright/**',
     'next-env.d.ts',
     // Bundles gerados por `scripts/build-functions.mjs` (esbuild). O fonte é
     // `functions/<id>/main.ts`; o `src/main.js` é saída, e lintar saída de

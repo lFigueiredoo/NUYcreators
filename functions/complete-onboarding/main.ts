@@ -49,6 +49,17 @@ export default async function main({ req, res, error }: Context, services: Servi
     const db = services.tables(new Client().setEndpoint(endpoint).setProject(project).setKey(key));
     const databaseId = process.env.APPWRITE_DATABASE_ID ?? 'nuy-creators';
     const permissions = ownerReadPermissions(user.$id);
+    // Repetir o onboarding não é uma edição: preserva perfil, redes e a escolha
+    // de exibição pública já sincronizada pela área Meu perfil.
+    try {
+      const existing = await db.getRow({ databaseId, tableId: 'profiles', rowId: user.$id });
+      if (existing.userId !== undefined && existing.userId !== user.$id)
+        return res.json({ error: 'account_disabled' }, 403);
+      if (typeof existing.onboardingCompletedAt === 'string' && existing.onboardingCompletedAt)
+        return res.json({ error: 'profile_already_completed' }, 409);
+    } catch (err) {
+      if ((err as { code?: number }).code !== 404) throw err;
+    }
     async function upsert(tableId: string, rowId: string, data: Record<string, unknown>) {
       try {
         const existing = await db.getRow({ databaseId, tableId, rowId });

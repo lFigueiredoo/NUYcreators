@@ -247,6 +247,8 @@ export async function onboardingAction(_previous: FormState, form: FormData): Pr
     if (!user?.emailVerification)
       return { message: 'Verifique seu email antes de salvar o perfil.' };
     const secret = (await cookies()).get(SESSION_COOKIE)!.value;
+    if ((await readOwnProfile(secret, user.$id))?.onboardingCompletedAt)
+      return { message: 'Seu perfil já está completo. Para alterá-lo, acesse Meu perfil no painel.' };
     const result = await new Functions(sessionClient(secret)).createExecution({
       functionId: 'complete-onboarding',
       body: JSON.stringify(parsed.data),

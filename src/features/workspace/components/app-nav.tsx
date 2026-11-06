@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { LayoutGrid, LogOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { LayoutGrid, LogOut, X } from 'lucide-react';
 import { logoutAction } from '@/features/auth/services/actions';
 import {
   bottomNav,
@@ -77,6 +77,7 @@ export function SidebarNav({ unread }: { unread: number | null }) {
  */
 export function BottomNav({ unread }: { unread: number | null }) {
   const pathname = usePathname();
+  const dialogRef = useRef<HTMLDialogElement>(null);
   // A folha pertence à tela onde foi aberta: guardar QUAL caminho a abriu, em vez
   // de um liga/desliga, faz a troca de tela fechá-la sozinha — inclusive o voltar
   // do navegador, e sem efeito nenhum sincronizando estado.
@@ -85,11 +86,22 @@ export function BottomNav({ unread }: { unread: number | null }) {
 
   useEffect(() => {
     if (!open) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenedAt(null);
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const desktop = window.matchMedia('(min-width: 901px)');
+    const closeOnDesktop = () => {
+      if (desktop.matches) setOpenedAt(null);
+    };
+    desktop.addEventListener('change', closeOnDesktop);
+    closeOnDesktop();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      desktop.removeEventListener('change', closeOnDesktop);
+    };
   }, [open]);
 
   return (
@@ -117,48 +129,62 @@ export function BottomNav({ unread }: { unread: number | null }) {
           className={open ? `${styles.bottomLink} ${styles.bottomLinkActive}` : styles.bottomLink}
           aria-expanded={open}
           aria-controls="mais-secoes"
+          aria-haspopup="dialog"
           onClick={() => setOpenedAt(open ? null : pathname)}
         >
           <LayoutGrid size={19} aria-hidden="true" />
           Mais
         </button>
       </nav>
-      {open ? (
-        <>
+      <dialog
+        ref={dialogRef}
+        className={styles.moreSheet}
+        id="mais-secoes"
+        aria-labelledby="mais-secoes-title"
+        onCancel={() => setOpenedAt(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setOpenedAt(null);
+        }}
+      >
+        <div className={styles.moreHead}>
+          <h2 id="mais-secoes-title" className={styles.moreTitle}>
+            Mais seções
+          </h2>
           <button
             type="button"
-            className={styles.moreBackdrop}
+            className={styles.moreClose}
             aria-label="Fechar menu"
             onClick={() => setOpenedAt(null)}
-          />
-          <nav className={styles.moreSheet} id="mais-secoes" aria-label="Mais seções">
-            <p className={styles.moreTitle}>Mais</p>
-            {moreNav.map((entry) => {
-              const Icon = entry.icon;
-              const badge = entry.href === '/app/notificacoes' ? unread : null;
-              return (
-                <Link
-                  key={entry.href}
-                  href={entry.href}
-                  className={styles.moreItem}
-                  aria-current={isCurrent(pathname, entry.href) ? 'page' : undefined}
-                  onClick={() => setOpenedAt(null)}
-                >
-                  <Icon size={18} aria-hidden="true" />
-                  {entry.label}
-                  {badge ? <span className={styles.moreBadge}>{badge}</span> : null}
-                </Link>
-              );
-            })}
-            <form action={logoutAction}>
-              <button type="submit" className={styles.moreItem}>
-                <LogOut size={18} aria-hidden="true" />
-                Sair
-              </button>
-            </form>
-          </nav>
-        </>
-      ) : null}
+          >
+            <X size={19} aria-hidden="true" />
+          </button>
+        </div>
+        <nav aria-label="Mais seções">
+          {moreNav.map((entry) => {
+            const Icon = entry.icon;
+            const badge = entry.href === '/app/notificacoes' ? unread : null;
+            return (
+              <Link
+                key={entry.href}
+                href={entry.href}
+                className={styles.moreItem}
+                aria-current={isCurrent(pathname, entry.href) ? 'page' : undefined}
+                onClick={() => setOpenedAt(null)}
+              >
+                <Icon size={18} aria-hidden="true" />
+                {entry.label}
+                {badge ? <span className={styles.moreBadge}>{badge}</span> : null}
+              </Link>
+            );
+          })}
+          <form action={logoutAction}>
+            <button type="submit" className={styles.moreItem}>
+              <LogOut size={18} aria-hidden="true" />
+              Sair
+            </button>
+          </form>
+        </nav>
+      </dialog>
     </>
   );
 }

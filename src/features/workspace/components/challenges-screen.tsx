@@ -8,6 +8,7 @@ import {
   Clock3,
   Coins,
   Compass,
+  ChevronDown,
   Inbox,
   PlaySquare,
   Search,
@@ -96,59 +97,65 @@ function DailyChallengesPanel() {
           </span>
           <div>
             <h2 id="daily-challenges-title">Desafios diários</h2>
-            <p>Atividades frequentes para criar, publicar e acumular Pontos NUY.</p>
+            <p>Consulte as regras e participe das atividades publicadas abaixo.</p>
           </div>
         </div>
         <span className={styles.dailyChallengesBadge}>
-          <Clock3 size={14} aria-hidden="true" /> Limites renovados a cada dia
+          <Clock3 size={14} aria-hidden="true" /> 5 atividades recorrentes
         </span>
       </header>
 
-      <div className={styles.dailyChallengesTableWrap}>
-        <table className={styles.dailyChallengesTable}>
-          <caption className={styles.visuallyHidden}>
-            Pontuação e limites das atividades diárias do NUY Creators
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Plataforma</th>
-              <th scope="col">Formato ou ação</th>
-              <th scope="col">Pontuação</th>
-              <th scope="col">Limite diário e regras</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dailyChallenges.map((item) => {
-              const Icon = dailyPlatformIcons[item.platform];
-              return (
-                <tr key={item.id}>
-                  <td data-label="Plataforma">
-                    <span className={styles.dailyChallengesPlatform}>
-                      <Icon size={16} aria-hidden="true" /> {item.platform}
-                    </span>
-                  </td>
-                  <td data-label="Formato ou ação">{item.format}</td>
-                  <td data-label="Pontuação">
-                    <strong className={styles.dailyChallengesPoints}>{item.points}</strong>
-                  </td>
-                  <td data-label="Limite diário e regras">{item.rule}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <details className={styles.dailyChallengesDetails}>
+        <summary className={styles.dailyChallengesToggle}>
+          Ver pontuação e limites
+          <ChevronDown size={18} aria-hidden="true" />
+        </summary>
+        <div className={styles.dailyChallengesTableWrap}>
+          <table className={styles.dailyChallengesTable}>
+            <caption className={styles.visuallyHidden}>
+              Pontuação e limites das atividades diárias do NUY Creators
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Plataforma</th>
+                <th scope="col">Formato ou ação</th>
+                <th scope="col">Pontuação</th>
+                <th scope="col">Limite diário e regras</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyChallenges.map((item) => {
+                const Icon = dailyPlatformIcons[item.platform];
+                return (
+                  <tr key={item.id}>
+                    <td data-label="Plataforma">
+                      <span className={styles.dailyChallengesPlatform}>
+                        <Icon size={16} aria-hidden="true" /> {item.platform}
+                      </span>
+                    </td>
+                    <td data-label="Formato ou ação">{item.format}</td>
+                    <td data-label="Pontuação">
+                      <strong className={styles.dailyChallengesPoints}>{item.points}</strong>
+                    </td>
+                    <td data-label="Limite diário e regras">{item.rule}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
-      <footer className={styles.dailyChallengesFoot}>
-        <p>
-          A pontuação é aplicada após aprovação da equipe NUY e quando a atividade estiver
-          disponível no painel.
-        </p>
-        <Link href="/app/regulamento" className={styles.blockLink}>
-          Ver regulamento completo
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-      </footer>
+        <footer className={styles.dailyChallengesFoot}>
+          <p>
+            A pontuação é aplicada após aprovação da equipe NUY e quando a atividade estiver
+            disponível no painel.
+          </p>
+          <Link href="/app/regulamento" className={styles.blockLink}>
+            Ver regulamento completo
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </footer>
+      </details>
     </section>
   );
 }
@@ -337,9 +344,14 @@ function SubmissionPanel({
               </a>
             </p>
           ) : null}
-          <p className={styles.noteText}>
-            O status vem da moderação da equipe NUY; o motivo da análise não é exibido aqui.
-          </p>
+          {submission.moderationReason ? (
+            <div className={styles.moderationFeedback}>
+              <h3>Orientação da equipe NUY</h3>
+              <p>{submission.moderationReason}</p>
+            </div>
+          ) : (
+            <p className={styles.noteText}>Acompanhe aqui a avaliação da equipe NUY.</p>
+          )}
         </>
       ) : (
         <p className={styles.noteText}>

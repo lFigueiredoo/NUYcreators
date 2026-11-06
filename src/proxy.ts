@@ -49,7 +49,7 @@ export function proxy(request: NextRequest) {
         maxAge: ACTION_TOKEN_MAX_AGE_SECONDS,
         priority: 'high',
       });
-    else response.cookies.delete(cookieName);
+    else response.cookies.delete({ name: cookieName, path: pathname });
     return response;
   }
 

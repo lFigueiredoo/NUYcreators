@@ -490,6 +490,18 @@
   }
 }
 @media (max-width: 520px) {
+  .sectionHead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .sectionHead .editorActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .sectionHead .button {
+    min-height: 44px;
+  }
   .editorLessonItem {
     grid-template-columns: auto minmax(0, 1fr);
   }

@@ -61,15 +61,31 @@ export function canonicalUrl(raw: string): string | null {
   const kept = [...url.searchParams.entries()]
     .filter(([key]) => !TRACKING.includes(key.toLowerCase()))
     .sort(([a, av], [b, bv]) => a.localeCompare(b) || av.localeCompare(bv));
-  const query = kept.length ? `?${kept.map(([key, value]) => `${key}=${value}`).join('&')}` : '';
+  // searchParams já decodificou cada valor. Reencodar preserva caracteres que
+  // pertencem ao valor (como %26), em vez de transformá-los em outro parâmetro.
+  const query = kept.length ? `?${new URLSearchParams(kept).toString()}` : '';
   return `${url.protocol}//${host}${path}${query}`;
 }
 
 /** Identificador de publicação por plataforma — usado só para exibição/depuração. */
 export function platformFromUrl(canonical: string): string {
-  const host = canonical.replace(/^https?:\/\//, '').split('/')[0] ?? '';
-  const [, second] = host.split('.');
-  return (second ?? host).replace(/\..*$/, '');
+  let host: string;
+  try {
+    host = new URL(canonical).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+  const platforms: Record<string, string> = {
+    'instagram.com': 'instagram',
+    'tiktok.com': 'tiktok',
+    'youtube.com': 'youtube',
+    'youtu.be': 'youtube',
+    'shopee.com.br': 'shopee',
+    'shopee.com': 'shopee',
+  };
+  for (const [domain, platform] of Object.entries(platforms))
+    if (host === domain || host.endsWith(`.${domain}`)) return platform;
+  return host;
 }
 
 /** Período `AAAA-MM` no fuso do ciclo — mesma convenção de `ranking_entries`. */

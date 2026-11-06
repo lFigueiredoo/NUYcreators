@@ -1361,7 +1361,7 @@ describe('fluxo completo pelo runtime (criadora → envio → moderação → po
     // 4. a fila entrega o aviso da aprovação
     const drained = await runFunction({ kind: 'session', actor: admin }, 'process-outbox');
     expect(proved(drained)).toEqual({ http: 200, executionStatus: 'completed', trigger: 'http' });
-    const notificationId = rowId('notify', creator.id, `submission.approved:${submissionId}`);
+    const notificationId = rowId('notify', creator.id, `submission.approved:${submissionId}:r1`);
     const notification = await adminDb.getRow({
       databaseId,
       tableId: 'notifications',

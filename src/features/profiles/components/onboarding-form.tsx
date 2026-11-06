@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useEffect, useId, useRef, useState } from 'react';
+import { useActionState, useId, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CircleAlert, CircleCheck, Info, LoaderCircle } from 'lucide-react';
 import { onboardingAction } from '@/features/auth/services/actions';
@@ -19,26 +19,24 @@ import styles from '@/features/auth/components/auth-access.module.css';
  */
 const ESSENCIAIS = ['name', 'phone', 'city', 'state', 'birthDate', 'terms'] as const;
 
-function contarPreenchidos(form: HTMLFormElement) {
-  let total = 0;
-  for (const campo of ESSENCIAIS) {
-    const elemento = form.elements.namedItem(campo);
-    if (!elemento) continue;
-    const valor =
-      elemento instanceof HTMLInputElement && elemento.type === 'checkbox'
-        ? elemento.checked
-          ? 'on'
-          : ''
-        : (elemento as HTMLInputElement | HTMLSelectElement).value;
-    if (valor.trim()) total += 1;
-  }
-  return total;
-}
-
 export function OnboardingForm({ name, enabled }: { name: string; enabled: boolean }) {
   const [state, action, pending] = useActionState(onboardingAction, { message: '' });
-  const formRef = useRef<HTMLFormElement>(null);
-  const [preenchidos, setPreenchidos] = useState(0);
+  const [values, setValues] = useState({
+    name,
+    phone: '',
+    city: '',
+    state: '',
+    birthDate: '',
+    niche: 'casa',
+    creatorType: 'consumidor',
+    instagram: '',
+    tiktok: '',
+    youtube: '',
+    terms: false,
+  });
+  function set<K extends keyof typeof values>(field: K, value: (typeof values)[K]) {
+    setValues((current) => ({ ...current, [field]: value }));
+  }
   const nameId = useId();
   const phoneId = useId();
   const cityId = useId();
@@ -47,27 +45,15 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
   const nicheId = useId();
   const creatorTypeId = useId();
 
-  // Mede depois da montagem (o SSR não tem formulário), uma vez só.
-  useEffect(() => {
-    const form = formRef.current;
-    if (form) setPreenchidos(contarPreenchidos(form));
-  }, []);
-
-  const medir = (form: HTMLFormElement | null) => {
-    if (form) setPreenchidos(contarPreenchidos(form));
-  };
-
+  const preenchidos = ESSENCIAIS.filter((field) => {
+    const value = values[field];
+    return typeof value === 'boolean' ? value : Boolean(value.trim());
+  }).length;
   const pct = Math.round((preenchidos / ESSENCIAIS.length) * 100);
   const isError = Boolean(state.message) && !state.success;
 
   return (
-    <form
-      ref={formRef}
-      action={action}
-      className={styles.form}
-      onInput={(event) => medir(event.currentTarget)}
-      onChange={(event) => medir(event.currentTarget)}
-    >
+    <form action={action} className={styles.form}>
       {!enabled && (
         <p className={styles.notice} role="status">
           <Info size={16} aria-hidden="true" />
@@ -107,7 +93,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           id={nameId}
           className={styles.input}
           name="name"
-          defaultValue={name}
+          value={values.name}
+          onChange={(event) => set('name', event.target.value)}
           autoComplete="name"
           required
           minLength={2}
@@ -126,6 +113,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           type="tel"
           autoComplete="tel"
           required
+          value={values.phone}
+          onChange={(event) => set('phone', event.target.value)}
         />
       </div>
 
@@ -141,6 +130,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
             autoComplete="address-level2"
             required
             maxLength={100}
+            value={values.city}
+            onChange={(event) => set('city', event.target.value)}
           />
         </div>
         <div className={styles.field}>
@@ -153,7 +144,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
             name="state"
             autoComplete="address-level1"
             required
-            defaultValue=""
+            value={values.state}
+            onChange={(event) => set('state', event.target.value)}
           >
             <option value="" disabled>
               Selecione
@@ -178,6 +170,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           required
           max={latestEligibleBirthDate()}
           min="1900-01-01"
+          value={values.birthDate}
+          onChange={(event) => set('birthDate', event.target.value)}
         />
       </div>
 
@@ -188,7 +182,13 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           <label className={styles.label} htmlFor={nicheId}>
             Seu universo
           </label>
-          <select id={nicheId} className={styles.input} name="niche" defaultValue="casa">
+          <select
+            id={nicheId}
+            className={styles.input}
+            name="niche"
+            value={values.niche}
+            onChange={(event) => set('niche', event.target.value)}
+          >
             <option value="casa">Casa</option>
             <option value="bem-estar">Bem-estar</option>
             <option value="beleza">Beleza</option>
@@ -204,7 +204,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
             id={creatorTypeId}
             className={styles.input}
             name="creatorType"
-            defaultValue="consumidor"
+            value={values.creatorType}
+            onChange={(event) => set('creatorType', event.target.value)}
           >
             <option value="consumidor">Consumidor</option>
             <option value="ugc">Creator UGC</option>
@@ -219,7 +220,7 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
           Links declarados aparecem como <strong>Não verificado</strong>. Nenhuma conexão OAuth é
           feita.
         </p>
-        {['instagram', 'tiktok', 'youtube'].map((network) => {
+        {(['instagram', 'tiktok', 'youtube'] as const).map((network) => {
           const rotulo =
             network === 'youtube' ? 'YouTube' : network === 'tiktok' ? 'TikTok' : 'Instagram';
           return (
@@ -233,6 +234,8 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
                 name={network}
                 type="url"
                 placeholder={`https://www.${network}.com/seu-perfil`}
+                value={values[network]}
+                onChange={(event) => set(network, event.target.value)}
               />
             </div>
           );
@@ -240,7 +243,13 @@ export function OnboardingForm({ name, enabled }: { name: string; enabled: boole
       </fieldset>
 
       <label className={styles.terms}>
-        <input type="checkbox" name="terms" required />
+        <input
+          type="checkbox"
+          name="terms"
+          required
+          checked={values.terms}
+          onChange={(event) => set('terms', event.target.checked)}
+        />
         <span>
           Declaro que tenho 18 anos ou mais e li e concordo com os{' '}
           <Link href="/termos">Termos de Uso</Link> e a{' '}

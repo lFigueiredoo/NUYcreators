@@ -2,6 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { headers, cookies } from 'next/headers';
 import { currentUser, SESSION_COOKIE } from '@/lib/appwrite/server';
+import { currentTermsState } from '@/features/legal/services/consent';
 import { databaseId, opsTables, operationsConfigured } from '@/lib/appwrite/data';
 import { getEnvironment } from '@/lib/env/server';
 import { sessionRoles } from '@/lib/security/authorization';
@@ -27,6 +28,14 @@ async function context(): Promise<Context> {
   const secret = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!user || !secret) throw new AcademyError('forbidden', 'Entre novamente para continuar.');
   const roles = await sessionRoles(secret, user.$id);
+  if (!roles.length) {
+    const consent = await currentTermsState(secret, user.$id);
+    if (consent !== 'accepted')
+      throw new AcademyError(consent === 'unavailable' ? 'unavailable' : 'forbidden',
+        consent === 'unavailable'
+          ? 'Não foi possível conferir seu aceite. Tente novamente em instantes.'
+          : 'Aceite a versão atual dos Termos de Uso para continuar.');
+  }
   return { tables: opsTables(), databaseId: databaseId(), actor: {
     id: user.$id,
     manage: hasCapability(roles, 'manage-catalog'),

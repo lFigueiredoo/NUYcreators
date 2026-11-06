@@ -673,28 +673,24 @@
 .bottomNav {
   display: none;
 }
-.moreSheet,
-.moreBackdrop {
+.moreSheet {
   display: none;
 }
-.moreBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 34;
-  border: 0;
-  padding: 0;
+.moreSheet::backdrop {
   background: rgba(8, 43, 85, 0.26);
-  cursor: pointer;
-  animation: appFade var(--app-motion-normal) var(--app-ease-out) backwards;
 }
-/* A folha sobe acima da barra: ela é um terceiro andar da navegação, não um
-   modal que cobre a tela inteira. */
+/* Dialog nativo mantém o foco na folha e devolve-o ao botão ao fechar. */
 .moreSheet {
   position: fixed;
+  top: auto;
   left: var(--app-3);
   right: var(--app-3);
   bottom: calc(74px + env(safe-area-inset-bottom, 0px));
-  z-index: 35;
+  width: auto;
+  max-width: none;
+  max-height: calc(100dvh - 110px - env(safe-area-inset-bottom, 0px));
+  margin: 0;
+  overflow-y: auto;
   flex-direction: column;
   gap: 2px;
   padding: 8px;
@@ -709,12 +705,31 @@
   animation: appFadeLift var(--app-motion-normal) var(--app-ease-out) backwards;
 }
 .moreTitle {
-  margin: 0 0 6px;
-  padding: 8px 10px 10px;
-  border-bottom: 1px solid var(--app-line);
-  font-size: 0.78rem;
+  margin: 0;
+  font-size: 0.94rem;
   font-weight: 600;
   color: var(--app-navy-soft);
+}
+.moreHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 6px 10px;
+  border-bottom: 1px solid var(--app-line);
+}
+.moreClose {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--app-radius-sm);
+  color: var(--app-navy);
+  background: transparent;
+  cursor: pointer;
+}
+.moreClose:hover {
+  background: var(--app-surface-soft);
 }
 .moreItem {
   display: flex;
@@ -750,6 +765,25 @@
   font-size: 0.72rem;
   font-weight: 700;
   text-align: center;
+}
+.moderationFeedback {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--app-gold-ink);
+  border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
+  background: var(--app-gold-wash);
+  overflow-wrap: anywhere;
+}
+.moderationFeedback h3,
+.moderationFeedback h4 {
+  margin: 0 0 4px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--app-navy);
+}
+.moderationFeedback p {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 /* ------------------------------------------------------- page structure -- */
@@ -1708,6 +1742,34 @@
   font-size: 0.76rem;
   font-weight: 650;
   white-space: nowrap;
+}
+.dailyChallengesDetails {
+  border-top: 1px solid var(--app-line);
+}
+.dailyChallengesDetails:not([open]) .dailyChallengesTableWrap,
+.dailyChallengesDetails:not([open]) .dailyChallengesFoot {
+  display: none;
+}
+.dailyChallengesToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-3);
+  min-height: 48px;
+  padding: 12px 20px;
+  list-style: none;
+  font-weight: 600;
+  color: var(--app-navy);
+  cursor: pointer;
+}
+.dailyChallengesToggle::-webkit-details-marker {
+  display: none;
+}
+.dailyChallengesToggle:hover {
+  background: var(--app-surface-soft);
+}
+.dailyChallengesDetails[open] .dailyChallengesToggle svg {
+  transform: rotate(180deg);
 }
 .dailyChallengesTableWrap {
   overflow-x: auto;
@@ -2840,10 +2902,7 @@
     transition: color var(--app-motion-fast) var(--app-ease-state);
   }
   /* A folha existe só no mobile: no desktop ela é um bloco display:none. */
-  .moreBackdrop {
-    display: block;
-  }
-  .moreSheet {
+  .moreSheet[open] {
     display: flex;
   }
   .gridTwo,

@@ -666,9 +666,13 @@ export async function adminCreators(
   );
   const levels = await page(ctx, 'creator_levels', [], PAGE);
   const levelNames = new Map(levels.map((row) => [String(row.$id), text(row.name)]));
-  const accounts = await page(ctx, 'point_accounts', [], PAGE);
+  const userIds = [...new Set(profiles.map((row) => text(row.userId)).filter(Boolean))];
+  // A página de perfis contém as creators mais recentes; a primeira página
+  // global de contas pode conter apenas pessoas antigas e produzir saldo zero.
+  const accounts = userIds.length
+    ? await page(ctx, 'point_accounts', [Query.equal('userId', userIds)], PAGE)
+    : [];
   const byUser = new Map(accounts.map((row) => [text(row.userId), row]));
-  const userIds = profiles.map((row) => text(row.userId)).filter(Boolean);
   const participations = userIds.length
     ? await listAll(ctx, 'challenge_participants', [Query.equal('userId', userIds)], ROOF)
     : { rows: [], truncated: false };

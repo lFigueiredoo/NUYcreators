@@ -36,15 +36,22 @@ export function Flash() {
   // do destino, sem render extra, e sobrevive à limpeza da URL logo abaixo.
   const [seen, setSeen] = useState({ path: pathname, message: announced });
   const handled = useRef('');
-  if (announced && (announced !== seen.message || pathname !== seen.path))
+  if (pathname !== seen.path || (announced && announced !== seen.message))
     setSeen({ path: pathname, message: announced });
 
   useEffect(() => {
     // `params` troca de identidade a cada render: sem esta trava, um aviso só
     // seria adotado várias vezes — e cada adoção puxaria a tela para o topo de
     // novo, brigando com quem rolou a página depois de ler.
-    if (!announced || announced === handled.current) return;
-    handled.current = announced;
+    if (!announced) {
+      // A URL limpa encerra esta ocorrência. Uma ação futura pode devolver a
+      // mesma mensagem e ainda precisa ser adotada, rolada e limpa novamente.
+      handled.current = '';
+      return;
+    }
+    const occurrence = `${pathname}:${announced}`;
+    if (occurrence === handled.current) return;
+    handled.current = occurrence;
     window.scrollTo(0, 0);
     const rest = new URLSearchParams(params);
     rest.delete(FLASH_PARAM);
