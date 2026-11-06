@@ -1,0 +1,63 @@
+.statusBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #dfd2b8;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: #082b55;
+}
+.statusBox svg {
+  flex: 0 0 auto;
+  color: #755714;
+}
+.statusBox strong {
+  display: block;
+  line-height: 1.4;
+}
+.statusBox p {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+.reason {
+  white-space: pre-wrap;
+}
+.hint {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  color: #4a6076;
+  line-height: 1.6;
+}
+.hint svg {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.actions {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+  text-align: center;
+}
+.actions a {
+  text-decoration: none;
+}
+.support,
+.exit {
+  color: #082b55;
+  font: inherit;
+  font-weight: 600;
+}
+.support:hover {
+  text-decoration: underline;
+}
+.exit {
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.exit:hover {
+  text-decoration: underline;
+}

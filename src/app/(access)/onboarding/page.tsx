@@ -3,6 +3,9 @@ import { cookies } from 'next/headers';
 import { Info } from 'lucide-react';
 import { currentUser, authConfigured, readOwnProfile, SESSION_COOKIE } from '@/lib/appwrite/server';
 import { currentSessionRoles } from '@/lib/security/authorization';
+import { operationsConfigured } from '@/lib/appwrite/data';
+import { currentAccountApproval } from '@/features/accounts/services/creator';
+import { signedInRoute } from '@/features/auth/services/onboarding-gate';
 import { getEnvironment } from '@/lib/env/server';
 import { resendAction, logoutAction } from '@/features/auth/services/actions';
 import { AuthLayout } from '@/features/auth/components/auth-access-shell';
@@ -57,7 +60,11 @@ export default async function Onboarding({
   // sendo o `requireStaff` de lá dentro.
   if ((await currentSessionRoles(user.$id)).length) redirect('/admin');
   const secret = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (secret && (await readOwnProfile(secret, user.$id))?.onboardingCompletedAt) redirect('/app');
+  if (!secret) redirect('/login');
+  const approval = await currentAccountApproval(secret, user.$id);
+  const profile = await readOwnProfile(secret, user.$id);
+  if (profile?.onboardingCompletedAt || approval === 'rejected' || approval === 'unavailable')
+    redirect(signedInRoute(profile, [], approval));
   const params = await searchParams;
 
   return (
@@ -90,13 +97,18 @@ export default async function Onboarding({
         )}
         {params.verification === 'verified' && user.emailVerification && (
           <p className={`${styles.message} ${styles.success}`} role="status" aria-live="polite">
-            E-mail confirmado. Agora complete seu perfil para entrar na comunidade.
+            E-mail confirmado. Agora complete seu perfil para a análise da equipe NUY.
           </p>
         )}
 
         <OnboardingForm
           name={user.name}
-          enabled={user.emailVerification && getEnvironment().APPWRITE_FUNCTIONS_ENABLED === 'true'}
+          enabled={
+            user.emailVerification &&
+            (approval === 'active'
+              ? getEnvironment().APPWRITE_FUNCTIONS_ENABLED === 'true'
+              : operationsConfigured())
+          }
         />
 
         <form action={logoutAction} className={styles.inlineForm}>

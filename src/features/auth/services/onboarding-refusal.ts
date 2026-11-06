@@ -21,7 +21,10 @@ const REFUSALS: Record<string, string> = {
   age_requirement: 'Você ainda não tem a idade mínima para participar do NUY Creators.',
   email_not_verified: 'Verifique seu e-mail antes de salvar o perfil.',
   account_disabled: 'Esta conta não pode participar. Fale com a nossa equipe.',
-  profile_already_completed: 'Seu perfil já está completo. Para alterá-lo, acesse Meu perfil no painel.',
+  profile_already_completed:
+    'Seu perfil já está completo. Para alterá-lo, acesse Meu perfil no painel.',
+  application_changed:
+    'Seu cadastro mudou durante o envio. Recarregue a página para conferir o status atual.',
   invalid_profile: 'Confira os dados: algum campo não passou na validação.',
 };
 

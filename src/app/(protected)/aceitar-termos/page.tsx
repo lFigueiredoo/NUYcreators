@@ -14,6 +14,7 @@ import {
 import { SESSION_COOKIE } from '@/lib/appwrite/server';
 import { requireSession } from '@/lib/security/authorization';
 import { returnPath } from '@/features/workspace/domain/flash';
+import { currentAccountApproval } from '@/features/accounts/services/creator';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Atualização dos Termos' };
@@ -31,6 +32,10 @@ export default async function AcceptTerms({
 }) {
   const user = await requireSession();
   const secret = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (secret) {
+    const approval = await currentAccountApproval(secret, user.$id);
+    if (approval === 'pending_review' || approval === 'rejected') redirect('/aguardando-aprovacao');
+  }
   const params = await searchParams;
   const destination = returnPath(params.returnTo ?? '', '/app');
   if (secret && (await currentTermsState(secret, user.$id)) === 'accepted') redirect(destination);

@@ -2,6 +2,7 @@ import { AuthAccessForm } from '@/features/auth/components/auth-access-form';
 import { AuthLayout } from '@/features/auth/components/auth-access-shell';
 import { AuthFormShell } from '@/features/auth/components/auth-form-shell';
 import { registrationConfigured } from '@/lib/appwrite/server';
+import { operationsConfigured } from '@/lib/appwrite/data';
 
 /**
  * Cadastro público na identidade da Proposta C.
@@ -28,9 +29,12 @@ export default function Signup() {
             NUY Creators começa aqui.
           </>
         }
-        lead="Crie sua conta e faça parte de uma comunidade feita para pessoas, rotinas e experiências reais."
+        lead="Crie sua conta, complete seu perfil e envie o cadastro para análise. A equipe NUY libera o acesso após a aprovação."
       >
-        <AuthAccessForm mode="signup" configured={registrationConfigured()} />
+        <AuthAccessForm
+          mode="signup"
+          configured={registrationConfigured() && operationsConfigured()}
+        />
       </AuthFormShell>
     </AuthLayout>
   );

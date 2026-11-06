@@ -20,6 +20,7 @@ import { readCertificate } from '../certs.mjs';
 import { buildDataset } from './fixtures.mjs';
 import { academyAdmin, academyFixtureTables } from './academy-fixtures.mjs';
 import { MEDIA_FILES } from './media.mjs';
+import { addApprovalFixtures } from './approval-fixtures.mjs';
 
 /** Bucket de catálogo do manifesto: o único que o stub serve. */
 const MEDIA_BUCKET = 'community-media';
@@ -143,7 +144,7 @@ export async function startStub(options = {}) {
     acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
     consentAt: new Date().toISOString(),
   }));
-  if (options.academyFixture) {
+  if (options.academyFixture || options.approvalFixture) {
     dataset.users.push(academyAdmin);
     Object.assign(dataset.tables, academyFixtureTables);
     dataset.tables.audit_logs ??= [];
@@ -155,6 +156,7 @@ export async function startStub(options = {}) {
       displayName: 'Ana Beatriz',
     });
   }
+  if (options.approvalFixture) addApprovalFixtures(dataset);
   const sessions = new Map();
   const journal = [];
   const transactions = new Map();
@@ -293,7 +295,9 @@ export async function startStub(options = {}) {
           const [tableId, rowId] = key.split('|');
           const now = tx.working[tableId].find((row) => row.$id === rowId);
           const index = dataset.tables[tableId].findIndex((row) => row.$id === rowId);
-          if (index >= 0) dataset.tables[tableId][index] = structuredClone(now);
+          if (!now) {
+            if (index >= 0) dataset.tables[tableId].splice(index, 1);
+          } else if (index >= 0) dataset.tables[tableId][index] = structuredClone(now);
           else dataset.tables[tableId].push(structuredClone(now));
         }
         transactions.delete(txId);
@@ -363,6 +367,17 @@ export async function startStub(options = {}) {
             tableId,
           )
         ) &&
+        !(
+          options.approvalFixture &&
+          [
+            'users',
+            'platform_settings',
+            'profiles',
+            'social_accounts',
+            'audit_logs',
+            'audit_log_snapshots',
+          ].includes(tableId)
+        ) &&
         request.method !== 'GET'
       )
         return failure(response, 403, 'stub_write_forbidden', 'Escrita fora da Academia.');
@@ -386,6 +401,14 @@ export async function startStub(options = {}) {
         };
         if (tx) tx.touched.set(`${tableId}|${rowId}`, true);
         return json(response, 200, withSystemFields(table[index], dataset, index, tableId));
+      }
+      if (segments.length === 6 && request.method === 'DELETE' && options.approvalFixture) {
+        const rowId = decodeURIComponent(segments[5]);
+        const index = table.findIndex((row) => row.$id === rowId);
+        if (index < 0) return failure(response, 404, 'row_not_found', 'Linha ausente.');
+        table.splice(index, 1);
+        if (tx) tx.touched.set(`${tableId}|${rowId}`, true);
+        return json(response, 200, {});
       }
       if (segments.length === 5 && request.method === 'GET') {
         const filtered = table
@@ -461,7 +484,10 @@ export async function startStub(options = {}) {
     if (segments[0] === 'teams' && segments[2] === 'memberships') {
       if (!session && !isAdmin)
         return failure(response, 401, 'user_unauthorized', 'Sessão necessária.');
-      if (options.academyFixture && session?.userId === academyAdmin.id) {
+      if (
+        (options.academyFixture || options.approvalFixture) &&
+        session?.userId === academyAdmin.id
+      ) {
         return json(response, 200, {
           total: 1,
           memberships: [
@@ -490,6 +516,7 @@ export async function startStub(options = {}) {
     server,
     port: assigned,
     endpoint: `https://127.0.0.1:${assigned}/v1`,
+    termsVersion: CURRENT_TERMS_VERSION,
     dataset,
     journal,
     close: () => new Promise((resolve) => server.close(resolve)),

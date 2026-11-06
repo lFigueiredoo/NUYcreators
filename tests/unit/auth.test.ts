@@ -87,6 +87,19 @@ describe('destino de quem já está autenticado', () => {
     // administração — a prioridade é a da operação, não a do perfil.
     expect(signedInRoute(concluded, ['admin'])).toBe('/admin');
   });
+
+  it('exige aprovação antes de liberar uma creator com perfil completo', () => {
+    for (const status of ['pending_review', 'rejected', 'missing', 'unavailable'] as const)
+      expect(signedInRoute(concluded, [], status)).toBe('/aguardando-aprovacao');
+    expect(signedInRoute(concluded, [], 'active')).toBe('/app');
+  });
+
+  it('permite preencher perfil pendente sem liberar participação', () => {
+    expect(signedInRoute(null, [], 'pending_review')).toBe('/onboarding');
+    expect(signedInRoute(null, [], 'missing')).toBe('/onboarding');
+    expect(signedInRoute(null, [], 'rejected')).toBe('/aguardando-aprovacao');
+    expect(signedInRoute(concluded, ['admin'], 'pending_review')).toBe('/admin');
+  });
 });
 
 describe('motivo da recusa ao salvar o perfil', () => {

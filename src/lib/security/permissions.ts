@@ -6,7 +6,14 @@ export function ownerReadPermissions(userId: string) {
   return [Permission.read(Role.user(userId))];
 }
 export const adminCapabilities = {
-  admin: ['moderate', 'adjust-points', 'manage-catalog', 'fulfill', 'view-audit'],
+  admin: [
+    'moderate',
+    'adjust-points',
+    'manage-catalog',
+    'fulfill',
+    'view-audit',
+    'review-creators',
+  ],
   moderator: ['moderate'],
   fulfillment: ['fulfill'],
 } as const;

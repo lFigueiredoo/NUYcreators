@@ -1,13 +1,14 @@
 import { Account, Client, TablesDB } from 'node-appwrite';
-import { ownerReadPermissions } from '../../src/lib/security/permissions';
 import { onboardingSchema } from '../../src/features/profiles/schemas/onboarding';
 import { isAtLeastAge } from '../../src/features/profiles/domain/age';
-import {
-  CURRENT_LEGAL_CONSENT_VERSION,
-  CURRENT_TERMS_VERSION,
-} from '../../src/features/legal/versions';
+import { CURRENT_TERMS_VERSION } from '../../src/features/legal/versions';
 import { resolveEndpoint } from '../shared/host';
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import type { CoreContext } from '../../src/features/workspace/core/context';
+import {
+  CreatorOnboardingError,
+  savePendingCreatorProfile,
+} from '../../src/features/accounts/core/onboarding';
 type Context = {
   req: { headers: Record<string, string>; bodyJson: unknown };
   res: { json: (data: unknown, status?: number) => unknown };
@@ -15,7 +16,7 @@ type Context = {
 };
 type Services = {
   account: (client: Client) => Pick<Account, 'get'>;
-  tables: (client: Client) => Pick<TablesDB, 'getRow' | 'createRow' | 'updateRow' | 'deleteRow'>;
+  tables: (client: Client) => CoreContext['tables'];
 };
 const sdkServices: Services = {
   account: (client) => new Account(client),
@@ -48,115 +49,23 @@ export default async function main({ req, res, error }: Context, services: Servi
     if (!user.emailVerification) return res.json({ error: 'email_not_verified' }, 403);
     const db = services.tables(new Client().setEndpoint(endpoint).setProject(project).setKey(key));
     const databaseId = process.env.APPWRITE_DATABASE_ID ?? 'nuy-creators';
-    const permissions = ownerReadPermissions(user.$id);
-    // Repetir o onboarding não é uma edição: preserva perfil, redes e a escolha
-    // de exibição pública já sincronizada pela área Meu perfil.
-    try {
-      const existing = await db.getRow({ databaseId, tableId: 'profiles', rowId: user.$id });
-      if (existing.userId !== undefined && existing.userId !== user.$id)
-        return res.json({ error: 'account_disabled' }, 403);
-      if (typeof existing.onboardingCompletedAt === 'string' && existing.onboardingCompletedAt)
-        return res.json({ error: 'profile_already_completed' }, 409);
-    } catch (err) {
-      if ((err as { code?: number }).code !== 404) throw err;
-    }
-    async function upsert(tableId: string, rowId: string, data: Record<string, unknown>) {
-      try {
-        const existing = await db.getRow({ databaseId, tableId, rowId });
-        if (existing.userId !== undefined && existing.userId !== user.$id)
-          throw new Error('ownership');
-        await db.updateRow({ databaseId, tableId, rowId, data, permissions });
-      } catch (err) {
-        if ((err as { code?: number }).code !== 404) throw err;
-        try {
-          await db.createRow({ databaseId, tableId, rowId, data, permissions });
-        } catch (conflict) {
-          // Concurrent onboarding: retry is safe, but never report partial write as success.
-          if ((conflict as { code?: number }).code !== 409) throw conflict;
-          await db.updateRow({ databaseId, tableId, rowId, data, permissions });
-        }
-      }
-    }
-    const { instagram, tiktok, youtube } = parsed.data;
-    const profile = { ...parsed.data };
-    const profileData = {
-      name: profile.name,
-      phone: profile.phone,
-      city: profile.city,
-      state: profile.state,
-      birthDate: profile.birthDate,
-      niche: profile.niche,
-      creatorType: profile.creatorType,
-    };
-    // No financial writes here. Sequential onboarding is resumable, NOT claimed atomic.
-    try {
-      const record = await db.getRow({
+    await savePendingCreatorProfile(
+      {
+        tables: db,
         databaseId,
-        tableId: 'users',
-        rowId: user.$id,
-      });
-      if (record.status !== 'active' || record.authUserId !== user.$id)
-        return res.json({ error: 'account_disabled' }, 403);
-      if (record.acceptedTermsVersion !== CURRENT_LEGAL_CONSENT_VERSION) {
-        await db.updateRow({
-          databaseId,
-          tableId: 'users',
-          rowId: user.$id,
-          data: {
-            acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
-            consentAt: new Date().toISOString(),
-          },
-          permissions,
-        });
-      }
-    } catch (err) {
-      if ((err as { code?: number }).code !== 404) throw err;
-      try {
-        await db.createRow({
-          databaseId,
-          tableId: 'users',
-          rowId: user.$id,
-          data: {
-            authUserId: user.$id,
-            status: 'active',
-            acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
-            consentAt: new Date().toISOString(),
-          },
-          permissions,
-        });
-      } catch (conflict) {
-        if ((conflict as { code?: number }).code !== 409) throw conflict;
-      }
-    }
-    for (const [platform, canonicalUrl] of Object.entries({ instagram, tiktok, youtube })) {
-      const rowId = createHash('sha256')
-        .update(`${user.$id}:${platform}`)
-        .digest('hex')
-        .slice(0, 36);
-      if (canonicalUrl)
-        await upsert('social_accounts', rowId, {
-          userId: user.$id,
-          platform,
-          canonicalUrl,
-          verificationStatus: 'unverified',
-        });
-      else {
-        try {
-          await db.deleteRow({ databaseId, tableId: 'social_accounts', rowId });
-        } catch (err) {
-          if ((err as { code?: number }).code !== 404) throw err;
-        }
-      }
-    }
-    // Completion marker is written last. No points account or fake level assigned.
-    await upsert('profiles', user.$id, {
-      ...profileData,
-      userId: user.$id,
-      publicProfile: false,
-      onboardingCompletedAt: new Date().toISOString(),
-    });
+        actor: { userId: user.$id, roles: [] },
+        now: new Date(),
+        correlationId: randomUUID(),
+      },
+      parsed.data,
+    );
     return res.json({ saved: true }, 200);
-  } catch {
+  } catch (cause) {
+    if (cause instanceof CreatorOnboardingError)
+      return res.json(
+        { error: cause.code },
+        cause.code === 'profile_unavailable' ? 503 : cause.code === 'account_disabled' ? 403 : 409,
+      );
     error('onboarding_failed'); // Do not log credentials or private form payload.
     return res.json({ error: 'profile_unavailable' }, 503);
   }

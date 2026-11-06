@@ -5,6 +5,7 @@ import { loadUnreadCount } from '@/features/workspace/services/notifications';
 import { workspaceSession } from '@/features/workspace/services/viewer';
 import { currentTermsState } from '@/features/legal/services/consent';
 import { sessionRoles } from '@/lib/security/authorization';
+import { currentAccountApproval } from '@/features/accounts/services/creator';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,19 @@ export const dynamic = 'force-dynamic';
  */
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const { secret, viewer } = await workspaceSession();
+  const approval = await currentAccountApproval(secret, viewer.id);
+  // A sessão autentica a identidade; só a aprovação administrativa libera o
+  // painel. Falha de leitura não é uma aprovação presumida.
+  if (approval !== 'active') {
+    if ((await sessionRoles(secret, viewer.id)).length) redirect('/admin');
+    if (
+      (approval === 'missing' || approval === 'pending_review') &&
+      viewer.profileState === 'ok' &&
+      !viewer.profile?.onboarded
+    )
+      redirect('/onboarding');
+    redirect('/aguardando-aprovacao');
+  }
   // Perfil ausente, incompleto ou ilegível: retoma o onboarding — ou a
   // administração, para quem é da equipe.
   if (viewer.profileState !== 'ok' || !viewer.profile?.onboarded) {

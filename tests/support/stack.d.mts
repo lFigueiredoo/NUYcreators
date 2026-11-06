@@ -38,4 +38,6 @@ export function startStack(options?: {
   mediaKey?: string;
   /** Ativa apenas as fixtures de Academia do stub local. */
   academyTest?: boolean;
+  /** Ativa solicitações sintéticas de aprovação e gravação somente no stub. */
+  approvalTest?: boolean;
 }): Promise<StackHandle>;

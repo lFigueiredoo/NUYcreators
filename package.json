@@ -25,7 +25,8 @@
     "infra:capabilities": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/capabilities.ts",
     "infra:scopes": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/key-scopes.ts",
     "functions:bundle": "node scripts/build-functions.mjs",
-    "infra:deploy": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/deploy-functions.ts"
+    "infra:deploy": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/deploy-functions.ts",
+    "infra:deploy:approval:production": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx infra/appwrite/deploy-approval-production.ts"
   },
   "keywords": [],
   "author": "",

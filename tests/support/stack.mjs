@@ -112,8 +112,13 @@ export async function startStack({
   mediaKey = 'stub-media-key',
   appwriteEndpoint = null,
   academyTest = false,
+  approvalTest = false,
 } = {}) {
-  const stub = await startStub({ port: STUB_PORT, academyFixture: academyTest });
+  const stub = await startStub({
+    port: STUB_PORT,
+    academyFixture: academyTest,
+    approvalFixture: approvalTest,
+  });
   const endpoint = appwriteEndpoint ?? stub.endpoint;
 
   let app = null;
@@ -133,7 +138,7 @@ export async function startStack({
         // de operação (telas dizem o estado real em vez de gravar). Definida
         // como string vazia, ela tem precedência sobre o `.env.local` de quem
         // roda — sem isto, ter a chave no ambiente mudaria o que o teste mede.
-        APPWRITE_OPS_API_KEY: academyTest ? 'stub-ops-key' : '',
+        APPWRITE_OPS_API_KEY: academyTest || approvalTest ? 'stub-ops-key' : '',
         APPWRITE_ACADEMY_ENABLED: academyTest ? 'true' : 'false',
         // A chave de MÍDIA é oposta: ligada por padrão, para o caminho de arquivo
         // ser exercitado de verdade (o stub cobra a chave, como o Appwrite).
@@ -141,6 +146,7 @@ export async function startStack({
         APPWRITE_FUNCTIONS_ENABLED: 'false',
         APPWRITE_TRANSACTIONS_VERIFIED: 'false',
         APPWRITE_REGISTRATION_ENABLED: 'false',
+        ...(approvalTest ? { NUY_TERMS_VERSION: stub.termsVersion, NUY_MINIMUM_AGE: '18' } : {}),
         AUTH_RATE_LIMIT_VERIFIED: 'true',
         // Certificado self-signed do stub: só o servidor de teste o vê.
         NODE_TLS_REJECT_UNAUTHORIZED: '0',

@@ -5,6 +5,8 @@ import { SESSION_COOKIE, currentUser } from '@/lib/appwrite/server';
 import { databaseId, listTableRows, sessionTables } from '@/lib/appwrite/data';
 import { MEDIA_ID_PATTERN } from '@/features/workspace/domain/media';
 import { mediaConfigured, readMediaFile } from '@/lib/appwrite/media';
+import { currentAccountApproval } from '@/features/accounts/services/creator';
+import { sessionRoles } from '@/lib/security/authorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +40,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
 
   const secret = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!secret) return new NextResponse(null, { status: 401 });
-  if (!(await currentUser())) return new NextResponse(null, { status: 401 });
+  const user = await currentUser();
+  if (!user) return new NextResponse(null, { status: 401 });
+  if (
+    (await currentAccountApproval(secret, user.$id)) !== 'active' &&
+    !(await sessionRoles(secret, user.$id)).length
+  )
+    return new NextResponse(null, { status: 403 });
   if (!(await isCatalogImage(secret, fileId))) return new NextResponse(null, { status: 404 });
 
   const file = await readMediaFile(fileId);

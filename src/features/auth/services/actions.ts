@@ -1,5 +1,6 @@
 'use server';
 import { ID, Functions } from 'node-appwrite';
+import { randomUUID } from 'node:crypto';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
@@ -13,6 +14,16 @@ import {
   sessionClient,
 } from '@/lib/appwrite/server';
 import { getEnvironment } from '@/lib/env/server';
+import { databaseId, operationsConfigured, opsTables } from '@/lib/appwrite/data';
+import {
+  currentAccountApproval,
+  ensureCurrentCreatorApplication,
+} from '@/features/accounts/services/creator';
+import {
+  CreatorOnboardingError,
+  savePendingCreatorProfile,
+} from '@/features/accounts/core/onboarding';
+import { isAtLeastAge } from '@/features/profiles/domain/age';
 import { sessionRoles } from '@/lib/security/authorization';
 import type { AdminRole } from '@/lib/security/permissions';
 import {
@@ -23,7 +34,7 @@ import {
   verificationSchema,
 } from '../schemas/auth';
 import { onboardingSchema } from '@/features/profiles/schemas/onboarding';
-import { CURRENT_LEGAL_CONSENT_VERSION } from '@/features/legal/versions';
+import { CURRENT_LEGAL_CONSENT_VERSION, CURRENT_TERMS_VERSION } from '@/features/legal/versions';
 import { signedInRoute } from './onboarding-gate';
 import { failureMessage, refusalMessage } from './onboarding-refusal';
 import {
@@ -93,10 +104,13 @@ export async function loginAction(_previous: FormState, form: FormData): Promise
       /* indiferente: `null` manda para o onboarding */
     }
   }
-  redirect(signedInRoute(profile, roles));
+  const approval = roles.length
+    ? 'active'
+    : await currentAccountApproval(session.secret, session.userId);
+  redirect(signedInRoute(profile, roles, approval));
 }
 export async function signupAction(_previous: FormState, form: FormData): Promise<FormState> {
-  if (!(await allowedRequest()) || !registrationConfigured())
+  if (!(await allowedRequest()) || !registrationConfigured() || !operationsConfigured())
     return {
       message: 'O cadastro aguarda a conexão segura e a aprovação das políticas de participação.',
     };
@@ -117,6 +131,10 @@ export async function signupAction(_previous: FormState, form: FormData): Promis
         termsConsentAt: new Date().toISOString(),
       },
     });
+    // O pedido é privado e nasce antes de liberar qualquer participação.
+    // O status nunca é derivado de preferências que a própria conta pode editar.
+    if (!(await ensureCurrentCreatorApplication()))
+      throw new Error('creator_application_unavailable');
     await account.createVerification({
       url: `${getEnvironment().APP_URL}/verificar-email`,
     });
@@ -238,29 +256,80 @@ export async function logoutAction(): Promise<void> {
 export async function onboardingAction(_previous: FormState, form: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: 'Solicitação não permitida.' };
   const env = getEnvironment();
-  if (env.APPWRITE_FUNCTIONS_ENABLED !== 'true')
-    return { message: 'O salvamento do perfil aguarda a ativação segura do Appwrite.' };
   const parsed = onboardingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { message: parsed.error.issues[0]?.message ?? 'Confira os dados.' };
+  if (env.NUY_TERMS_VERSION !== CURRENT_TERMS_VERSION || !env.NUY_MINIMUM_AGE)
+    return {
+      message: 'O salvamento do perfil aguarda a configuração das políticas de participação.',
+    };
+  if (!isAtLeastAge(parsed.data.birthDate, env.NUY_MINIMUM_AGE))
+    return { message: 'Você ainda não tem a idade mínima para participar do NUY Creators.' };
+  let destination = '/app';
   try {
     const user = await currentUser();
     if (!user?.emailVerification)
       return { message: 'Verifique seu email antes de salvar o perfil.' };
     const secret = (await cookies()).get(SESSION_COOKIE)!.value;
+    if ((await sessionRoles(secret, user.$id)).length)
+      return { message: 'Use a área administrativa para gerenciar sua conta.' };
     if ((await readOwnProfile(secret, user.$id))?.onboardingCompletedAt)
-      return { message: 'Seu perfil já está completo. Para alterá-lo, acesse Meu perfil no painel.' };
-    const result = await new Functions(sessionClient(secret)).createExecution({
-      functionId: 'complete-onboarding',
-      body: JSON.stringify(parsed.data),
-      async: false,
-    });
-    // O motivo da recusa existe e tem conserto na maioria das vezes: a frase que
-    // a pessoa lê sai do que a Function respondeu, não de um "tente mais tarde"
-    // que convidava a insistir para sempre.
-    if (result.responseStatusCode !== 200)
-      return { message: refusalMessage(result.responseStatusCode, result.responseBody) };
+      return {
+        message: 'Seu perfil já está completo. Para alterá-lo, acesse Meu perfil no painel.',
+      };
+    let approval = await currentAccountApproval(secret, user.$id);
+    if (approval === 'missing') {
+      if (!(await ensureCurrentCreatorApplication()))
+        return {
+          message: 'Não foi possível registrar sua solicitação. Tente novamente em instantes.',
+        };
+      approval = await currentAccountApproval(secret, user.$id);
+    }
+    if (approval === 'pending_review') {
+      if (!operationsConfigured())
+        return { message: 'O envio do cadastro para análise ainda não está disponível.' };
+      await savePendingCreatorProfile(
+        {
+          tables: opsTables(),
+          databaseId: databaseId(),
+          actor: { userId: user.$id, roles: [] },
+          now: new Date(),
+          correlationId: randomUUID(),
+        },
+        parsed.data,
+      );
+      destination = '/aguardando-aprovacao';
+    } else if (approval !== 'active') {
+      return {
+        message:
+          'Esta conta não pode enviar um novo cadastro. Consulte o status da sua solicitação.',
+      };
+    } else {
+      if (env.APPWRITE_FUNCTIONS_ENABLED !== 'true')
+        return { message: 'O salvamento do perfil aguarda a ativação segura do Appwrite.' };
+      const result = await new Functions(sessionClient(secret)).createExecution({
+        functionId: 'complete-onboarding',
+        body: JSON.stringify(parsed.data),
+        async: false,
+      });
+      // O motivo da recusa existe e tem conserto na maioria das vezes: a frase que
+      // a pessoa lê sai do que a Function respondeu, não de um "tente mais tarde"
+      // que convidava a insistir para sempre.
+      if (result.responseStatusCode !== 200)
+        return { message: refusalMessage(result.responseStatusCode, result.responseBody) };
+    }
   } catch (error) {
+    if (error instanceof CreatorOnboardingError)
+      return {
+        message: refusalMessage(
+          error.code === 'profile_unavailable'
+            ? 503
+            : error.code === 'account_disabled'
+              ? 403
+              : 409,
+          JSON.stringify({ error: error.code }),
+        ),
+      };
     return { message: failureMessage(error) };
   }
-  redirect('/app');
+  redirect(destination);
 }

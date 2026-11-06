@@ -88,11 +88,11 @@ describe('área autenticada', () => {
       const name = relative(join(ROOT, 'app', '(protected)'), page);
       // A página não monta markup de dado: ela renderiza a tela da área.
       expect(source, `${name} não renderiza uma tela da área`).toMatch(
-        /from '@\/features\/(admin|academy)\/components\//,
+        /from '@\/features\/(admin|academy|accounts)\/components\//,
       );
       if (readsNothing.has(name)) continue;
       expect(source, `${name} não passa pela porta da administração`).toMatch(
-        /from '@\/features\/(admin|academy)\/services\//,
+        /from '@\/features\/(admin|academy|accounts)\/services\//,
       );
     }
   });

@@ -152,9 +152,12 @@ describe('autorização da administração', () => {
     expect(roleAllows('moderator', 'adjust-points')).toBe(false);
     expect(roleAllows('fulfillment', 'fulfill')).toBe(true);
     expect(roleAllows('fulfillment', 'moderate')).toBe(false);
-    // `admin` é o único que acumula as cinco — é a conta humana que opera tudo.
+    // `admin` é o único que acumula as seis capacidades, incluindo aprovação de contas.
     expect(Object.keys(adminCapabilities)).toEqual(['admin', 'moderator', 'fulfillment']);
-    expect(adminCapabilities.admin).toHaveLength(5);
+    expect(adminCapabilities.admin).toHaveLength(6);
+    expect(roleAllows('admin', 'review-creators')).toBe(true);
+    expect(roleAllows('moderator', 'review-creators')).toBe(false);
+    expect(roleAllows('fulfillment', 'review-creators')).toBe(false);
     expect(hasCapability(['moderator'], 'view-audit')).toBe(false);
     expect(hasCapability(['moderator', 'admin'], 'view-audit')).toBe(true);
   });

@@ -18,24 +18,32 @@ import type { AdminRole } from '@/lib/security/permissions';
 export const ONBOARDING_ROUTE = '/onboarding';
 export const WORKSPACE_ROUTE = '/app';
 export const ADMIN_ROUTE = '/admin';
+export const APPROVAL_ROUTE = '/aguardando-aprovacao';
+
+type ApprovalState = 'active' | 'pending_review' | 'rejected' | 'missing' | 'unavailable';
 
 export function postLoginRoute(
   profile: { onboardingCompletedAt?: unknown } | null,
-): typeof ONBOARDING_ROUTE | typeof WORKSPACE_ROUTE {
+  approval: ApprovalState = 'active',
+): typeof ONBOARDING_ROUTE | typeof WORKSPACE_ROUTE | typeof APPROVAL_ROUTE {
+  if (approval === 'rejected' || approval === 'unavailable') return APPROVAL_ROUTE;
   // Documento ausente, campo ausente e leitura indisponível (`null`) caem todos
   // no onboarding: o formulário é resumível e regrava por upsert, então repetir
   // é seguro — mandar para `/app` quem não concluiu não é.
   return typeof profile?.onboardingCompletedAt === 'string' && profile.onboardingCompletedAt
-    ? WORKSPACE_ROUTE
+    ? approval === 'active'
+      ? WORKSPACE_ROUTE
+      : APPROVAL_ROUTE
     : ONBOARDING_ROUTE;
 }
 
 export function signedInRoute(
   profile: { onboardingCompletedAt?: unknown } | null,
   roles: readonly AdminRole[],
-): typeof ADMIN_ROUTE | typeof ONBOARDING_ROUTE | typeof WORKSPACE_ROUTE {
+  approval: ApprovalState = 'active',
+): typeof ADMIN_ROUTE | typeof ONBOARDING_ROUTE | typeof WORKSPACE_ROUTE | typeof APPROVAL_ROUTE {
   // Destino administrativo ANTES do onboarding de criadora: o operador não é
   // criadora em onboarding, e o perfil de criadora dele pode nunca existir.
   if (roles.length) return ADMIN_ROUTE;
-  return postLoginRoute(profile);
+  return postLoginRoute(profile, approval);
 }

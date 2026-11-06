@@ -7,6 +7,13 @@ const mocks = vi.hoisted(() => ({
   createRow: vi.fn(),
   updateRow: vi.fn(),
   deleteRow: vi.fn(),
+  listRows: vi.fn(),
+  createTransaction: vi.fn(),
+  updateTransaction: vi.fn(),
+  deleteTransaction: vi.fn(),
+  getTransaction: vi.fn(),
+  incrementRowColumn: vi.fn(),
+  decrementRowColumn: vi.fn(),
 }));
 import handler from '../../functions/complete-onboarding/main';
 import {
@@ -21,6 +28,13 @@ const main = (ctx: Parameters<typeof handler>[0]) =>
       createRow: mocks.createRow,
       updateRow: mocks.updateRow,
       deleteRow: mocks.deleteRow,
+      listRows: mocks.listRows,
+      createTransaction: mocks.createTransaction,
+      updateTransaction: mocks.updateTransaction,
+      deleteTransaction: mocks.deleteTransaction,
+      getTransaction: mocks.getTransaction,
+      incrementRowColumn: mocks.incrementRowColumn,
+      decrementRowColumn: mocks.decrementRowColumn,
     }),
   });
 const body = {
@@ -67,6 +81,9 @@ beforeEach(() => {
   );
   mocks.updateRow.mockResolvedValue({});
   mocks.deleteRow.mockResolvedValue({});
+  mocks.createTransaction.mockResolvedValue({ $id: 'onboarding-transaction' });
+  mocks.updateTransaction.mockResolvedValue({});
+  mocks.deleteTransaction.mockResolvedValue({});
 });
 afterEach(() => vi.unstubAllEnvs());
 it('requires platform credentials and user JWT', async () => {
@@ -93,14 +110,87 @@ it('rejects suspended users', async () => {
   mocks.getRow.mockResolvedValue({ authUserId: 'trusted-user', status: 'suspended' });
   expect(await main(context())).toMatchObject({ status: 403 });
 });
+it('allows a pending creator to submit profile without activating the account', async () => {
+  mocks.getRow.mockImplementation(async ({ tableId }: { tableId: string }) =>
+    tableId === 'users'
+      ? {
+          authUserId: 'trusted-user',
+          status: 'pending_review',
+          acceptedTermsVersion: CURRENT_LEGAL_CONSENT_VERSION,
+        }
+      : { userId: 'trusted-user' },
+  );
+  expect(await main(context())).toMatchObject({ status: 200 });
+  expect(mocks.updateRow.mock.calls.some(([input]) => input.data?.status === 'active')).toBe(false);
+  expect(mocks.updateRow.mock.calls.at(-1)?.[0]).toMatchObject({
+    tableId: 'profiles',
+    rowId: 'trusted-user',
+    data: { onboardingCompletedAt: expect.any(String) },
+  });
+});
+it('creates a direct new account pending administrative review, never active', async () => {
+  mocks.getRow.mockRejectedValue(Object.assign(new Error('absent'), { code: 404 }));
+  mocks.createRow.mockResolvedValue({});
+  expect(await main(context())).toMatchObject({ status: 200 });
+  const account = mocks.createRow.mock.calls.find(([input]) => input.tableId === 'users')?.[0];
+  expect(account).toMatchObject({
+    rowId: 'trusted-user',
+    data: { authUserId: 'trusted-user', status: 'pending_review' },
+    permissions: ['read("user:trusted-user")'],
+  });
+});
+it('does not reopen a rejected application through onboarding', async () => {
+  mocks.getRow.mockImplementation(async ({ tableId }: { tableId: string }) =>
+    tableId === 'users'
+      ? { authUserId: 'trusted-user', status: 'rejected' }
+      : { userId: 'trusted-user' },
+  );
+  expect(await main(context())).toMatchObject({ status: 403, data: { error: 'account_disabled' } });
+  expect(mocks.updateRow).not.toHaveBeenCalled();
+  expect(mocks.createRow).not.toHaveBeenCalled();
+});
+it('stages profile, account and social changes together and touches the approval authority', async () => {
+  expect(await main(context())).toMatchObject({ status: 200 });
+  for (const [input] of [
+    ...mocks.getRow.mock.calls,
+    ...mocks.updateRow.mock.calls,
+    ...mocks.createRow.mock.calls,
+    ...mocks.deleteRow.mock.calls,
+  ])
+    expect(input.transactionId).toBe('onboarding-transaction');
+  const authority = mocks.updateRow.mock.calls.find(([input]) => input.tableId === 'users')?.[0];
+  expect(authority).toBeDefined();
+  expect(authority.data).not.toHaveProperty('status');
+  expect(mocks.updateTransaction).toHaveBeenCalledWith({
+    transactionId: 'onboarding-transaction',
+    commit: true,
+  });
+});
+it('does not report success if an approval or another onboarding wins the commit', async () => {
+  mocks.updateTransaction.mockImplementation(async (input) => {
+    if (input.commit) throw Object.assign(new Error('conflict'), { code: 409 });
+    return {};
+  });
+  expect(await main(context())).toMatchObject({
+    status: 409,
+    data: { error: 'application_changed' },
+  });
+  expect(mocks.updateTransaction).toHaveBeenCalledWith({
+    transactionId: 'onboarding-transaction',
+    rollback: true,
+  });
+});
 it('preserves an already completed profile, public preference and social accounts on replay', async () => {
   const publicProfile = {
-    userId: 'trusted-user', name: 'Nome público atual', publicProfile: true,
+    userId: 'trusted-user',
+    name: 'Nome público atual',
+    publicProfile: true,
     onboardingCompletedAt: '2026-10-20T10:00:00.000Z',
   };
   mocks.getRow.mockResolvedValue(publicProfile);
-  expect(await main(context(undefined, { ...body, name: 'Nome alterado pelo replay' })))
-    .toMatchObject({ status: 409, data: { error: 'profile_already_completed' } });
+  expect(
+    await main(context(undefined, { ...body, name: 'Nome alterado pelo replay' })),
+  ).toMatchObject({ status: 409, data: { error: 'profile_already_completed' } });
   expect(mocks.updateRow).not.toHaveBeenCalled();
   expect(mocks.createRow).not.toHaveBeenCalled();
   expect(mocks.deleteRow).not.toHaveBeenCalled();
@@ -131,7 +221,7 @@ it('selects ownership from verified identity, never from the payload', async () 
   expect(
     await main(context(undefined, { ...body, userId: 'victim', points: 999, role: 'admin' })),
   ).toMatchObject({ status: 200 });
-  const write = mocks.updateRow.mock.calls[0][0];
+  const write = mocks.updateRow.mock.calls.find(([input]) => input.tableId === 'profiles')![0];
   expect(write.rowId).toBe('trusted-user');
   expect(write.data.userId).toBe('trusted-user');
   expect(write.data).not.toHaveProperty('points');

@@ -8,6 +8,7 @@ import {
   Megaphone,
   Sparkles,
   Users,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -30,6 +31,7 @@ export type AdminDestination =
   | 'academy-comments'
   | 'submissions'
   | 'creators'
+  | 'approvals'
   | 'rewards'
   | 'campaigns'
   | 'reports';
@@ -82,6 +84,14 @@ export const adminNavEntries: AdminNavEntry[] = [
     href: '/admin/submissoes',
     icon: Inbox,
     capability: 'moderate',
+    section: 'Comunidade',
+  },
+  {
+    id: 'approvals',
+    label: 'Aprovar contas',
+    href: '/admin/aprovacoes',
+    icon: UserCheck,
+    capability: 'review-creators',
     section: 'Comunidade',
   },
   {
