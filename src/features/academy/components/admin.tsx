@@ -50,7 +50,7 @@ export function AdminAcademyHome({ courses, enabled = false }: {
         </div>
       </div>
       {!enabled ? <AcademyNotice text="A gestão será ativada após a migração aprovada e os controles de acesso." /> : null}
-      <div className={styles.grid} aria-label="Estados dos treinamentos">
+      <div className={styles.grid} role="group" aria-label="Estados dos treinamentos">
         <div className={styles.panel}>
           <span className={styles.muted}>Rascunhos nesta página</span>
           <h2>{courses.state === 'ok' ? counts.draft : '—'}</h2>

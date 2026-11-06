@@ -15,8 +15,10 @@ Testes autenticados usam somente fixtures locais. Não houve escrita em dados de
 | Confirmação antiga reaparecia ao voltar a uma tela | Estado é encerrado na mudança de rota; mensagens iguais de uma nova ação são processadas | Deploy web |
 | Menu Mais sobrepunha a página sem gestão modal de foco | Dialog nativo, fechamento acessível, restauração de foco/rolagem e fechamento no breakpoint desktop | Deploy web |
 | Avatar perdia seu nome acessível quando o texto era ocultado no celular | Nome explícito da conta e retorno de foco no Escape | Deploy web |
+| Tabela horizontal do Regulamento não recebia foco por teclado no celular | Região nomeada e focável para rolagem pelas setas | Deploy web |
 | Tabela diária longa afastava os desafios publicados no celular | Regras em seção expansível por teclado, mantendo todos os formatos/pontos/limites | Deploy web |
 | Cabeçalho da Academia dividia título e ações em colunas muito estreitas no celular | Título e ações empilhados em telas de até 520px | Deploy web |
+| Selo de estado do editor da Academia tinha contraste 4,26:1 em texto pequeno | Dourado do texto escurecido, mantendo a paleta e superando 4,5:1 | Deploy web |
 | Criadora não recebia o motivo de recusa ou ajuste informado pela equipe | Orientação visível no conteúdo e no detalhe; CTA de revisão; notas de aprovação permanecem internas | Deploy web |
 | Editar a pontuação do catálogo alterava o histórico de créditos exibido | Créditos vêm do ledger associado aos envios exibidos; sem crédito, não se inventa pontuação | Deploy web |
 | Callback malformado não apagava o token anterior no mesmo path | Expiração do cookie no path exato de recuperação/verificação | Deploy web |
@@ -38,6 +40,7 @@ Testes autenticados usam somente fixtures locais. Não houve escrita em dados de
 - Menu mobile Admin: seleção de seção e Escape/foco confirmados no navegador; console sem erros.
 - Login recusado preserva os campos, confirmado no navegador local.
 - Axe na tela de desafios mobile após a correção do avatar: zero violações nas regras WCAG A/AA e 2.1 A/AA verificadas. Esse resultado é daquela tela/estado, não uma certificação do site inteiro.
+- Lighthouse da home publicada, mobile: desempenho 91, acessibilidade 100, boas práticas 100, SEO 100; FCP 1,0 s, LCP 3,1 s, TBT 190 ms, CLS 0. Uma medição sintética, sem avisos; não representa todos os dispositivos/conexões.
 - Evidências locais de navegador: `output/playwright/` (ignorado no Git).
 
 ## Pendências reais e limites

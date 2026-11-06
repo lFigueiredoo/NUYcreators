@@ -182,7 +182,12 @@ export function RegulationScreen({ publication }: { publication: RegulationPubli
               <Clock3 size={14} aria-hidden="true" /> Limites renovados às 00h
             </span>
           </div>
-          <div className={styles.tableScroll}>
+          <div
+            className={styles.tableScroll}
+            tabIndex={0}
+            role="region"
+            aria-label="Pontuação das tarefas diárias: use as setas para rolar a tabela"
+          >
             <table>
               <thead>
                 <tr>
