@@ -43,6 +43,99 @@
   line-height: 1.03;
 }
 
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--app-gold-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lede {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: var(--app-muted);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.cardGrid > .card {
+  overflow: hidden;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  background: var(--app-surface);
+}
+
+.cardBody {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.cardBody h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.cardBody form {
+  display: grid;
+  gap: 8px;
+}
+
+.cardBody form button {
+  justify-content: center;
+}
+
+.button,
+.buttonSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--app-gold);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button {
+  background: var(--app-gold);
+  color: #2d2106;
+}
+
+.buttonSecondary {
+  border-color: var(--adm-line);
+  background: transparent;
+  color: var(--app-ink);
+}
+
+.button:disabled,
+.buttonSecondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cardBody form p {
+  margin: 2px 0 0;
+  color: var(--adm-ok);
+  font-size: 0.78rem;
+}
+
 .shell {
   grid-template-columns: 252px minmax(0, 1fr);
 }

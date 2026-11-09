@@ -34,6 +34,7 @@ export type AdminDestination =
   | 'approvals'
   | 'rewards'
   | 'campaigns'
+  | 'influencers'
   | 'reports';
 
 export type AdminNavEntry = {
@@ -59,6 +60,14 @@ export const adminNavEntries: AdminNavEntry[] = [
     label: 'Desafios',
     href: '/admin/desafios',
     icon: Sparkles,
+    capability: 'manage-catalog',
+    section: 'Conteúdo',
+  },
+  {
+    id: 'influencers',
+    label: 'Fotos da landing',
+    href: '/admin/influencers',
+    icon: Users,
     capability: 'manage-catalog',
     section: 'Conteúdo',
   },

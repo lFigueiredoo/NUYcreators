@@ -21,6 +21,7 @@ import {
   commandSaveReward,
 } from './console';
 import { discardUploaded, imageForForm, retireReplaced } from './media';
+import { removeInfluencerImage, saveInfluencerImage } from './influencers';
 
 /**
  * Server Actions da administração.
@@ -172,6 +173,39 @@ export async function challengeSaveAction(
   revalidatePath('/app/desafios');
   revalidatePath('/app');
   return { message: outcome.message, success: true };
+}
+
+export async function influencerImageAction(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
+  const handle = field(data, 'handle');
+  const currentFileId = field(data, 'currentFileId');
+  const remove = field(data, 'remove') === 'true';
+  if (!handle) return { message: 'Influencer não identificada. Recarregue a página.' };
+  const image = await imageForForm({
+    file: fileField(data, 'image'),
+    keep: currentFileId,
+    clear: remove,
+  });
+  if (!image.ok) return { message: image.message };
+  let persisted = false;
+  try {
+    if (image.fileId) await saveInfluencerImage(handle, image.fileId);
+    else await removeInfluencerImage(handle);
+    persisted = true;
+  } finally {
+    if (!persisted) await discardUploaded(image.uploaded);
+  }
+  await retireReplaced(image.replaced, image.fileId);
+  revalidatePath('/admin/influencers');
+  revalidatePath('/');
+  return {
+    message: remove ? 'Foto removida da landing.' : 'Foto da influencer atualizada.',
+    success: true,
+  };
 }
 
 export async function challengeStatusAction(
