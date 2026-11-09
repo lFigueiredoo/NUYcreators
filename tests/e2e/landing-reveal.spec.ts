@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('o carrossel percorre as fotos pelo teclado com movimento reduzido', async ({
+test('o carrossel mantém acessibilidade com movimento reduzido', async ({
   page,
 }) => {
   const mobile = test.info().project.name === 'mobile';
@@ -10,40 +10,43 @@ test('o carrossel percorre as fotos pelo teclado com movimento reduzido', async 
 
   const community = page.locator('#comunidade');
   const track = community.getByRole('group', { name: 'Fotos das criadoras NUY' });
-  const progress = community.locator('[aria-live="polite"]');
-  const activeStep = community.locator('[data-current="true"]');
+  const announcement = community.locator('[aria-live="polite"]');
 
   await track.focus();
   await track.press('ArrowRight');
   await expect(track).toBeFocused();
-  await expect(activeStep).toHaveAttribute('data-index', '1');
-  await track.press('End');
-  await expect(progress).toHaveText(/foto 7 de 7/);
-  await track.press('ArrowRight');
-  await track.press('Home');
+  await expect(announcement).toHaveText(/@thay_emilyane, foto 1 de 7/);
+  await expect(community.locator('#editorial-creator-track > div')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
 });
 
-test('autoplay avança sozinho depois de seis segundos', async ({ page }) => {
+test('o carrossel se move continuamente sem intervalo', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const community = page.locator('#comunidade');
-  const activeStep = community.locator('[data-current="true"]');
+  const track = community.locator('#editorial-creator-track > div');
   await community.scrollIntoViewIfNeeded();
-  await expect(activeStep).toHaveAttribute('data-index', '0');
-  await page.waitForTimeout(6300);
-  await expect(activeStep).toHaveAttribute('data-index', '1', { timeout: 3500 });
+  await expect(track).toHaveCSS('animation-name', /editorial-marquee/);
+  const before = await track.evaluate((element) => getComputedStyle(element).transform);
+  await page.waitForTimeout(1200);
+  const after = await track.evaluate((element) => getComputedStyle(element).transform);
+  expect(after).not.toBe(before);
 });
 
-test('movimento reduzido mantém o carrossel sem autoplay', async ({ page }) => {
+test('movimento reduzido desativa o movimento contínuo', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/');
   const community = page.locator('#comunidade');
   await community.scrollIntoViewIfNeeded();
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.waitForTimeout(6500);
-  await expect(community.locator('[data-current="true"]')).toHaveAttribute('data-index', '0');
+  await expect(community.locator('#editorial-creator-track > div')).toHaveCSS(
+    'animation-name',
+    'none',
+  );
 });
 
 test('o FAQ expande e recolhe por teclado com foco visível', async ({ page }) => {
