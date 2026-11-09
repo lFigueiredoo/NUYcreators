@@ -15,6 +15,7 @@ const PLATFORM: Record<string, string> = {
   instagram: 'Instagram',
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  live: 'Live',
 };
 
 const CREATOR_TYPE: Record<string, string> = {

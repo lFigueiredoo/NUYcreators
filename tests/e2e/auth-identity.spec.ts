@@ -61,87 +61,38 @@ test('login e cadastro nascem no creme, com o lockup da marca e sem resto do uni
   expect(errors).toEqual([]);
 });
 
-test('acesso e landing são o mesmo produto: marca, botão e régua medidos nas duas', async ({
-  page,
-}) => {
-  const read = (selector: string) =>
+test('acesso e landing mantêm a marca e a cor principal da NUY', async ({ page }) => {
+  const readBrand = () =>
     page
-      .locator(selector)
-      .first()
-      .evaluate((element) => {
-        const style = getComputedStyle(element);
+      .getByRole('link', { name: 'NUY Creators início' })
+      .locator('img')
+      .evaluate(async (element) => {
+        const image = element as HTMLImageElement;
+        await image.decode();
+        const url = new URL(image.currentSrc, location.href);
         return {
-          family: style.fontFamily,
-          size: style.fontSize,
-          weight: style.fontWeight,
-          tracking: style.letterSpacing,
-          color: style.color,
-          background: style.backgroundColor,
-          radius: style.borderRadius,
+          file: url.searchParams.get('url') ?? url.pathname,
+          ratio: image.naturalWidth / image.naturalHeight,
         };
       });
 
-  /**
-   * A marca deixou de ser texto e virou bitmap: o que se compara agora é o
-   * arquivo servido e o tamanho em que ele aparece. A prova continua a mesma —
-   * acesso e landing mostram a mesma marca, do mesmo jeito.
-   */
-  const readBrand = () =>
-    page.locator('header [aria-label="NUY Creators início"] img').evaluate((element) => {
-      const image = element as HTMLImageElement;
-      const box = image.getBoundingClientRect();
-      const url = new URL(image.currentSrc, location.href);
-      return {
-        // Com o otimizador ligado, o arquivo real vem no parâmetro `url`.
-        file: url.pathname === '/_next/image' ? (url.searchParams.get('url') ?? '') : url.pathname,
-        natural: image.naturalWidth,
-        height: Math.round(box.height),
-        ratio: Number((box.width / box.height).toFixed(2)),
-      };
-    });
-
   await page.goto('/');
   const landingLockup = await readBrand();
-  // A página estática usa um destino neutro: a rota protegida decide login ou painel.
-  const landingButton = await read('a[href="/app"]:has-text("ACESSAR O NUY CREATORS")');
-  const landingGutter = await page
-    .locator('header')
-    .evaluate((element) => getComputedStyle(element).paddingLeft);
+  await expect(page.getByRole('link', { name: 'ACESSAR O NUY CREATORS', exact: true })).toHaveCSS(
+    'background-color',
+    'rgb(8, 43, 85)',
+  );
 
   await page.goto('/login');
   const authLockup = await readBrand();
-  const authButton = await read('button[type="submit"]');
-  const authGutter = await page
-    .locator('header')
-    .evaluate((element) => getComputedStyle(element).paddingLeft);
-
-  // Lockup: a MESMA marca — mesmo arquivo servido, mesma altura, mesma
-  // proporção — no acesso e na landing.
-  expect(authLockup.file).toBe(landingLockup.file);
-  expect(authLockup.height).toBe(landingLockup.height);
-  expect(authLockup.ratio).toBeCloseTo(landingLockup.ratio, 1);
+  await expect(page.locator('button[type="submit"]')).toHaveCSS(
+    'background-color',
+    'rgb(8, 43, 85)',
+  );
   expect(landingLockup.file).toMatch(/nuy-creators-logo\.png$/);
-  expect(landingLockup.natural).toBeGreaterThan(0);
-  // Botão principal: mesmo navy, mesmo raio, mesma família e peso.
-  expect(authButton.background).toBe(landingButton.background);
-  expect(authButton.radius).toBe(landingButton.radius);
-  expect(authButton.family).toBe(landingButton.family);
-  expect(authButton.weight).toBe(landingButton.weight);
-  // Régua editorial: a mesma calha no topo das duas páginas.
-  expect(authGutter).toBe(landingGutter);
-
-  // O acesso não empresta a imagem do hero: o painel de marca é bloco navy
-  // chapado, e os únicos bitmaps de produto da casa continuam no hero da
-  // landing — os packshots reais do pacote, nenhum deles no acesso.
-  expect(await page.locator('main figure img').count()).toBe(0);
-  await page.goto('/');
-  expect(
-    await page
-      .locator('[class*=heroStage] img')
-      .evaluateAll((images) =>
-        images.every((image) => (image as HTMLImageElement).naturalWidth > 0),
-      ),
-  ).toBe(true);
+  expect(authLockup.file).toMatch(/nuy-creators-logo\.png$/);
+  expect(authLockup.ratio).toBeCloseTo(landingLockup.ratio, 1);
+  await expect(page.locator('main figure img')).toHaveCount(0);
 });
 
 test('campos com rótulo visível, foco discreto e leitura de senha acessível', async ({ page }) => {

@@ -25,13 +25,18 @@ export async function currentUser() {
   }
 }
 export function authConfigured() {
-  const env = getEnvironment();
-  return Boolean(
-    env.APPWRITE_ENDPOINT &&
-    env.APPWRITE_PROJECT_ID &&
-    process.env.APPWRITE_AUTH_API_KEY &&
-    (process.env.NODE_ENV !== 'production' || env.AUTH_RATE_LIMIT_VERIFIED === 'true'),
-  );
+  try {
+    const env = getEnvironment();
+    return Boolean(
+      env.APPWRITE_ENDPOINT &&
+      env.APPWRITE_PROJECT_ID &&
+      process.env.APPWRITE_AUTH_API_KEY &&
+      (process.env.NODE_ENV !== 'production' || env.AUTH_RATE_LIMIT_VERIFIED === 'true'),
+    );
+  } catch (error) {
+    console.error('Configuração de autenticação inválida:', error);
+    return false;
+  }
 }
 export function createSessionAccount() {
   const env = getEnvironment();

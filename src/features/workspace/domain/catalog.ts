@@ -81,7 +81,12 @@ export function isVisibleToCreators(status: string) {
 }
 
 /** Plataformas já usadas pelo produto (onboarding, envio e atribuição de link). */
-export const catalogPlatforms = ['instagram', 'tiktok', 'youtube'] as const;
+export const catalogPlatforms = ['instagram', 'tiktok', 'youtube', 'live'] as const;
+
+export function catalogPlatformLabel(platform: string): string {
+  if (platform === 'live') return 'Live';
+  return platform.charAt(0).toUpperCase() + platform.slice(1);
+}
 
 /**
  * Rascunhos do catálogo — o que a tela preenche e o núcleo grava.
@@ -116,6 +121,18 @@ export type ChallengeDraft = {
   mentions: string;
   requirements: RequirementDraft[];
 };
+
+export function withLiveRequirement(draft: ChallengeDraft): ChallengeDraft {
+  if (draft.platform.trim().toLowerCase() !== 'live') return draft;
+  if (draft.requirements.some((requirement) => requirement.type.trim() === 'link')) return draft;
+  return {
+    ...draft,
+    requirements: [
+      ...draft.requirements,
+      { type: 'link', required: true, configJson: '' },
+    ],
+  };
+}
 
 export type RewardDraft = {
   name: string;

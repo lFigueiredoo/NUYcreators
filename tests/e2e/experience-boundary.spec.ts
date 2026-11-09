@@ -28,13 +28,11 @@ test('a landing pública contém só blocos editoriais e links de aquisição', 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  // Inventário de seções da landing: o REDESIGN CLEAN reduz a página a cinco
-  // blocos editoriais, em ordem de documento — comunidade (pré-lançamento), o
-  // que é, como participar, FAQ e CTA final. A lista é exata: nenhum bloco
-  // operacional (desafios, recompensas, conteúdos, manifesto) pode voltar.
+  // A landing apresenta a comunidade. Desafios, recompensas e ranking
+  // continuam na área autenticada.
   const planned = ['comunidade', 'o-que-e', 'como-participar', 'faq', 'cta-final'];
   const ids = await page
-    .locator('main section[id]')
+    .locator('main > section[id]')
     .evaluateAll((elements) => elements.map((element) => element.id));
   expect(ids).toEqual(planned);
 
@@ -42,16 +40,38 @@ test('a landing pública contém só blocos editoriais e links de aquisição', 
     page.locator('main a[href="/ranking"],main a[href="/recompensas"],main a[href="/desafios"]'),
   ).toHaveCount(0);
 
-  const header = page.locator('header');
-  if (test.info().project.name === 'mobile')
-    await header.getByRole('button', { name: 'Abrir menu' }).click();
-  // Três âncoras discretas, não a barra de sete itens do layout antigo.
+  const header = page.getByRole('banner');
+  const mobile = test.info().project.name === 'mobile';
+  const menu = header.getByRole('button', { name: 'Menu', exact: true });
+  if (mobile) {
+    await menu.focus();
+    await menu.press('Enter');
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    const faqLink = header.getByRole('link', { name: 'FAQ', exact: true });
+    await faqLink.focus();
+    await faqLink.press('Escape');
+    await expect(menu).toHaveAttribute('aria-expanded', 'false');
+    await expect(menu).toBeFocused();
+    await menu.press('Enter');
+  }
   for (const label of ['O que é', 'Como participar', 'FAQ']) {
     await expect(
       header.getByRole('link', { name: label, exact: true }).filter({ visible: true }).first(),
     ).toBeVisible();
   }
-  await expect(header.getByRole('link', { name: 'ACESSAR', exact: true }).first()).toBeVisible();
+  const access = header
+    .getByRole('link', { name: 'ACESSAR', exact: true })
+    .filter({ visible: true });
+  await expect(access).toHaveCount(1);
+  await expect(access).toHaveAttribute('href', '/app');
+  await header.getByRole('link', { name: 'FAQ', exact: true }).click();
+  await expect(page).toHaveURL(/#faq$/);
+  await expect(page.locator('#faq h2')).toBeInViewport();
+  if (mobile) await expect(menu).toHaveAttribute('aria-expanded', 'false');
+
+  await page.getByRole('link', { name: 'ACESSAR O NUY CREATORS', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole('heading', { name: 'Bem-vinda de volta.' })).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -59,28 +79,30 @@ test('o rodapé fecha a página pública com rotas reais', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
-  const footer = page.locator('footer');
-  await expect(footer.getByRole('link', { name: 'NUY Creators início' })).toHaveAttribute(
-    'href',
-    '/',
-  );
-  // Rodapé mínimo: FAQ e páginas legais, com acesso neutro à rota protegida.
-  expect(
-    await footer
-      .locator('nav[aria-label="Rodapé"] a')
-      .evaluateAll((links) => links.map((link) => [link.textContent, link.getAttribute('href')])),
-  ).toEqual([
-    ['FAQ', '#faq'],
-    ['Termos', '/termos'],
-    ['Privacidade', '/privacidade'],
-    ['Acessar', '/app'],
-  ]);
+  const footer = page.getByRole('contentinfo');
+  const explore = footer.getByRole('navigation', { name: 'Explore' });
+  for (const [label, hash] of [
+    ['O que é', 'o-que-e'],
+    ['Comunidade', 'comunidade'],
+    ['Como participar', 'como-participar'],
+    ['FAQ', 'faq'],
+  ]) {
+    await expect(explore.getByRole('link', { name: label, exact: true })).toHaveAttribute(
+      'href',
+      new RegExp('#' + hash + '$'),
+    );
+  }
+  const information = footer.getByRole('navigation', { name: 'Informações' });
+  await expect(information.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login');
   await expect(footer.getByText('© 2026 NUY Creators')).toBeVisible();
-  await expect(footer.getByRole('link', { name: 'Privacidade' })).toHaveAttribute(
+  await expect(information.getByRole('link', { name: 'Privacidade' })).toHaveAttribute(
     'href',
     '/privacidade',
   );
-  await expect(footer.getByRole('link', { name: 'Termos' })).toHaveAttribute('href', '/termos');
+  await expect(information.getByRole('link', { name: 'Termos' })).toHaveAttribute(
+    'href',
+    '/termos',
+  );
 });
 
 test('nenhum link público é morto: sem "#" solto e sem destino quebrado', async ({ page }) => {

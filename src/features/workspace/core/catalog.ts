@@ -19,6 +19,7 @@ import {
   type CampaignDraft,
   type ChallengeDraft,
   type RewardDraft,
+  withLiveRequirement,
 } from '../domain/catalog';
 
 /**
@@ -349,8 +350,9 @@ export async function saveChallenge(
 ): Promise<CoreResult<ChallengeResult>> {
   const blocked = requiresStaff<ChallengeResult>(ctx, 'manage-catalog');
   if (blocked) return blocked;
-  if (challengeIssues(input.draft).length) return failure('invalid');
-  const data = challengeData(input.draft, input.timeZone);
+  const draft = withLiveRequirement(input.draft);
+  if (challengeIssues(draft).length) return failure('invalid');
+  const data = challengeData(draft, input.timeZone);
   if (!data) return failure('invalid');
   // O slug é a chave pública do desafio (a URL da criadora): nasce com o desafio
   // e não muda depois — mudar o slug mudaria o endereço de quem já participa.
@@ -401,7 +403,7 @@ export async function saveChallenge(
           permissions,
           transactionId: tx.transactionId,
         });
-      await syncRequirements(ctx, tx, challengeId, status, input.draft.requirements);
+      await syncRequirements(ctx, tx, challengeId, status, draft.requirements);
       if (existing && status !== existing.status) {
         const comments = await refreshChallengeCommentPermissions(ctx, tx, challengeId);
         if (!comments.ok) return failure(comments.failure.code);

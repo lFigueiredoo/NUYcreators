@@ -15,6 +15,7 @@ import {
   catalogStatusView,
   catalogView,
   challengeIssues,
+  withLiveRequirement,
   isLive,
   isVisibleToCreators,
   rewardIssues,
@@ -282,6 +283,14 @@ describe('validação dos rascunhos do catálogo', () => {
     expect(challengeIssues(challenge)).toEqual([]);
     expect(rewardIssues(reward)).toEqual([]);
     expect(campaignIssues(campaign)).toEqual([]);
+  });
+
+  it('adiciona link obrigatório automaticamente em desafios de live', () => {
+    const liveChallenge = withLiveRequirement({ ...challenge, platform: 'live', requirements: [] });
+    expect(liveChallenge.requirements).toEqual([
+      { type: 'link', required: true, configJson: '' },
+    ]);
+    expect(withLiveRequirement(liveChallenge)).toEqual(liveChallenge);
   });
 
   it('recusa o que o schema não aceita, com uma frase por problema', () => {

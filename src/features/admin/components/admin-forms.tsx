@@ -12,6 +12,7 @@ import {
 import { CircleAlert, CircleCheck, LoaderCircle, Plus, TriangleAlert, Trash2 } from 'lucide-react';
 import {
   catalogPlatforms,
+  catalogPlatformLabel,
   catalogStatuses,
   catalogStatusView,
   type CatalogStatus,
@@ -489,7 +490,10 @@ export function ChallengeForm({
     values.productId,
   );
   const platforms = withCurrent(
-    catalogPlatforms.map((platform) => ({ value: platform, label: platform })),
+    catalogPlatforms.map((platform) => ({
+      value: platform,
+      label: catalogPlatformLabel(platform),
+    })),
     values.platform,
   );
 

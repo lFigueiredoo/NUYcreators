@@ -281,13 +281,21 @@ export function ChallengesScreen({
   );
 }
 
-function RequirementItem({ requirement }: { requirement: Requirement }) {
+function RequirementItem({
+  requirement,
+  isLive,
+}: {
+  requirement: Requirement;
+  isLive: boolean;
+}) {
   const entries = configEntries(requirement.config);
   const simple = entries.length === 1 && entries[0].key === 'value';
+  const label =
+    isLive && requirement.type === 'link' ? 'Link da live' : requirementLabel(requirement.type);
   return (
     <li className={styles.requirementItem}>
       <div className={styles.requirementMain}>
-        <p className={styles.requirementLabel}>{requirementLabel(requirement.type)}</p>
+        <p className={styles.requirementLabel}>{label}</p>
         {entries.length > 0 ? (
           <p className={styles.requirementValue}>
             {simple ? entries[0].value : entries.map((e) => `${e.key}: ${e.value}`).join(' · ')}
@@ -379,7 +387,11 @@ function SubmissionPanel({
       !ended &&
       challenge.participation &&
       (!submission || submission.status === 'revision_requested') ? (
-        <SubmitContentForm challengeId={challenge.id} returnTo={returnTo} />
+        <SubmitContentForm
+          challengeId={challenge.id}
+          returnTo={returnTo}
+          isLive={challenge.platform === 'live'}
+        />
       ) : null}
       <Link href="/app/conteudos" className={styles.blockLink}>
         Ver meus conteúdos
@@ -505,7 +517,11 @@ export function ChallengeDetailScreen({
             <Block title="O que enviar">
               <ul className={styles.requirementList}>
                 {detail.requirements.items.map((requirement) => (
-                  <RequirementItem key={requirement.id} requirement={requirement} />
+                  <RequirementItem
+                    key={requirement.id}
+                    requirement={requirement}
+                    isLive={challenge.platform === 'live'}
+                  />
                 ))}
               </ul>
             </Block>

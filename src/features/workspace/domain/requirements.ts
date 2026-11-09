@@ -49,7 +49,7 @@ const REQUIREMENT_LABELS: Record<string, string> = {
   min_duration_seconds: 'Duração mínima (segundos)',
   min_slides: 'Mínimo de slides',
   caption: 'Legenda',
-  link: 'Link na publicação',
+  link: 'Link da publicação ou live',
 };
 
 export function requirementLabel(type: string) {

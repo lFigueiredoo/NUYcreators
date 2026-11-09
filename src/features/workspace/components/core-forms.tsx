@@ -101,9 +101,11 @@ export function JoinChallengeForm({
 export function SubmitContentForm({
   challengeId,
   returnTo,
+  isLive = false,
 }: {
   challengeId: string;
   returnTo: string;
+  isLive?: boolean;
 }) {
   const [state, action, pending] = useActionState(submitContentAction.bind(null, returnTo), EMPTY);
   const [url, setUrl] = useState('');
@@ -112,7 +114,7 @@ export function SubmitContentForm({
     <form action={action} className={styles.form}>
       <input type="hidden" name="challengeId" value={challengeId} />
       <label className={styles.fieldLabel} htmlFor={urlId}>
-        Link da publicação
+        {isLive ? 'Link da live' : 'Link da publicação'}
       </label>
       <input
         id={urlId}

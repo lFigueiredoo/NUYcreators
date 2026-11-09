@@ -1,0 +1,8 @@
+.git
+.next
+node_modules
+artifacts
+playwright-report
+test-results
+*.zip
+debug.log
