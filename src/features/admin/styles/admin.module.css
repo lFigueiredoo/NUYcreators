@@ -635,6 +635,36 @@ a.kpi:hover {
   padding-top: 0;
   border-top: 0;
 }
+
+.advancedOptions {
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-radius);
+  background: color-mix(in srgb, var(--app-surface) 92%, var(--app-deep));
+}
+
+.advancedOptions > summary {
+  padding: 14px 16px;
+  color: var(--app-navy);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.advancedOptions[open] > summary {
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.advancedBody {
+  display: grid;
+  gap: 18px;
+  padding: 16px;
+}
+
+.advancedBody .formSection {
+  padding-top: 0;
+  border-top: 0;
+}
 .admin .formSectionTitle {
   margin: 0;
   font-family: inherit;

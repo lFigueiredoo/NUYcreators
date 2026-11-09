@@ -407,6 +407,15 @@ export function ChallengeForm({
 }) {
   const editing = Boolean(initial?.challengeId);
   const [values, setValues] = useState<ChallengeFormValues>(initial ?? BLANK_CHALLENGE);
+  const [advancedOpen, setAdvancedOpen] = useState(
+    editing ||
+      Boolean(
+        initial?.campaignId ||
+          initial?.productId ||
+          initial?.requirements?.length ||
+          initial?.imageFileId,
+      ),
+  );
   const [state, action, pending] = useActionState(challengeSaveAction, EMPTY);
 
   function set<K extends keyof ChallengeFormValues>(field: K, value: ChallengeFormValues[K]) {
@@ -499,13 +508,20 @@ export function ChallengeForm({
               />
             )}
           </Field>
-          <ImageField
-            label="Imagem do desafio"
-            value={values.imageFileId}
-            enabled={mediaEnabled}
-            hint="JPG, PNG ou WEBP até 5 MB. Em branco, o desafio aparece sem imagem."
-          />
         </div>
+        <Field label="Descrição" hint="Explique em poucas frases o que a creator precisa fazer.">
+          {(id) => (
+            <textarea
+              id={id}
+              className={styles.textarea}
+              name="description"
+              value={values.description}
+              maxLength={10000}
+              required
+              onChange={(event) => set('description', event.target.value)}
+            />
+          )}
+        </Field>
       </Section>
 
       <Section title="Janela e pontuação">
@@ -551,107 +567,91 @@ export function ChallengeForm({
               />
             )}
           </Field>
-          <Field label="Limite de participantes" hint="Em branco = sem limite de vagas.">
-            {(id) => (
-              <input
-                id={id}
-                className={appStyles.input}
-                name="participantLimit"
-                type="number"
-                min={1}
-                step={1}
-                value={values.participantLimit}
-                onChange={(event) => set('participantLimit', event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="Nível exigido" hint="Quem estiver abaixo do nível não consegue participar.">
-            {(id) => (
-              <Choice
-                id={id}
-                name="requiredLevelId"
-                value={values.requiredLevelId}
-                onChange={(value) => set('requiredLevelId', value)}
-                options={[{ value: '', label: 'Sem exigência de nível' }, ...levels]}
-              />
-            )}
-          </Field>
         </div>
       </Section>
 
-      <Section title="Contexto">
-        <div className={appStyles.formGrid}>
-          <Field label="Campanha" hint="Agrupa o desafio numa campanha. Opcional.">
-            {(id) => (
-              <Choice
-                id={id}
-                name="campaignId"
-                value={values.campaignId}
-                onChange={(value) => set('campaignId', value)}
-                options={[{ value: '', label: 'Sem campanha' }, ...campaigns]}
+      <details
+        className={styles.advancedOptions}
+        open={advancedOpen}
+        onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+      >
+        <summary>Mais opções</summary>
+        <div className={styles.advancedBody}>
+          <Section title="Contexto">
+            <div className={appStyles.formGrid}>
+              <Field label="Campanha" hint="Agrupa o desafio numa campanha. Opcional.">
+                {(id) => (
+                  <Choice
+                    id={id}
+                    name="campaignId"
+                    value={values.campaignId}
+                    onChange={(value) => set('campaignId', value)}
+                    options={[{ value: '', label: 'Sem campanha' }, ...campaigns]}
+                  />
+                )}
+              </Field>
+              <Field label="Produto" hint="Produto associado ao desafio. Opcional.">
+                {(id) => (
+                  <Choice
+                    id={id}
+                    name="productId"
+                    value={values.productId}
+                    onChange={(value) => set('productId', value)}
+                    options={[{ value: '', label: 'Sem produto' }, ...products]}
+                  />
+                )}
+              </Field>
+              <Field label="Limite de participantes" hint="Em branco = sem limite de vagas.">
+                {(id) => (
+                  <input
+                    id={id}
+                    className={appStyles.input}
+                    name="participantLimit"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={values.participantLimit}
+                    onChange={(event) => set('participantLimit', event.target.value)}
+                  />
+                )}
+              </Field>
+              <Field label="Nível exigido" hint="Quem estiver abaixo não consegue participar.">
+                {(id) => (
+                  <Choice
+                    id={id}
+                    name="requiredLevelId"
+                    value={values.requiredLevelId}
+                    onChange={(value) => set('requiredLevelId', value)}
+                    options={[{ value: '', label: 'Sem exigência de nível' }, ...levels]}
+                  />
+                )}
+              </Field>
+              <Field label="Hashtags" hint="Como a creator deve usar na publicação.">
+                {(id) => (
+                  <input id={id} className={appStyles.input} name="hashtags" value={values.hashtags} maxLength={2000} onChange={(event) => set('hashtags', event.target.value)} />
+                )}
+              </Field>
+              <Field label="Marcações" hint="Perfis que a publicação precisa marcar.">
+                {(id) => (
+                  <input id={id} className={appStyles.input} name="mentions" value={values.mentions} maxLength={2000} onChange={(event) => set('mentions', event.target.value)} />
+                )}
+              </Field>
+              <ImageField
+                label="Imagem do desafio"
+                value={values.imageFileId}
+                enabled={mediaEnabled}
+                hint="JPG, PNG ou WEBP até 5 MB. Opcional."
               />
-            )}
-          </Field>
-          <Field label="Produto" hint="Produto associado ao desafio. Opcional.">
-            {(id) => (
-              <Choice
-                id={id}
-                name="productId"
-                value={values.productId}
-                onChange={(value) => set('productId', value)}
-                options={[{ value: '', label: 'Sem produto' }, ...products]}
-              />
-            )}
-          </Field>
-          <Field label="Hashtags" hint="Como a creator deve usar na publicação.">
-            {(id) => (
-              <input
-                id={id}
-                className={appStyles.input}
-                name="hashtags"
-                value={values.hashtags}
-                maxLength={2000}
-                onChange={(event) => set('hashtags', event.target.value)}
-              />
-            )}
-          </Field>
-          <Field label="Marcações" hint="Perfis que a publicação precisa marcar.">
-            {(id) => (
-              <input
-                id={id}
-                className={appStyles.input}
-                name="mentions"
-                value={values.mentions}
-                maxLength={2000}
-                onChange={(event) => set('mentions', event.target.value)}
-              />
-            )}
-          </Field>
-        </div>
-        <Field label="Descrição" hint="O que a creator precisa saber para participar.">
-          {(id) => (
-            <textarea
-              id={id}
-              className={styles.textarea}
-              name="description"
-              value={values.description}
-              maxLength={10000}
-              required
-              onChange={(event) => set('description', event.target.value)}
-            />
-          )}
-        </Field>
-      </Section>
+            </div>
+          </Section>
 
-      <Section title="Requisitos">
-        <p className={styles.formHint}>
-          Requisito é o que a publicação precisa cumprir. A configuração é JSON lido pela página do
-          desafio — os tipos oferecidos usam <code>{'{"value":"…"}'}</code>. Chaves que a página não
-          conhece ficam guardadas, mas não são exibidas.
-        </p>
-        <div className={styles.requirementRows}>
-          {values.requirements.map((requirement, index) => (
-            <div className={styles.requirementRow} key={index}>
+          <Section title="Requisitos">
+            <p className={styles.formHint}>
+              Use apenas se este desafio tiver regras específicas para a publicação.
+            </p>
+            <div className={styles.requirementRows}>
+              {values.requirements.map((requirement, index) => (
+                <div className={styles.requirementRow} key={index}>
               <Choice
                 id={`requirement-type-${index}`}
                 name="requirementType"
@@ -703,29 +703,31 @@ export function ChallengeForm({
                 <Trash2 size={16} aria-hidden="true" />
               </button>
             </div>
-          ))}
+              ))}
+            </div>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                className={`${appStyles.button} ${appStyles.buttonQuiet}`}
+                disabled={values.requirements.length >= 20}
+                onClick={() =>
+                  setValues((current) => ({
+                    ...current,
+                    requirements: [
+                      ...current.requirements,
+                      { type: '', required: true, configJson: '' },
+                    ],
+                  }))
+                }
+              >
+                <Plus size={15} aria-hidden="true" />
+                Adicionar requisito
+              </button>
+              <p className={styles.counter}>{values.requirements.length} de 20</p>
+            </div>
+          </Section>
         </div>
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={`${appStyles.button} ${appStyles.buttonQuiet}`}
-            disabled={values.requirements.length >= 20}
-            onClick={() =>
-              setValues((current) => ({
-                ...current,
-                requirements: [
-                  ...current.requirements,
-                  { type: '', required: true, configJson: '' },
-                ],
-              }))
-            }
-          >
-            <Plus size={15} aria-hidden="true" />
-            Adicionar requisito
-          </button>
-          <p className={styles.counter}>{values.requirements.length} de 20</p>
-        </div>
-      </Section>
+      </details>
 
       <div className={styles.actions}>
         <button
@@ -748,7 +750,7 @@ export function ChallengeForm({
         </button>
       </div>
       <p className={styles.formHint}>
-        Rascunho não aparece para nenhuma creator. Publicado aparece dentro do período informado.
+        Salvar rascunho guarda sem exibir. Use “Criar e publicar” para colocar o desafio no ar dentro do período informado.
       </p>
       <ActionMessage state={state} pending={pending} />
     </form>
