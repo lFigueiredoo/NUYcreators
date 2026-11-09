@@ -33,7 +33,7 @@ export function Hero() {
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>COMUNIDADE NUY CREATORS</p>
           <h1 id="editorial-hero-title" className={styles.headline}>
-            Bem vindos ao
+            Bem-vindo à
             <br /> <span translate="no">NUY Creators</span>
           </h1>
           <p className={styles.heroDescription}>

@@ -20,7 +20,7 @@ test('a Editorial mantém a composição aprovada em desktop e celular', async (
   await page.evaluate(() => document.fonts.ready);
 
   const hero = page.locator('section[aria-labelledby="editorial-hero-title"]');
-  await expect(hero.getByRole('heading', { level: 1 })).toHaveText(/Bem vindos ao\s*NUY Creators/);
+  await expect(hero.getByRole('heading', { level: 1 })).toHaveText(/Bem-vindo à\s*NUY Creators/);
   await expect(hero.getByText('COMUNIDADE NUY CREATORS')).toBeVisible();
   await expect(hero.getByRole('link', { name: 'ACESSAR O NUY CREATORS' })).toHaveAttribute(
     'href',
