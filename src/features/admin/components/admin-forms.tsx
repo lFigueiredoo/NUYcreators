@@ -396,6 +396,44 @@ const BLANK_CHALLENGE: ChallengeFormValues = {
   requirements: [],
 };
 
+function requirementValue(configJson: string): string {
+  try {
+    const parsed: unknown = JSON.parse(configJson);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && 'value' in parsed) {
+      const value = parsed.value;
+      return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+    }
+  } catch {
+    return configJson;
+  }
+  return configJson;
+}
+
+function requirementConfig(value: string): string {
+  return value.trim() ? JSON.stringify({ value: value.trim() }) : '';
+}
+
+function requirementValueHint(type: string): string {
+  switch (type) {
+    case 'min_duration_seconds':
+      return 'Ex.: 15';
+    case 'min_slides':
+      return 'Ex.: 3';
+    case 'hashtag':
+      return 'Ex.: #nuyemcasa';
+    case 'mention':
+      return 'Ex.: @nuyoficial';
+    case 'format':
+      return 'Ex.: vídeo vertical';
+    case 'caption':
+      return 'Ex.: mencione sua rotina';
+    case 'link':
+      return 'Ex.: link na bio';
+    default:
+      return 'Informe o valor da regra';
+  }
+}
+
 export function ChallengeForm({
   values: initial,
   choices,
@@ -432,6 +470,10 @@ export function ChallengeForm({
         position === index ? { ...requirement, ...patch } : requirement,
       ),
     }));
+  }
+
+  function setRequirementValue(index: number, value: string) {
+    setRequirement(index, { configJson: requirementConfig(value) });
   }
 
   const levels = withCurrent(
@@ -647,62 +689,64 @@ export function ChallengeForm({
 
           <Section title="Requisitos">
             <p className={styles.formHint}>
-              Use apenas se este desafio tiver regras específicas para a publicação.
+              Adicione uma regra, escolha se é obrigatória e informe apenas o valor. Não é necessário escrever código.
             </p>
             <div className={styles.requirementRows}>
               {values.requirements.map((requirement, index) => (
                 <div className={styles.requirementRow} key={index}>
-              <Choice
-                id={`requirement-type-${index}`}
-                name="requirementType"
-                value={requirement.type}
-                onChange={(value) => setRequirement(index, { type: value })}
-                options={[
-                  { value: '', label: 'Tipo do requisito' },
-                  ...requirementTypes.map((type) => ({
-                    value: type,
-                    label: requirementLabel(type),
-                  })),
-                  ...(requirement.type && !requirementTypes.includes(requirement.type)
-                    ? [{ value: requirement.type, label: `${requirement.type} (fora da lista)` }]
-                    : []),
-                ]}
-              />
-              <Choice
-                id={`requirement-required-${index}`}
-                name="requirementRequired"
-                value={requirement.required ? 'true' : 'false'}
-                onChange={(value) => setRequirement(index, { required: value === 'true' })}
-                options={[
-                  { value: 'true', label: 'Obrigatório' },
-                  { value: 'false', label: 'Opcional' },
-                ]}
-              />
-              <div className={styles.requirementConfig}>
-                <input
-                  className={appStyles.input}
-                  name="requirementConfig"
-                  value={requirement.configJson}
-                  placeholder={'{"value":"…"}'}
-                  maxLength={10000}
-                  aria-label={`Configuração do requisito ${index + 1}`}
-                  onChange={(event) => setRequirement(index, { configJson: event.target.value })}
-                />
-              </div>
-              <button
-                type="button"
-                className={styles.iconOnly}
-                aria-label={`Remover requisito ${index + 1}`}
-                onClick={() =>
-                  setValues((current) => ({
-                    ...current,
-                    requirements: current.requirements.filter((_, position) => position !== index),
-                  }))
-                }
-              >
-                <Trash2 size={16} aria-hidden="true" />
-              </button>
-            </div>
+                  <Choice
+                    id={`requirement-type-${index}`}
+                    name="requirementType"
+                    value={requirement.type}
+                    onChange={(value) => setRequirement(index, { type: value, configJson: '' })}
+                    options={[
+                      { value: '', label: 'Escolha a regra' },
+                      ...requirementTypes.map((type) => ({
+                        value: type,
+                        label: requirementLabel(type),
+                      })),
+                      ...(requirement.type && !requirementTypes.includes(requirement.type)
+                        ? [{ value: requirement.type, label: `${requirement.type} (fora da lista)` }]
+                        : []),
+                    ]}
+                  />
+                  <Choice
+                    id={`requirement-required-${index}`}
+                    name="requirementRequired"
+                    value={requirement.required ? 'true' : 'false'}
+                    onChange={(value) => setRequirement(index, { required: value === 'true' })}
+                    options={[
+                      { value: 'true', label: 'Obrigatório' },
+                      { value: 'false', label: 'Opcional' },
+                    ]}
+                  />
+                  <div className={styles.requirementConfig}>
+                    <input
+                      className={appStyles.input}
+                      name="requirementConfig"
+                      value={requirementValue(requirement.configJson)}
+                      placeholder={requirementValueHint(requirement.type)}
+                      maxLength={10000}
+                      aria-label={`Valor do requisito ${index + 1}`}
+                      onChange={(event) => setRequirementValue(index, event.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.iconOnly}
+                    aria-label={`Remover requisito ${index + 1}`}
+                    onClick={() =>
+                      setValues((current) => ({
+                        ...current,
+                        requirements: current.requirements.filter(
+                          (_, position) => position !== index,
+                        ),
+                      }))
+                    }
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
+                </div>
               ))}
             </div>
             <div className={styles.actions}>
@@ -737,7 +781,7 @@ export function ChallengeForm({
           className={`${appStyles.button} ${appStyles.buttonGhost}`}
           disabled={pending}
         >
-          Salvar rascunho
+          Salvar sem publicar
         </button>
         <button
           type="submit"
@@ -746,11 +790,11 @@ export function ChallengeForm({
           className={`${appStyles.button} ${appStyles.buttonPrimary}`}
           disabled={pending}
         >
-          {editing ? 'Salvar e publicar' : 'Criar e publicar'}
+          {editing ? 'Salvar e publicar' : 'Publicar desafio'}
         </button>
       </div>
       <p className={styles.formHint}>
-        Salvar rascunho guarda sem exibir. Use “Criar e publicar” para colocar o desafio no ar dentro do período informado.
+        “Salvar sem publicar” guarda o desafio para depois. “Publicar desafio” deixa o conteúdo visível para creators dentro do período informado.
       </p>
       <ActionMessage state={state} pending={pending} />
     </form>
@@ -789,7 +833,7 @@ export function CatalogTransitionForm({
         <p className={styles.warnText}>
           {live
             ? `Encerrar o ${noun} recusa novas participações e novos envios. Quem já participou continua vendo o ${noun} e o próprio histórico — nada é apagado.`
-            : `Publicar deixa o ${noun} visível para as creators dentro do período informado. Se o período já terminou, ele aparece na lista e não aceita envios.`}
+            : `Publicar deixa o ${noun} visível para as creators dentro do período informado. Se o período já terminou, ele aparece na lista, mas não aceita novas participações.`}
         </p>
       </div>
       {live ? (
