@@ -1,44 +1,33 @@
-﻿import './styles/landing-reveal.css';
-import { LandingReveal } from './landing-reveal';
-import { LandingDepth } from './landing-depth';
-import { landingFontVariables } from './landing-fonts';
-import { PublicHeader } from './components/public-header';
+import localFont from 'next/font/local';
 import { Hero } from './components/hero';
-import { Community } from './components/community';
-import { WhatIs } from './components/what-is';
-import { HowToParticipate } from './components/how-to-participate';
-import { Faq } from './components/faq';
-import { CtaFinal } from './components/cta-final';
-import { PublicFooter } from './components/public-footer';
-import styles from './styles/landing.module.css';
+import { EditorialCarousel } from './editorial-carousel';
+import { EditorialHeader } from './editorial-header';
+import { EditorialFooter, EditorialSections } from './editorial-sections';
+import styles from './styles/editorial.module.css';
 
-/**
- * Landing pública — REDESIGN CLEAN (Opção 1 / referência "Moça Lovers").
- *
- * Oito blocos, um por ideia: header pill, hero com packshots reais, comunidade
- * em pré-lançamento, o que é, como participar (navy), FAQ (navy), CTA final e
- * rodapé mínimo. Nenhum card SaaS, nenhum ornamento, quase nenhuma animação —
- * só o reveal discreto de fade/translateY herdado do `landing-reveal.css`
- * (desfeito por `<noscript>`).
- */
-export function PublicLanding({ authenticated }: { authenticated?: boolean }) {
+const nunito = localFont({
+  src: '../../../node_modules/@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2',
+  variable: '--editorial-sans',
+  display: 'swap',
+  weight: '400 900',
+  fallback: ['Arial', 'sans-serif'],
+  adjustFontFallback: 'Arial',
+});
+
+export function PublicLanding() {
   return (
-    <div id="topo" className={`pl-landing ${styles.landing} ${landingFontVariables}`}>
-      <noscript>
-        <style>{'[data-pl-reveal]{opacity:1 !important;transform:none !important}'}</style>
-      </noscript>
-      <LandingReveal />
-      <LandingDepth />
-      <PublicHeader authenticated={authenticated} />
-      <main id="main">
-        <Hero authenticated={authenticated} />
-        <Community />
-        <WhatIs />
-        <HowToParticipate />
-        <Faq />
-        <CtaFinal authenticated={authenticated} />
+    <div
+      id="topo"
+      tabIndex={-1}
+      className={`${styles.landing} ${nunito.variable}`}
+    >
+      <EditorialHeader />
+      <main id="main" tabIndex={-1} className={styles.main}>
+        <Hero />
+        <EditorialCarousel />
+        <EditorialSections />
       </main>
-      <PublicFooter authenticated={authenticated} reveal />
+      <EditorialFooter />
     </div>
   );
 }
