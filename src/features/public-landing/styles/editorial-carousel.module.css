@@ -21,11 +21,11 @@
   max-width: 590px;
   margin: 0;
   color: var(--editorial-ink);
-  font-family: var(--editorial-sans), Arial, sans-serif;
+  font-family: var(--editorial-display);
   font-size: var(--nuy-type-h2);
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.18;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 

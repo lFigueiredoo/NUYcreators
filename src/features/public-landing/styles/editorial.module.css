@@ -6,6 +6,7 @@
   --editorial-muted: #42566f;
   --editorial-line: #ddd8cd;
   --editorial-gutter: 40px;
+  --editorial-display: 'Recoleta', 'Cormorant Garamond', Georgia, serif;
   --editorial-anchor-offset: 104px;
   --nuy-type-h1: clamp(2.5rem, 1.93rem + 2.35vw, 4rem);
   --nuy-type-h2: clamp(2rem, 1.71rem + 1.18vw, 2.75rem);
@@ -94,10 +95,10 @@
 
 .headline {
   margin: 0;
-  font-family: var(--editorial-sans), Arial, sans-serif;
+  font-family: var(--editorial-display);
   font-size: var(--nuy-type-h1);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: -0.035em;
   line-height: 1.14;
   text-wrap: balance;
   overflow-wrap: anywhere;

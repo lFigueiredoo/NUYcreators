@@ -11,10 +11,10 @@
 
 .title {
   margin: 0;
-  font-family: var(--editorial-sans), Arial, sans-serif;
+  font-family: var(--editorial-display);
   font-size: var(--nuy-type-h2);
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: -0.035em;
   line-height: 1.18;
   text-wrap: balance;
   overflow-wrap: anywhere;
@@ -107,7 +107,7 @@
 .step h3,
 .footerNav h2 {
   margin: 0;
-  font-family: var(--editorial-sans), Arial, sans-serif;
+  font-family: var(--editorial-display);
   font-weight: 600;
   line-height: 1.35;
   letter-spacing: normal;
@@ -156,7 +156,7 @@
   display: block;
   margin-bottom: 22px;
   color: var(--editorial-dark-gold);
-  font-family: var(--editorial-sans), Arial, sans-serif;
+  font-family: var(--editorial-display);
   font-size: 2.8125rem;
   font-weight: 800;
   font-variant-numeric: lining-nums tabular-nums;
