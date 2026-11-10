@@ -45,10 +45,30 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
     <>
       <ScreenHeader
         kicker="Ranking"
-        title="Ranking da comunidade"
-        intro={`Pontos ganhos no ciclo de ${ranking.periodLabel}. Resgatar recompensa usa o seu saldo e não muda a sua posição.`}
+        title="Ranking por campanha"
+        intro={
+          ranking.campaignName
+            ? `Pontos ganhos em ${ranking.campaignName}. Cada desafio publicado nessa campanha soma na mesma classificação.`
+            : 'As campanhas publicadas aparecem aqui para você acompanhar os pontos dos desafios.'
+        }
         className={styles.enter}
       />
+
+      {ranking.campaigns.length > 0 ? (
+        <nav aria-label="Campanhas do ranking" className={styles.enter}>
+          {ranking.campaigns.map((campaign) => (
+            <Link
+              key={campaign.id}
+              href={`/app/ranking?campanha=${encodeURIComponent(campaign.id)}`}
+              className={`${styles.button} ${
+                campaign.id === ranking.campaignId ? styles.buttonPrimary : styles.buttonGhost
+              }`}
+            >
+              {campaign.name}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
 
       {unavailable ? (
         <UnavailableState what="o ranking" />
@@ -61,16 +81,16 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
           </p>
           <p className={styles.statHint}>
             {ranking.own?.position
-              ? `${formatPoints(ranking.own.earnedPoints)} pontos ganhos em ${ranking.periodLabel}.`
+              ? `${formatPoints(ranking.own.earnedPoints)} pontos ganhos em ${ranking.campaignName ?? 'nenhuma campanha'}.`
               : ranking.own
-                ? `Você ganhou ${formatPoints(ranking.own.earnedPoints)} pontos neste ciclo; a posição aparece junto com a classificação do período.`
-                : `Sem pontos ganhos no ciclo de ${ranking.periodLabel}. Participe de um desafio para entrar no ranking.`}
+                ? `Você ganhou ${formatPoints(ranking.own.earnedPoints)} pontos nesta campanha; a posição aparece junto com a classificação.`
+                : 'Sem pontos ganhos nesta campanha. Participe de um desafio para entrar no ranking.'}
           </p>
         </Card>
       )}
 
       {podium.length > 0 ? (
-        <Block title="Destaques do ciclo" className={`${styles.enter} ${styles.i2}`}>
+        <Block title="Destaques da campanha" className={`${styles.enter} ${styles.i2}`}>
           {/* A grade se ajusta a quem existe: três colunas para três pessoas, duas
               para duas, e uma só — sem largura fixa deixando um buraco na terceira
               coluna. Um ciclo com pouca gente não vira uma tela pela metade. */}
@@ -126,9 +146,9 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
         </Block>
       ) : null}
 
-      {!unavailable && entries.length === 0 ? (
+      {!unavailable && entries.length === 0 && ranking.campaignName ? (
         <Block title="Classificação">
-          <RankingEmpty periodLabel={ranking.periodLabel} />
+          <RankingEmpty periodLabel={ranking.campaignName} />
         </Block>
       ) : null}
 

@@ -263,7 +263,7 @@ function SummaryStats({ journey, ranking }: { journey: JourneyView; ranking: Ran
           <>
             <p className={styles.statValue}>{ranking.own.position}º</p>
             <p className={styles.statHint}>
-              {formatPoints(ranking.own.earnedPoints)} pontos em {ranking.periodLabel}.
+              {formatPoints(ranking.own.earnedPoints)} pontos em {ranking.campaignName ?? 'nenhuma campanha'}.
             </p>
           </>
         ) : (
@@ -272,7 +272,9 @@ function SummaryStats({ journey, ranking }: { journey: JourneyView; ranking: Ran
             <p className={styles.statHint}>
               {ranking.entries.state === 'unavailable'
                 ? 'Ranking indisponível agora.'
-                : `Sem pontos no ciclo de ${ranking.periodLabel}.`}
+                : ranking.campaignName
+                  ? `Sem pontos em ${ranking.campaignName}.`
+                  : 'Nenhuma campanha publicada agora.'}
             </p>
           </>
         )}
@@ -614,10 +616,12 @@ export function DashboardData({
                 </div>
                 <p className={styles.statHint}>
                   {ranking.own?.position
-                    ? `${formatPoints(ranking.own.earnedPoints)} pontos ganhos em ${ranking.periodLabel}.`
+                    ? `${formatPoints(ranking.own.earnedPoints)} pontos ganhos em ${ranking.campaignName ?? 'nenhuma campanha'}.`
                     : ranking.entries.state === 'unavailable'
                       ? 'Ranking indisponível agora.'
-                      : `Sem pontos no ciclo de ${ranking.periodLabel}.`}
+                      : ranking.campaignName
+                        ? `Sem pontos em ${ranking.campaignName}.`
+                        : 'Nenhuma campanha publicada agora.'}
                 </p>
               </div>
               {leaders.length > 0 ? (
@@ -641,7 +645,7 @@ export function DashboardData({
             </Card>
             {leaders.length > 0 ? (
               <p className={styles.footNote}>
-                Quem lidera o ciclo de {ranking.periodLabel}. O nome exibido é o público — só ele
+                Quem lidera {ranking.campaignName ?? 'a campanha'}. O nome exibido é o público — só ele
                 aparece aqui, nunca e-mail, telefone ou cidade.
               </p>
             ) : null}

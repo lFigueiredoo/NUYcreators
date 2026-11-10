@@ -42,6 +42,7 @@ export type CreditInput = {
   description: string;
   /** Chave determinística da operação de negócio (ex.: `submission.approved:<id>`). */
   idempotencyKey: string;
+  campaignId?: string | null;
   /** Créditos elegíveis contam para nível e ranking; ajuste administrativo não. */
   qualifies: boolean;
 };
@@ -96,7 +97,7 @@ export async function creditPoints(
   ctx: CoreContext,
   tx: Staged,
   input: CreditInput,
-  ranking: { periodKey: string; delta: number },
+  ranking: { periodKey: string; campaignId?: string | null; delta: number },
 ): Promise<boolean> {
   const id = ledgerRowId(input.idempotencyKey);
   try {
@@ -115,6 +116,7 @@ export async function creditPoints(
         idempotencyKey: input.idempotencyKey,
         rankingDelta: ranking.delta,
         actorId: ctx.actor.userId,
+        campaignId: input.campaignId || null,
       },
       permissions: ownerReadPermissions(input.userId),
       transactionId: tx.transactionId,
@@ -290,9 +292,10 @@ async function projectRanking(
   ctx: CoreContext,
   tx: Staged,
   userId: string,
-  ranking: { periodKey: string; delta: number },
+  ranking: { periodKey: string; campaignId?: string | null; delta: number },
 ): Promise<void> {
-  const id = rowId('rank', ranking.periodKey, userId);
+  const scope = ranking.campaignId || ranking.periodKey;
+  const id = rowId('rank', scope, userId);
   const existing = await readRankingEntry(ctx, tx, id);
   if (existing) {
     await incrementColumn(ctx.tables, {
@@ -319,6 +322,7 @@ async function projectRanking(
     data: {
       periodKey: ranking.periodKey,
       userId,
+      campaignId: ranking.campaignId || null,
       earnedPoints: ranking.delta,
       lastEarnedAt: ctx.now.toISOString(),
     },

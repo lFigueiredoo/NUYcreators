@@ -117,7 +117,7 @@ export const tables: Table[] = [
   ),
   table(
     'point_transactions',
-    'userId type amount:# referenceId referenceType description:2000 createdAt:@ idempotencyKey rankingDelta:# actorId reversalOf?',
+    'userId type amount:# referenceId referenceType description:2000 createdAt:@ idempotencyKey rankingDelta:# actorId campaignId? reversalOf?',
     [['idempotencyKey']],
     [
       ['userId', 'createdAt'],
@@ -185,9 +185,9 @@ export const tables: Table[] = [
   ),
   table(
     'ranking_entries',
-    'periodKey userId earnedPoints:# lastEarnedAt:@',
+    'periodKey userId campaignId? earnedPoints:# lastEarnedAt:@',
     [['periodKey', 'userId']],
-    [['periodKey', 'earnedPoints']],
+    [['periodKey', 'earnedPoints'], ['campaignId', 'earnedPoints']],
   ),
   table(
     'submission_history',

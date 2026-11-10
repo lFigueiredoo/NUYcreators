@@ -221,10 +221,15 @@ export async function moderateSubmission(
               referenceType: 'challenge_submission',
               description: `Aprovação — ${text(challenge?.name) || challengeId}`,
               idempotencyKey: `submission.approved:${submissionId}`,
+              campaignId: text(challenge?.campaignId) || null,
               // Crédito de aprovação é conquista: conta para nível e ranking.
               qualifies: true,
             },
-            { periodKey: periodKey(ctx.now, rankingTimeZone), delta: points },
+            {
+              periodKey: periodKey(ctx.now, rankingTimeZone),
+              campaignId: text(challenge?.campaignId) || null,
+              delta: points,
+            },
           );
           if (credited) pointsAwarded = points;
         }

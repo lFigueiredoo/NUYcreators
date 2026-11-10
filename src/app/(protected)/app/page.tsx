@@ -44,7 +44,7 @@ async function DashboardBody({ secret, userId }: { secret: string; userId: strin
   const [journeyView, challenges, ranking, catalog] = await Promise.all([
     journey,
     loadChallenges(secret, userId),
-    loadRanking(secret, userId, now),
+    loadRanking(secret, userId, null, now),
     loadCatalog(secret, userId, now, journey),
   ]);
   return (

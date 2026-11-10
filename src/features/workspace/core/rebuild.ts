@@ -71,7 +71,7 @@ export async function rebuildRanking(
   return inTransaction(ctx, async (tx) => {
     const transactionId = tx.transactionId;
     if (!transactionId) throw new Error('rebuild_transaction_missing');
-    const totals = new Map<string, Map<string, { points: number; last: string }>>();
+    const totals = new Map<string, Map<string, { points: number; last: string; campaignId: string | null }>>();
     const ledger = await allRows(ctx, 'point_transactions', transactionId);
     for (const row of ledger) {
       const delta = typeof row.rankingDelta === 'number' ? row.rankingDelta : 0;
@@ -81,7 +81,9 @@ export async function rebuildRanking(
       if (!createdAt || Number.isNaN(createdAt.getTime()) || !userId) continue;
       const key = periodKey(createdAt, rankingTimeZone);
       if (input.period && key !== input.period) continue;
-      const perUser = totals.get(key) ?? new Map();
+      const campaignId = typeof row.campaignId === 'string' && row.campaignId ? row.campaignId : null;
+      const scope = campaignId ? `campaign:${campaignId}` : `period:${key}`;
+      const perUser = totals.get(scope) ?? new Map();
       const current = perUser.get(userId) ?? { points: 0, last: '' };
       const stamp = createdAt.toISOString();
       // A projeção ao vivo atualiza `lastEarnedAt` a cada crédito. O rebuild precisa
@@ -89,15 +91,18 @@ export async function rebuildRanking(
       perUser.set(userId, {
         points: current.points + delta,
         last: current.last && current.last > stamp ? current.last : stamp,
+        campaignId,
       });
-      totals.set(key, perUser);
+      totals.set(scope, perUser);
     }
 
     const projected = await allRows(ctx, 'ranking_entries', transactionId);
     const existingByPeriod = new Map<string, Row[]>();
     for (const row of projected) {
-      const key = typeof row.periodKey === 'string' ? row.periodKey : '';
-      if (!key || (input.period && key !== input.period)) continue;
+      const campaignId = typeof row.campaignId === 'string' && row.campaignId ? row.campaignId : null;
+      const period = typeof row.periodKey === 'string' ? row.periodKey : '';
+      if (!period || (input.period && period !== input.period)) continue;
+      const key = campaignId ? `campaign:${campaignId}` : `period:${period}`;
       const entries = existingByPeriod.get(key) ?? [];
       entries.push(row);
       existingByPeriod.set(key, entries);
@@ -105,13 +110,13 @@ export async function rebuildRanking(
     // Período explícito também precisa ser reconciliado quando não há nenhum
     // crédito: nesse caso todas as linhas existentes são projeções órfãs.
     const keys = input.period
-      ? [input.period]
+      ? [...new Set([...totals.keys(), ...existingByPeriod.keys()].filter((key) => key.endsWith(input.period!)))]
       : [...new Set([...totals.keys(), ...existingByPeriod.keys()])].sort((a, b) =>
           a.localeCompare(b),
         );
     const periods: RebuildResult['periods'] = [];
     for (const key of keys) {
-      const perUser = totals.get(key) ?? new Map<string, { points: number; last: string }>();
+      const perUser = totals.get(key) ?? new Map<string, { points: number; last: string; campaignId: string | null }>();
       const existing = existingByPeriod.get(key) ?? [];
       const existingByUser = new Map<string, Row>();
       for (const row of existing) {
@@ -124,10 +129,13 @@ export async function rebuildRanking(
       }
       const survivorIds = new Set([...existingByUser.values()].map((row) => String(row.$id)));
       for (const [userId, total] of perUser) {
-        const id = rowId('rank', key, userId);
+        const campaignId = total.campaignId;
+        const period = key.startsWith('period:') ? key.slice('period:'.length) : input.period ?? '';
+        const id = rowId('rank', campaignId || period, userId);
         const data = {
-          periodKey: key,
+          periodKey: period,
           userId,
+          campaignId,
           earnedPoints: total.points,
           lastEarnedAt: total.last,
         };
@@ -163,7 +171,7 @@ export async function rebuildRanking(
         });
       }
       periods.push({
-        periodKey: key,
+        periodKey: key.startsWith('period:') ? key.slice('period:'.length) : key,
         entries: perUser.size,
         earnedPoints: [...perUser.values()].reduce((sum, entry) => sum + entry.points, 0),
       });

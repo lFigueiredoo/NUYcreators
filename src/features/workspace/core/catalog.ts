@@ -44,6 +44,9 @@ import {
  * (`nuy-admins`), nunca do payload.
  */
 const CREATOR_READ = [Permission.read(Role.users())];
+function campaignPermissions(status: string): string[] {
+  return status === 'published' || status === 'active' ? CREATOR_READ : [];
+}
 
 /** Rascunho é da equipe: nem a sessão da própria criadora lê a linha. */
 function permissionsFor(status: string): string[] {
@@ -784,6 +787,7 @@ export async function saveCampaign(
           tableId: 'campaigns',
           rowId: campaignId,
           data,
+          permissions: campaignPermissions(data.status),
           transactionId: tx.transactionId,
         });
       else
@@ -792,8 +796,7 @@ export async function saveCampaign(
           tableId: 'campaigns',
           rowId: campaignId,
           data,
-          // Campanha é da equipe: nenhuma sessão de criadora lê esta linha.
-          permissions: [],
+          permissions: campaignPermissions(data.status),
           transactionId: tx.transactionId,
         });
       const diff = auditDiff(existing ?? {}, data);

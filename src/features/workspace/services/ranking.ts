@@ -32,8 +32,11 @@ export type RankingRow = {
 };
 
 export type RankingView = {
+  campaignId: string | null;
+  campaignName: string | null;
   periodKey: string;
   periodLabel: string;
+  campaigns: Array<{ id: string; name: string; startsAt: string; endsAt: string }>;
   entries: Loaded<RankingRow>;
   /** Posição e pontos da própria usuária no ciclo; `null` sem entrada. */
   own: { position: number | null; earnedPoints: number } | null;
@@ -63,12 +66,36 @@ function mapPublic(document: Document) {
 export async function loadRanking(
   secret: string,
   userId: string,
+  selectedCampaignId?: string | null,
   now: Date = new Date(),
 ): Promise<RankingView> {
+  const campaigns = await listSession(secret, SCOPE, 'campaigns', (document) => ({
+    id: text(document.$id),
+    name: text(document.name),
+    startsAt: text(document.startsAt),
+    endsAt: text(document.endsAt),
+  }), {
+    queries: [
+      Query.equal('status', ['published', 'active']),
+      Query.orderDesc('startsAt'),
+    ],
+    limit: 100,
+  });
+  const options = campaigns.state === 'ok' ? campaigns.items : [];
+  const campaign = options.find((item) => item.id === selectedCampaignId) ?? options[0] ?? null;
   const key = periodKey(now);
+  if (!campaign)
+    return {
+      campaignId: null,
+      campaignName: null,
+      periodKey: key,
+      periodLabel: periodLabel(key),
+      campaigns: [],
+      entries: loaded([]),
+      own: null,
+    };
   const entries = await listSession(secret, SCOPE, 'ranking_entries', mapEntry, {
-    // Índice periodKey+earnedPoints sustenta a ordenação e a paginação.
-    queries: [Query.equal('periodKey', key), Query.orderDesc('earnedPoints')],
+    queries: [Query.equal('campaignId', campaign.id), Query.orderDesc('earnedPoints')],
     limit: 100,
     paged: true,
   });
@@ -76,6 +103,9 @@ export async function loadRanking(
     return {
       periodKey: key,
       periodLabel: periodLabel(key),
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      campaigns: options,
       entries: unavailable<RankingRow>(),
       own: null,
     };
@@ -88,7 +118,7 @@ export async function loadRanking(
   // faz falta: dentro da janela, `positionOf` já respondeu e a leitura extra seria
   // desperdício. As consultas são as mesmas duas; o que muda é a ordem no tempo.
   const own = positionOf(ranked, userId);
-  const foraDaJanela = own ? null : ownOutsideWindow(secret, key, userId);
+  const foraDaJanela = own ? null : ownOutsideWindow(secret, campaign.id, userId);
   const names = new Map<string, string>();
   if (window.length > 0) {
     const profiles = await listSession(secret, SCOPE, 'public_creator_profiles', mapPublic, {
@@ -107,6 +137,9 @@ export async function loadRanking(
   return {
     periodKey: key,
     periodLabel: periodLabel(key),
+    campaignId: campaign.id,
+    campaignName: campaign.name,
+    campaigns: options,
     entries: loaded(
       window.map((entry) => ({
         position: entry.position,
@@ -126,9 +159,9 @@ export async function loadRanking(
  * tiver entrada fora da janela exibida, mostramos os pontos sem inventar
  * posição: para saber a posição exata seria preciso contar o restante do ciclo.
  */
-async function ownOutsideWindow(secret: string, key: string, userId: string) {
+async function ownOutsideWindow(secret: string, campaignId: string, userId: string) {
   const result = await listSession(secret, SCOPE, 'ranking_entries', mapEntry, {
-    queries: [Query.equal('periodKey', key), Query.equal('userId', userId)],
+    queries: [Query.equal('campaignId', campaignId), Query.equal('userId', userId)],
     limit: 1,
   });
   const entry = result.state === 'ok' ? (result.items[0] ?? null) : null;
