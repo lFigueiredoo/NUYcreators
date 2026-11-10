@@ -186,7 +186,7 @@ export const tables: Table[] = [
   table(
     'ranking_entries',
     'periodKey userId campaignId? earnedPoints:# lastEarnedAt:@',
-    [['periodKey', 'userId']],
+    [['periodKey', 'userId'], ['campaignId', 'userId']],
     [['periodKey', 'earnedPoints'], ['campaignId', 'earnedPoints']],
   ),
   table(
