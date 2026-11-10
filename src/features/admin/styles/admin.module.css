@@ -619,22 +619,22 @@ a.kpi:hover {
 .dailyForm {
   display: grid;
   gap: 18px;
-  max-width: 860px;
+  min-width: 0;
+  max-width: none;
 }
 .dailyFormGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 .dailyField {
   display: grid;
-  grid-column: span 2;
   gap: 6px;
   min-width: 0;
 }
-.dailyField:nth-child(4),
-.dailyField:nth-child(5) {
-  grid-column: span 1;
+.dailyField:nth-child(4) input,
+.dailyField:nth-child(5) input {
+  max-width: 150px;
 }
 .dailyField span {
   color: var(--app-navy);
@@ -643,6 +643,7 @@ a.kpi:hover {
 }
 .dailyField input,
 .dailyField textarea {
+  box-sizing: border-box;
   width: 100%;
   min-height: 42px;
   padding: 9px 12px;
@@ -1280,10 +1281,9 @@ a.kpi:hover {
   .dailyFormGrid {
     grid-template-columns: 1fr;
   }
-  .dailyField,
-  .dailyField:nth-child(4),
-  .dailyField:nth-child(5) {
-    grid-column: auto;
+  .dailyField:nth-child(4) input,
+  .dailyField:nth-child(5) input {
+    max-width: none;
   }
   .dailyItemSummary {
     grid-template-columns: auto minmax(0, 1fr) auto;
