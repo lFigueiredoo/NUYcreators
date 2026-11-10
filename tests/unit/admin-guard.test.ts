@@ -74,6 +74,7 @@ describe('rotas /admin', () => {
     expect(adminNavEntries.map((entry) => entry.label)).toEqual([
       'Visão geral',
       'Desafios',
+      'Atividades diárias',
       'Fotos da landing',
       'Academia NUY',
       'Comentários',
@@ -87,6 +88,7 @@ describe('rotas /admin', () => {
     expect(adminNavEntries.map((entry) => entry.href)).toEqual([
       '/admin',
       '/admin/desafios',
+      '/admin/desafios-diarios',
       '/admin/influencers',
       '/admin/academia',
       '/admin/academia/comentarios',
