@@ -144,6 +144,19 @@ export async function rebuildRanking(
           : row.referenceType === 'challenge_submission' && typeof row.referenceId === 'string'
             ? submissionCampaigns.get(row.referenceId) ?? null
             : null;
+      if (
+        campaignId &&
+        (!row.campaignId || typeof row.campaignId !== 'string') &&
+        typeof row.$id === 'string'
+      ) {
+        await updateTableRow(ctx.tables, {
+          databaseId: ctx.databaseId,
+          tableId: 'point_transactions',
+          rowId: row.$id,
+          data: { campaignId },
+          transactionId,
+        });
+      }
       const scope = campaignId ? `campaign:${campaignId}` : `period:${key}`;
       const perUser = totals.get(scope) ?? new Map();
       const current = perUser.get(userId) ?? { points: 0, last: '' };

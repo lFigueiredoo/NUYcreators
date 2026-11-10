@@ -195,6 +195,7 @@ describe('rebuild completo do ranking', () => {
       userId,
       earnedPoints: 25,
     });
+    expect(db.row('point_transactions', transaction.$id)).toMatchObject({ campaignId });
     expect(db.row('public_creator_profiles', userId)).toMatchObject({
       userId,
       displayName: 'Creator Legacy',
