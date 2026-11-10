@@ -161,4 +161,36 @@ describe('rebuild completo do ranking', () => {
     ]);
     expect(db.row('ranking_entries', orphanId)).toBeUndefined();
   });
+
+  it('associa créditos antigos à campanha pelo envio aprovado e pelo desafio', async () => {
+    const campaignId = 'campaign-legacy';
+    const userId = 'creator-legacy';
+    const transaction = {
+      $id: 'ptx-legacy',
+      userId,
+      rankingDelta: 25,
+      referenceType: 'challenge_submission',
+      referenceId: 'submission-legacy',
+      createdAt: '2026-10-12T12:00:00.000Z',
+    };
+    const db = memoryTables({
+      point_transactions: [transaction],
+      challenge_submissions: [
+        { $id: 'submission-legacy', challengeId: 'challenge-legacy' },
+      ],
+      challenges: [
+        { $id: 'challenge-legacy', campaignId },
+      ],
+      ranking_entries: [],
+    });
+
+    const rebuilt = await rebuildRanking(context(db.api));
+
+    expect(rebuilt.ok).toBe(true);
+    expect(db.row('ranking_entries', rowId('rank', campaignId, userId))).toMatchObject({
+      campaignId,
+      userId,
+      earnedPoints: 25,
+    });
+  });
 });

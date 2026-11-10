@@ -73,6 +73,26 @@ export async function rebuildRanking(
     if (!transactionId) throw new Error('rebuild_transaction_missing');
     const totals = new Map<string, Map<string, { points: number; last: string; campaignId: string | null }>>();
     const ledger = await allRows(ctx, 'point_transactions', transactionId);
+    const submissions = await allRows(ctx, 'challenge_submissions', transactionId);
+    const submissionCampaigns = new Map<string, string>();
+    const challengeIds = [...new Set(
+      submissions
+        .map((row) => (typeof row.challengeId === 'string' ? row.challengeId : ''))
+        .filter(Boolean),
+    )];
+    if (challengeIds.length) {
+      const challenges = await allRows(ctx, 'challenges', transactionId);
+      const campaigns = new Map(
+        challenges
+          .map((row) => [String(row.$id), typeof row.campaignId === 'string' ? row.campaignId : ''] as const)
+          .filter((entry): entry is readonly [string, string] => Boolean(entry[1])),
+      );
+      for (const submission of submissions) {
+        const submissionId = String(submission.$id);
+        const campaignId = campaigns.get(String(submission.challengeId));
+        if (campaignId) submissionCampaigns.set(submissionId, campaignId);
+      }
+    }
     for (const row of ledger) {
       const delta = typeof row.rankingDelta === 'number' ? row.rankingDelta : 0;
       if (delta <= 0) continue;
@@ -81,7 +101,12 @@ export async function rebuildRanking(
       if (!createdAt || Number.isNaN(createdAt.getTime()) || !userId) continue;
       const key = periodKey(createdAt, rankingTimeZone);
       if (input.period && key !== input.period) continue;
-      const campaignId = typeof row.campaignId === 'string' && row.campaignId ? row.campaignId : null;
+      const campaignId =
+        typeof row.campaignId === 'string' && row.campaignId
+          ? row.campaignId
+          : row.referenceType === 'challenge_submission' && typeof row.referenceId === 'string'
+            ? submissionCampaigns.get(row.referenceId) ?? null
+            : null;
       const scope = campaignId ? `campaign:${campaignId}` : `period:${key}`;
       const perUser = totals.get(scope) ?? new Map();
       const current = perUser.get(userId) ?? { points: 0, last: '' };

@@ -20,9 +20,6 @@ import {
 
 const SCOPE = 'ranking';
 
-/** Quantas posições a lista mostra — o resto continua no backend. */
-const WINDOW = 50;
-
 export type RankingRow = {
   position: number;
   earnedPoints: number;
@@ -53,6 +50,10 @@ function mapEntry(document: Document): RankingEntry {
 
 function mapPublic(document: Document) {
   return { userId: text(document.userId), displayName: text(document.displayName) };
+}
+
+function isTestAccount(displayName: string) {
+  return displayName.toLocaleLowerCase('pt-BR').includes('teste');
 }
 
 /**
@@ -110,8 +111,36 @@ export async function loadRanking(
       own: null,
     };
 
-  const ranked = rankEntries(entries.items);
-  const window = ranked.slice(0, WINDOW);
+  const profiles = await listSession(secret, SCOPE, 'public_creator_profiles', mapPublic, {
+    queries: [],
+    limit: 100,
+    paged: true,
+  });
+  if (profiles.state !== 'ok')
+    return {
+      periodKey: key,
+      periodLabel: periodLabel(key),
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      campaigns: options,
+      entries: unavailable<RankingRow>(),
+      own: null,
+    };
+
+  const eligibleProfiles = profiles.items.filter(
+    (profile) => profile.userId && profile.displayName.trim() && !isTestAccount(profile.displayName),
+  );
+  const pointsByUser = new Map(entries.items.map((entry) => [entry.userId, entry]));
+  const mergedEntries: RankingEntry[] = eligibleProfiles.map((profile) => {
+    const entry = pointsByUser.get(profile.userId);
+    return entry ?? {
+      id: `zero:${profile.userId}`,
+      userId: profile.userId,
+      earnedPoints: 0,
+      lastEarnedAt: null,
+    };
+  });
+  const ranked = rankEntries(mergedEntries);
   // `own` já está decidido aqui: depende só de `ranked`, não do nome público.
   // Saber disso agora deixa a busca de quem está FORA da janela correr em paralelo
   // com a leitura dos perfis, em vez de depois dela — e ela só é disparada quando
@@ -120,19 +149,7 @@ export async function loadRanking(
   const own = positionOf(ranked, userId);
   const foraDaJanela = own ? null : ownOutsideWindow(secret, campaign.id, userId);
   const names = new Map<string, string>();
-  if (window.length > 0) {
-    const profiles = await listSession(secret, SCOPE, 'public_creator_profiles', mapPublic, {
-      queries: [
-        Query.equal(
-          'userId',
-          window.map((entry) => entry.userId),
-        ),
-      ],
-      limit: 100,
-    });
-    if (profiles.state === 'ok')
-      for (const profile of profiles.items) names.set(profile.userId, profile.displayName);
-  }
+  for (const profile of eligibleProfiles) names.set(profile.userId, profile.displayName);
 
   return {
     periodKey: key,
@@ -141,7 +158,7 @@ export async function loadRanking(
     campaignName: campaign.name,
     campaigns: options,
     entries: loaded(
-      window.map((entry) => ({
+      ranked.map((entry) => ({
         position: entry.position,
         earnedPoints: entry.earnedPoints,
         displayName: names.get(entry.userId) || 'Creator NUY',
