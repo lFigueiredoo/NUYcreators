@@ -97,6 +97,7 @@ export function DailyActivitiesScreen({
 }) {
   const items = result.ok ? result.value.items : [];
   const activeCount = items.filter((item) => item.active).length;
+  const pausedCount = items.length - activeCount;
   return (
     <div className={styles.stack}>
       <ScreenHeader
@@ -104,31 +105,51 @@ export function DailyActivitiesScreen({
         title="Atividades diárias"
         intro="Crie tarefas simples para a comunidade enviar todos os dias. A equipe aprova cada envio antes de liberar os pontos."
       />
-      <div className={styles.dailySummary}>
-        <div>
-          <span className={styles.dailySummaryLabel}>Operação de hoje</span>
-          <strong>
-            {activeCount} {activeCount === 1 ? 'atividade ativa' : 'atividades ativas'}
-          </strong>
-          <p>As creators encontram essas tarefas na aba Desafios.</p>
+      <div className={styles.dailyOverview}>
+        <div className={styles.dailyOverviewIntro}>
+          <span className={styles.dailySummaryLabel}>Visão rápida</span>
+          <strong>Seu quadro de tarefas</strong>
+          <p>Ativas aparecem para as creators na aba Desafios.</p>
         </div>
-        <div className={styles.dailySummaryRule} />
-        <div>
-          <span className={styles.dailySummaryLabel}>Como funciona</span>
-          <strong>Publicar → receber → aprovar</strong>
-          <p>O limite diário é aplicado por creator e por atividade.</p>
+        <div className={styles.dailyMetric}>
+          <strong>{activeCount}</strong>
+          <span>ativas</span>
+        </div>
+        <div className={styles.dailyMetric}>
+          <strong>{pausedCount}</strong>
+          <span>pausadas</span>
+        </div>
+        <div className={styles.dailyMetric}>
+          <strong>{items.length}</strong>
+          <span>no total</span>
         </div>
       </div>
       <Block title="Criar atividade" className={styles.dailyCreateBlock}>
-        <form action={save} className={styles.dailyForm}>
-          <ActivityFields />
-          <div className={styles.actions}>
-            <button type="submit" className={`${appStyles.button} ${appStyles.buttonPrimary}`}>
-              Criar atividade
-            </button>
-            <span className={styles.dailyFormHint}>Você poderá editar ou pausar depois.</span>
+        <div className={styles.dailyCreateLayout}>
+          <div className={styles.dailyCreateIntro}>
+            <span className={styles.dailyCreateNumber}>01</span>
+            <h3>Uma tarefa por vez, bem explicada.</h3>
+            <p>
+              Dê um nome simples, explique o que deve aparecer e defina quantos envios valem no dia.
+              A creator verá exatamente essas informações antes de enviar.
+            </p>
+            <div className={styles.dailyCreateNote}>
+              <strong>Depois de publicar</strong>
+              <span>
+                Você ainda pode editar os dados ou pausar a atividade sem apagar o histórico.
+              </span>
+            </div>
           </div>
-        </form>
+          <form action={save} className={styles.dailyForm}>
+            <ActivityFields />
+            <div className={styles.actions}>
+              <button type="submit" className={`${appStyles.button} ${appStyles.buttonPrimary}`}>
+                Criar atividade
+              </button>
+              <span className={styles.dailyFormHint}>Você poderá editar ou pausar depois.</span>
+            </div>
+          </form>
+        </div>
       </Block>
       <Block
         title="Atividades cadastradas"
