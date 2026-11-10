@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation';
 import { getEnvironment } from '@/lib/env/server';
 import { currentUser, SESSION_COOKIE } from '@/lib/appwrite/server';
 import { currentTermsState } from '@/features/legal/services/consent';
+import { createMediaFile, deleteMediaFile } from '@/lib/appwrite/media';
+import { mediaExtension, mediaIssue } from '../domain/media';
 import { flashHref, returnPath } from '../domain/flash';
 import {
   commandAdjustPoints,
@@ -85,11 +87,41 @@ export async function submitContentAction(
 ): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
   if (!(await acceptedCurrentTerms())) return { message: TERMS_REQUIRED };
+  const dailyActivityId = field(data, 'dailyActivityId');
+  const file = data.get('file');
+  let uploaded: string | null = null;
+  if (dailyActivityId) {
+    if (!(file instanceof File) || file.size === 0)
+      return { message: 'Anexe o print da atividade para enviar.' };
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const issue = mediaIssue({
+      name: file.name,
+      declaredType: file.type,
+      size: file.size,
+      head: bytes.subarray(0, 16),
+    });
+    if (issue) return { message: issue };
+    try {
+      uploaded = await createMediaFile({
+        bytes: bytes.buffer,
+        name: file.name,
+        extension: mediaExtension(file.name),
+      });
+    } catch {
+      return { message: 'Não foi possível enviar o print agora. Tente novamente.' };
+    }
+  }
   const outcome = await commandSubmit({
-    challengeId: field(data, 'challengeId'),
+    challengeId: field(data, 'challengeId') || undefined,
+    dailyActivityId: dailyActivityId || undefined,
     url: field(data, 'url'),
+    fileId: uploaded || undefined,
   });
-  if (!outcome.ok) return { message: outcome.message };
+  if (!outcome.ok) {
+    if (uploaded) await deleteMediaFile(uploaded);
+    return { message: outcome.message };
+  }
+  if (uploaded && !outcome.value.created) await deleteMediaFile(uploaded);
   revalidatePath('/app/desafios');
   revalidatePath('/app/conteudos');
   redirect(flashHref(returnPath(returnTo, '/app/conteudos'), outcome.message));

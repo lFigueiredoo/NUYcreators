@@ -1,6 +1,7 @@
 import {
   adminCampaigns,
   adminChallenge,
+  adminDailyActivities,
   adminOptions,
   adminChallenges,
   adminCreator,
@@ -19,6 +20,7 @@ import {
   publishReward,
   saveCampaign,
   saveChallenge,
+  saveDailyActivity,
   saveReward,
   setRewardStock,
   type CoreResult,
@@ -128,6 +130,16 @@ function campaignDraft(value: unknown): CampaignDraft {
   };
 }
 
+function dailyActivityDraft(value: unknown) {
+  const source = record(value);
+  return {
+    activityId: text(source.activityId) || null,
+    name: text(source.name), platform: text(source.platform), format: text(source.format),
+    points: integer(source.points) ?? 0, dailyLimit: integer(source.dailyLimit) ?? 0,
+    active: flag(source.active), rules: text(source.rules),
+  };
+}
+
 export default async function main(event: FunctionEvent) {
   const run = await hosted(event, { requireUser: true, roles: true });
   if (!run.ready) return run.response;
@@ -200,6 +212,10 @@ export default async function main(event: FunctionEvent) {
           expectedVersion: integer(body.expectedVersion),
         }),
       );
+    case 'daily-activities.list':
+      return read(adminDailyActivities(ctx));
+    case 'daily-activity.save':
+      return write(saveDailyActivity(ctx, dailyActivityDraft(body.draft)));
 
     // ---------- recompensas ----------
     case 'rewards.list':

@@ -1,4 +1,4 @@
-import { submitContent } from '../../src/features/workspace/core';
+import { submitContent, submitDailyContent } from '../../src/features/workspace/core';
 import { hosted, refuse, text, type FunctionEvent } from '../shared/host';
 
 /**
@@ -11,12 +11,18 @@ import { hosted, refuse, text, type FunctionEvent } from '../shared/host';
 export default async function main(event: FunctionEvent) {
   const run = await hosted(event, { requireUser: true, currentTerms: true });
   if (!run.ready) return run.response;
-  const result = await submitContent(run.ctx, {
+  const result = text(run.body.dailyActivityId)
+    ? await submitDailyContent(run.ctx, {
+        activityId: text(run.body.dailyActivityId),
+        url: text(run.body.url),
+        fileId: text(run.body.fileId),
+      })
+    : await submitContent(run.ctx, {
     challengeId: text(run.body.challengeId),
     url: text(run.body.url),
     fileId: text(run.body.fileId),
     platform: text(run.body.platform),
-  });
+      });
   const refused = refuse(event, result);
   if (refused) return refused;
   if (result.ok) return event.res.json(result.value, result.value.created ? 201 : 200);

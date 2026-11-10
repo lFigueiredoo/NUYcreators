@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { ChallengesScreen } from '@/features/workspace/components/challenges-screen';
 import { LoadingCards } from '@/features/workspace/components/ui/state';
 import { challengeTabs, type ChallengeTab } from '@/features/workspace/domain/status';
-import { loadChallenges } from '@/features/workspace/services/challenges';
+import { loadChallenges, loadDailyActivities } from '@/features/workspace/services/challenges';
 import { workspaceSession } from '@/features/workspace/services/viewer';
 
 export const dynamic = 'force-dynamic';
@@ -30,11 +30,13 @@ export default async function ChallengesPage({
 async function ChallengesBody({ tab }: { tab: ChallengeTab }) {
   const { secret, viewer } = await workspaceSession();
   const challenges = await loadChallenges(secret, viewer.id);
+  const dailyActivities = await loadDailyActivities(secret, viewer.id);
   return (
     <ChallengesScreen
       view={challenges.state === 'ok' ? challenges.items : null}
       tab={tab}
       now={new Date()}
+      dailyActivities={dailyActivities}
     />
   );
 }

@@ -7,7 +7,19 @@
  * para HTTP e para copy — nenhum deles reimplementa regra.
  */
 export { joinChallenge, type JoinResult } from './join';
-export { submitContent, type SubmitInput, type SubmitResult } from './submit';
+export {
+  submitContent,
+  submitDailyContent,
+  type DailySubmitInput,
+  type SubmitInput,
+  type SubmitResult,
+} from './submit';
+export {
+  adminDailyActivities,
+  saveDailyActivity,
+  type AdminDailyActivity,
+  type DailyActivityDraft,
+} from './console';
 export {
   moderateSubmission,
   moderationQueue,

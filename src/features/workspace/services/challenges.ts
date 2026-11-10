@@ -1,6 +1,7 @@
 import 'server-only';
 import { Query } from 'node-appwrite';
 import { functionsOnline } from './commands';
+import type { DailyActivity } from '@/features/regulation/daily-activities';
 import { challengeBucket, type ChallengeTab } from '../domain/status';
 import { isVisibleToCreators } from '../domain/catalog';
 import { parseRequirementConfig, type RequirementConfig } from '../domain/requirements';
@@ -19,6 +20,30 @@ import {
 } from './read';
 
 const SCOPE = 'desafios';
+
+export async function loadDailyActivities(secret: string, userId: string): Promise<DailyActivity[]> {
+  const result = await listSession(secret, SCOPE, 'daily_activities', (document) => ({
+    id: text(document.$id),
+    name: text(document.name),
+    platform: text(document.platform),
+    format: text(document.format),
+    points: integer(document.points),
+    dailyLimit: integer(document.dailyLimit),
+    active: flag(document.active),
+    rules: text(document.rules),
+  }), { queries: [Query.equal('active', true), Query.orderAsc('name')], limit: 100 });
+  if (result.state !== 'ok') return [];
+  const submissions = await listSession(secret, SCOPE, 'challenge_submissions', (document) => ({
+    activityId: text(document.dailyActivityId),
+    status: text(document.status),
+    submittedAt: text(document.submittedAt),
+  }), { queries: [Query.equal('userId', userId), Query.orderDesc('submittedAt')], limit: 100 });
+  if (submissions.state !== 'ok') return result.items;
+  const latest = new Map<string, string>();
+  for (const submission of submissions.items)
+    if (submission.activityId && !latest.has(submission.activityId)) latest.set(submission.activityId, submission.status);
+  return result.items.map((item) => ({ ...item, submissionStatus: latest.get(item.id) ?? null }));
+}
 
 export type Challenge = {
   id: string;

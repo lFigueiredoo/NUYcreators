@@ -232,13 +232,17 @@ export async function commandJoin(challengeId: string): Promise<CommandOutcome<J
  * abaixo é verdadeira nas duas.
  */
 export async function commandSubmit(input: {
-  challengeId: string;
+  challengeId?: string;
+  dailyActivityId?: string;
   url: string;
+  fileId?: string;
 }): Promise<CommandOutcome<SubmitResult>> {
   if (!functionsOnline()) return { ok: false, message: OPERATIONS_OFFLINE };
   const reply = await runFunction<SubmitResult>('submit-content', {
     challengeId: input.challengeId,
+    dailyActivityId: input.dailyActivityId,
     url: input.url,
+    fileId: input.fileId,
   });
   if (!reply.ok) return reply;
   return {

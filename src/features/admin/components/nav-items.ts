@@ -2,6 +2,7 @@ import {
   BookOpen,
   MessagesSquare,
   BarChart3,
+  CalendarDays,
   Gift,
   Inbox,
   LayoutDashboard,
@@ -27,6 +28,7 @@ import {
 export type AdminDestination =
   | 'overview'
   | 'challenges'
+  | 'daily-activities'
   | 'academy'
   | 'academy-comments'
   | 'submissions'
@@ -60,6 +62,14 @@ export const adminNavEntries: AdminNavEntry[] = [
     label: 'Desafios',
     href: '/admin/desafios',
     icon: Sparkles,
+    capability: 'manage-catalog',
+    section: 'Conteúdo',
+  },
+  {
+    id: 'daily-activities',
+    label: 'Atividades diárias',
+    href: '/admin/desafios-diarios',
+    icon: CalendarDays,
     capability: 'manage-catalog',
     section: 'Conteúdo',
   },

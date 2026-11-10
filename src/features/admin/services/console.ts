@@ -16,6 +16,7 @@ import type {
   CreatorDetail,
   CreatorSummary,
   ReportSummary,
+  AdminDailyActivity,
 } from '@/features/workspace/core';
 
 /**
@@ -51,6 +52,20 @@ export async function loadChallenges(
   status: string,
 ): Promise<AdminOutcome<{ items: CatalogChallenge[] }>> {
   return call('challenges.list', { status });
+}
+
+export async function loadDailyActivities(): Promise<
+  AdminOutcome<{ items: AdminDailyActivity[] }>
+> {
+  return call('daily-activities.list');
+}
+
+export async function commandSaveDailyActivity(
+  draft: Record<string, unknown>,
+): Promise<AdminCommand<AdminDailyActivity>> {
+  const reply = await call<AdminDailyActivity>('daily-activity.save', { draft });
+  if (!reply.ok) return reply;
+  return { ok: true, value: reply.value, message: 'Atividade diária salva.' };
 }
 
 export async function loadChallenge(

@@ -175,6 +175,17 @@ export async function moderateSubmission(
       } catch (error) {
         if (!isAbsent(error)) throw error;
       }
+      if (!challenge && text(submission.dailyActivityId)) {
+        challenge = await getTableRow(ctx.tables, {
+          databaseId: ctx.databaseId,
+          tableId: 'daily_activities',
+          rowId: text(submission.dailyActivityId),
+          transactionId: tx.transactionId,
+        }).catch((error: unknown) => {
+          if (isAbsent(error)) return null;
+          throw error;
+        });
+      }
 
       await updateTableRow(ctx.tables, {
         databaseId: ctx.databaseId,
@@ -192,7 +203,12 @@ export async function moderateSubmission(
       let pointsAwarded = 0;
       let credited = false;
       if (input.decision === 'approve') {
-        const points = typeof challenge?.points === 'number' ? challenge.points : 0;
+        const points =
+          typeof submission.pointsSnapshot === 'number'
+            ? submission.pointsSnapshot
+            : typeof challenge?.points === 'number'
+              ? challenge.points
+              : 0;
         if (points > 0) {
           credited = await creditPoints(
             ctx,

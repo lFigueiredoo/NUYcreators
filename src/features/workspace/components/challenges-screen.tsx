@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { dailyChallenges } from '@/features/regulation/daily-challenges';
+import type { DailyActivity } from '@/features/regulation/daily-activities';
 import {
   deadlineLabel,
   deadlinePassed,
@@ -84,7 +85,15 @@ const dailyPlatformIcons = {
  * quando um envio está disponível. Assim, a interface não promete uma operação
  * automática que ainda dependa de liberação ou de aprovação da equipe NUY.
  */
-function DailyChallengesPanel() {
+function DailyChallengesPanel({ activities }: { activities?: DailyActivity[] }) {
+  const configured = Boolean(activities?.length);
+  const items = activities?.length
+    ? activities.map((item) => ({
+        ...item,
+        points: `${item.points} pontos / envio`,
+        rule: `${item.rules}${item.dailyLimit ? ` Limite: ${item.dailyLimit} por dia.` : ''}`,
+      }))
+    : dailyChallenges;
   return (
     <section
       className={`${styles.dailyChallenges} ${styles.enter} ${styles.i1}`}
@@ -101,7 +110,7 @@ function DailyChallengesPanel() {
           </div>
         </div>
         <span className={styles.dailyChallengesBadge}>
-          <Clock3 size={14} aria-hidden="true" /> 5 atividades recorrentes
+          <Clock3 size={14} aria-hidden="true" /> {items.length} atividades recorrentes
         </span>
       </header>
 
@@ -124,8 +133,8 @@ function DailyChallengesPanel() {
               </tr>
             </thead>
             <tbody>
-              {dailyChallenges.map((item) => {
-                const Icon = dailyPlatformIcons[item.platform];
+              {items.map((item) => {
+                const Icon = dailyPlatformIcons[item.platform as keyof typeof dailyPlatformIcons] ?? Sparkles;
                 return (
                   <tr key={item.id}>
                     <td data-label="Plataforma">
@@ -137,7 +146,25 @@ function DailyChallengesPanel() {
                     <td data-label="Pontuação">
                       <strong className={styles.dailyChallengesPoints}>{item.points}</strong>
                     </td>
-                    <td data-label="Limite diário e regras">{item.rule}</td>
+                    <td data-label="Limite diário e regras">
+                      {item.rule}
+                      {configured ? (
+                        <div style={{ marginTop: 10 }}>
+                          {('submissionStatus' in item && item.submissionStatus === 'pending') ? (
+                            <span>Envio em análise</span>
+                          ) : ('submissionStatus' in item && item.submissionStatus === 'approved') ? (
+                            <span>Envio aprovado</span>
+                          ) : (
+                            <SubmitContentForm
+                              challengeId=""
+                              dailyActivityId={item.id}
+                              daily
+                              returnTo="/app/desafios"
+                            />
+                          )}
+                        </div>
+                      ) : null}
+                    </td>
                   </tr>
                 );
               })}
@@ -195,10 +222,12 @@ export function ChallengesScreen({
   view,
   tab,
   now,
+  dailyActivities,
 }: {
   view: ChallengeView[] | null;
   tab: ChallengeTab;
   now: Date;
+  dailyActivities?: DailyActivity[];
 }) {
   // Sem leitura (`view === null`) as abas vêm sem contagem e a tela mostra
   // "indisponível" — o vazio com histórico nunca é montado sem número real.
@@ -225,7 +254,7 @@ export function ChallengesScreen({
         className={styles.enter}
       />
 
-      <DailyChallengesPanel />
+      <DailyChallengesPanel activities={dailyActivities} />
 
       <Tabs
         items={counts}

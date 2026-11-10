@@ -154,10 +154,10 @@ export function SubmissionsScreen({
                   </td>
                   <td className={styles.tableWide}>
                     <Link
-                      href={`/admin/desafios/${submission.challengeId}`}
+                      href={submission.dailyActivityName ? '/admin/desafios-diarios' : `/admin/desafios/${submission.challengeId}`}
                       className={styles.tableLink}
                     >
-                      {submission.challengeName}
+                      {submission.dailyActivityName || submission.challengeName}
                     </Link>
                   </td>
                   <td>
@@ -226,6 +226,9 @@ function SubmissionDetail({ submission }: { submission: AdminSubmissionDetail })
         intro={`Enviado em ${stampIn(submission.submittedAt)} · revisão ${submission.revision}`}
         action={<Pill view={submissionView(submission.status)} />}
       />
+      {submission.fileId ? (
+        <p><a className={styles.tableLink} href={`/app/midia/${submission.fileId}`} target="_blank" rel="noreferrer">Abrir print/screenshot</a></p>
+      ) : null}
 
       <div className={styles.cols}>
         <div className={styles.stack}>

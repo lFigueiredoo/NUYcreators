@@ -11,6 +11,7 @@ import { done, failure, type CoreContext, type CoreResult } from './context';
 import { canonicalUrl, digest, platformFromUrl, rowId } from './ids';
 import { recordAudit, recordOutbox, recordSubmissionHistory } from './record';
 import { inTransaction } from './transaction';
+import { brasiliaDate } from '../../regulation/daily-activities';
 
 /**
  * Enviar conteúdo para um desafio.
@@ -51,6 +52,80 @@ export type SubmitResult = {
   created: boolean;
   status: string;
 };
+
+export type DailySubmitInput = {
+  activityId: string;
+  url?: string | null;
+  fileId?: string | null;
+};
+
+/**
+ * Daily activities deliberately use the same submission table as normal
+ * challenges. This keeps them in the existing moderation queue and ledger,
+ * while rejected rows remain terminal and a new row can be submitted that day.
+ */
+export async function submitDailyContent(
+  ctx: CoreContext,
+  input: DailySubmitInput,
+): Promise<CoreResult<SubmitResult>> {
+  const activityId = (input.activityId ?? '').trim();
+  if (!activityId || activityId.length > 36 || !ctx.actor.userId) return failure('invalid');
+  const fileId = (input.fileId ?? '').trim();
+  const canonical = input.url ? canonicalUrl(input.url) : null;
+  if (input.url && input.url.trim() && !canonical) return failure('invalid');
+  if (!canonical && !fileId) return failure('invalid');
+  return inTransaction<SubmitResult>(ctx, async (tx) => {
+    let activity: Row;
+    try {
+      activity = await getTableRow(ctx.tables, {
+        databaseId: ctx.databaseId, tableId: 'daily_activities', rowId: activityId,
+        transactionId: tx.transactionId,
+      });
+    } catch (error) {
+      if (isAbsent(error)) return failure('not_found');
+      throw error;
+    }
+    if (activity.active !== true) return failure('not_published');
+    const date = brasiliaDate(ctx.now);
+    const limit = typeof activity.dailyLimit === 'number' ? activity.dailyLimit : 0;
+    const existing = await ctx.tables.listRows({
+      databaseId: ctx.databaseId, tableId: 'challenge_submissions',
+      queries: [
+        Query.equal('dailyActivityId', activityId), Query.equal('userId', ctx.actor.userId),
+        Query.equal('activityDate', date), Query.notEqual('status', 'rejected'), Query.limit(100),
+      ], transactionId: tx.transactionId,
+    });
+    if (limit > 0 && existing.total >= limit) return failure('limit_reached');
+    const fingerprintBase = digest(`daily:${activityId}`, ctx.actor.userId, canonical ?? `file:${fileId}`);
+    const rejected = await ctx.tables.listRows({
+      databaseId: ctx.databaseId, tableId: 'challenge_submissions',
+      queries: [Query.equal('dailyActivityId', activityId), Query.equal('userId', ctx.actor.userId),
+        Query.equal('activityDate', date), Query.equal('status', 'rejected'), Query.limit(100)],
+      transactionId: tx.transactionId,
+    });
+    const retry = rejected.rows.filter((row) => row.contentFingerprint === fingerprintBase).length;
+    const fingerprint = retry ? digest(fingerprintBase, `retry:${retry}`) : fingerprintBase;
+    const submissionId = rowId('sub', `daily:${activityId}`, ctx.actor.userId, fingerprint);
+    if (existing.rows.some((row) => row.$id === submissionId))
+      return done({ submissionId, challengeId: `daily:${activityId}`, revision: 1, created: false, status: 'pending' });
+    const data = {
+      challengeId: `daily:${activityId}`, dailyActivityId: activityId, activityDate: date,
+      participantId: '', userId: ctx.actor.userId, platform: text(activity.platform),
+      canonicalUrl: canonical ?? '', contentFingerprint: fingerprint, fileId,
+      pointsSnapshot: typeof activity.points === 'number' ? activity.points : 0,
+      status: 'pending', revision: 1, submittedAt: ctx.now.toISOString(), moderationReason: '',
+    };
+    await createTableRow(ctx.tables, {
+      databaseId: ctx.databaseId, tableId: 'challenge_submissions', rowId: submissionId,
+      data, permissions: ownerReadPermissions(ctx.actor.userId), transactionId: tx.transactionId,
+    });
+    await recordSubmissionHistory(ctx, tx, { submissionId, userId: ctx.actor.userId, revision: 1,
+      previousStatus: null, nextStatus: 'pending', payload: { url: canonical ?? '', fileId, dailyActivityId: activityId } });
+    await recordOutbox(ctx, tx, { eventKey: `submission.created:${submissionId}:r1`, type: 'submission.created',
+      aggregateId: submissionId, payload: { userId: ctx.actor.userId, challengeId: `daily:${activityId}`, submissionId } });
+    return done({ submissionId, challengeId: `daily:${activityId}`, revision: 1, created: true, status: 'pending' });
+  }, { conflict: 'duplicate_content' });
+}
 
 function text(value: unknown): string {
   return typeof value === 'string' ? value : '';

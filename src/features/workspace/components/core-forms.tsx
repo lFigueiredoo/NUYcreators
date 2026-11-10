@@ -100,10 +100,14 @@ export function JoinChallengeForm({
 /** Enviar conteúdo: o link é canonizado e o fingerprint bloqueia repetição. */
 export function SubmitContentForm({
   challengeId,
+  dailyActivityId,
+  daily = false,
   returnTo,
   isLive = false,
 }: {
   challengeId: string;
+  dailyActivityId?: string;
+  daily?: boolean;
   returnTo: string;
   isLive?: boolean;
 }) {
@@ -113,8 +117,9 @@ export function SubmitContentForm({
   return (
     <form action={action} className={styles.form}>
       <input type="hidden" name="challengeId" value={challengeId} />
+      {dailyActivityId ? <input type="hidden" name="dailyActivityId" value={dailyActivityId} /> : null}
       <label className={styles.fieldLabel} htmlFor={urlId}>
-        {isLive ? 'Link da live' : 'Link da publicação'}
+        {isLive ? 'Link da live' : daily ? 'Link da atividade' : 'Link da publicação'}
       </label>
       <input
         id={urlId}
@@ -129,6 +134,12 @@ export function SubmitContentForm({
         onChange={(event) => setUrl(event.target.value)}
         aria-describedby={`${urlId}-hint`}
       />
+      {daily ? (
+        <>
+          <label className={styles.fieldLabel} htmlFor={`${urlId}-file`}>Print ou screenshot</label>
+          <input id={`${urlId}-file`} className={styles.input} name="file" type="file" accept="image/jpeg,image/png,image/webp" required />
+        </>
+      ) : null}
       <p id={`${urlId}-hint`} className={styles.statHint}>
         O link entra na análise da equipe NUY. Um conteúdo por vez por desafio.
       </p>

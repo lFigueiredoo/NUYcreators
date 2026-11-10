@@ -102,12 +102,18 @@ export const tables: Table[] = [
   ),
   table(
     'challenge_submissions',
-    'challengeId participantId userId platform canonicalUrl:2048? contentFingerprint fileId? status revision:# submittedAt:@ reviewedBy? reviewedAt:@? moderationReason:2000?',
+    'challengeId participantId? userId platform canonicalUrl:2048? contentFingerprint fileId? status revision:# submittedAt:@ reviewedBy? reviewedAt:@? moderationReason:2000? dailyActivityId? activityDate? pointsSnapshot:#?',
     [['contentFingerprint']],
     [
       ['userId', 'submittedAt'],
       ['status', 'submittedAt'],
     ],
+  ),
+  table(
+    'daily_activities',
+    'name platform format points:# dailyLimit:# active:! rules:5000 slug createdAt:@ updatedAt:@ version:#',
+    [['slug']],
+    [['active', 'name']],
   ),
   table(
     'point_transactions',

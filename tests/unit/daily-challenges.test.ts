@@ -2,9 +2,14 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { dailyChallenges } from '../../src/features/regulation/daily-challenges';
+import { brasiliaDate } from '../../src/features/regulation/daily-activities';
 import { ChallengesScreen } from '../../src/features/workspace/components/challenges-screen';
 
 describe('desafios diários', () => {
+  it('calcula o dia no fuso de Brasília para limites', () => {
+    expect(brasiliaDate(new Date('2026-11-10T02:30:00.000Z'))).toBe('2026-11-09');
+    expect(brasiliaDate(new Date('2026-11-10T03:30:00.000Z'))).toBe('2026-11-10');
+  });
   it('mantém os cinco formatos, pontos e limites oficiais em uma fonte compartilhada', () => {
     expect(dailyChallenges).toHaveLength(5);
     expect(new Set(dailyChallenges.map((item) => item.id)).size).toBe(5);

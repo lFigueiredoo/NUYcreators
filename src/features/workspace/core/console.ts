@@ -1,8 +1,10 @@
 import { Query } from 'node-appwrite';
-import { countTableRows, listTableRows, type Row } from '../../../lib/appwrite/data/contract';
+import { countTableRows, createTableRow, listTableRows, updateTableRow, type Row } from '../../../lib/appwrite/data/contract';
 import { rankingTimeZone } from '../domain/ranking';
 import { instantIn } from './catalog';
-import { done, requiresStaff, type CoreContext, type CoreResult } from './context';
+import { done, failure, requiresStaff, type CoreContext, type CoreResult } from './context';
+import { rowId } from './ids';
+import { Permission, Role } from 'node-appwrite';
 
 /**
  * Leituras da administração.
@@ -188,6 +190,8 @@ export type AdminSubmission = {
   reviewedAt: string;
   reviewedBy: string;
   moderationReason: string;
+  fileId: string;
+  dailyActivityName: string;
 };
 
 export type AdminSubmissionDetail = AdminSubmission & {
@@ -357,6 +361,67 @@ export async function adminChallenges(
   const campaigns = await page(ctx, 'campaigns', [], PAGE);
   const names = new Map(campaigns.map((row) => [String(row.$id), text(row.name)]));
   return done({ items: rows.map((row) => challengeFrom(row, names)) });
+}
+
+export type DailyActivityDraft = {
+  activityId?: string | null;
+  name: string;
+  platform: string;
+  format: string;
+  points: number;
+  dailyLimit: number;
+  active: boolean;
+  rules: string;
+};
+
+export type AdminDailyActivity = DailyActivityDraft & { activityId: string; version: number };
+
+function dailyFrom(row: Row): AdminDailyActivity {
+  return {
+    activityId: String(row.$id), name: text(row.name), platform: text(row.platform),
+    format: text(row.format), points: integer(row.points),
+    dailyLimit: integer(row.dailyLimit), active: row.active === true,
+    rules: text(row.rules), version: integer(row.version),
+  };
+}
+
+export async function adminDailyActivities(
+  ctx: CoreContext,
+): Promise<CoreResult<{ items: AdminDailyActivity[] }>> {
+  const blocked = requiresStaff<{ items: AdminDailyActivity[] }>(ctx, 'manage-catalog');
+  if (blocked) return blocked;
+  const rows = await page(ctx, 'daily_activities', [Query.orderAsc('name')], PAGE);
+  return done({ items: rows.map(dailyFrom) });
+}
+
+export async function saveDailyActivity(
+  ctx: CoreContext,
+  draft: DailyActivityDraft,
+): Promise<CoreResult<AdminDailyActivity>> {
+  const blocked = requiresStaff<AdminDailyActivity>(ctx, 'manage-catalog');
+  if (blocked) return blocked;
+  if (!draft.name.trim() || !draft.platform.trim() || !draft.format.trim() ||
+      !Number.isInteger(draft.points) || draft.points < 0 ||
+      !Number.isInteger(draft.dailyLimit) || draft.dailyLimit < 1 ||
+      draft.rules.length > 5000) return failure('invalid');
+  const id = (draft.activityId ?? '').trim() || rowId('daily', draft.name.trim().toLowerCase());
+  const existing = await page(ctx, 'daily_activities', [Query.equal('$id', id)], 1);
+  const data = {
+    name: draft.name.trim(), platform: draft.platform.trim(), format: draft.format.trim(),
+    points: draft.points, dailyLimit: draft.dailyLimit, active: draft.active,
+    rules: draft.rules.trim(), updatedAt: ctx.now.toISOString(),
+  };
+  if (existing[0]) {
+    const version = integer(existing[0].version) + 1;
+    await updateTableRow(ctx.tables, { databaseId: ctx.databaseId, tableId: 'daily_activities',
+      rowId: id, data: { ...data, version },
+      permissions: draft.active ? [Permission.read(Role.users())] : [] });
+    return done(dailyFrom({ ...existing[0], ...data, $id: id, version }));
+  }
+  const created = await createTableRow(ctx.tables, { databaseId: ctx.databaseId,
+    tableId: 'daily_activities', rowId: id, data: { ...data, slug: id, createdAt: ctx.now.toISOString(), version: 1 },
+    permissions: draft.active ? [Permission.read(Role.users())] : [] });
+  return done(dailyFrom(created));
 }
 
 export async function adminChallenge(
@@ -583,6 +648,7 @@ export async function adminSubmissions(
 async function describe(ctx: CoreContext, rows: Row[]): Promise<AdminSubmission[]> {
   const challenges = new Map<string, { name: string; points: number }>();
   const creators = new Map<string, string>();
+  const activities = new Map<string, string>();
   const challengeIds = [...new Set(rows.map((row) => text(row.challengeId)).filter(Boolean))];
   const userIds = [...new Set(rows.map((row) => text(row.userId)).filter(Boolean))];
   if (challengeIds.length) {
@@ -593,6 +659,11 @@ async function describe(ctx: CoreContext, rows: Row[]): Promise<AdminSubmission[
   if (userIds.length) {
     const found = await page(ctx, 'profiles', [Query.equal('userId', userIds)], PAGE);
     for (const row of found) creators.set(text(row.userId), text(row.name));
+  }
+  const activityIds = [...new Set(rows.map((row) => text(row.dailyActivityId)).filter(Boolean))];
+  if (activityIds.length) {
+    const found = await page(ctx, 'daily_activities', [Query.equal('$id', activityIds)], PAGE);
+    for (const row of found) activities.set(String(row.$id), text(row.name));
   }
   return rows.map((row) => {
     const challengeId = text(row.challengeId);
@@ -610,6 +681,8 @@ async function describe(ctx: CoreContext, rows: Row[]): Promise<AdminSubmission[
       reviewedAt: instant(row.reviewedAt),
       reviewedBy: text(row.reviewedBy),
       moderationReason: text(row.moderationReason),
+      fileId: text(row.fileId),
+      dailyActivityName: activities.get(text(row.dailyActivityId)) ?? '',
     };
   });
 }
@@ -637,7 +710,7 @@ export async function adminSubmission(
     ...described,
     contentFingerprint: text(row.contentFingerprint),
     fileId: text(row.fileId),
-    challengePoints: integer(challenge[0]?.points),
+    challengePoints: typeof row.pointsSnapshot === 'number' ? row.pointsSnapshot : integer(challenge[0]?.points),
     history: history.map((entry) => ({
       id: String(entry.$id),
       previousStatus: text(entry.previousStatus),
