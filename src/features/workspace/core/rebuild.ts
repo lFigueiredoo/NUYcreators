@@ -35,6 +35,42 @@ export type RebuildResult = {
 
 const PAGE = 100;
 
+async function syncRankingProfiles(ctx: CoreContext, transactionId: string) {
+  const profiles = await allRows(ctx, 'profiles', transactionId);
+  const publicProfiles = await allRows(ctx, 'public_creator_profiles', transactionId);
+  const publicByUser = new Map(
+    publicProfiles
+      .map((row) => [typeof row.userId === 'string' ? row.userId : '', row] as const)
+      .filter(([userId]) => Boolean(userId)),
+  );
+
+  for (const profile of profiles) {
+    const userId = typeof profile.userId === 'string' ? profile.userId : '';
+    const displayName = typeof profile.name === 'string' ? profile.name.trim().slice(0, 100) : '';
+    if (!userId || !displayName || !profile.onboardingCompletedAt) continue;
+    const existing = publicByUser.get(userId);
+    if (existing) {
+      if (existing.displayName === displayName) continue;
+      await updateTableRow(ctx.tables, {
+        databaseId: ctx.databaseId,
+        tableId: 'public_creator_profiles',
+        rowId: String(existing.$id),
+        data: { displayName },
+        transactionId,
+      });
+      continue;
+    }
+    await createTableRow(ctx.tables, {
+      databaseId: ctx.databaseId,
+      tableId: 'public_creator_profiles',
+      rowId: userId,
+      data: { userId, displayName },
+      permissions: [Permission.read(Role.users())],
+      transactionId,
+    });
+  }
+}
+
 /**
  * Percorre a tabela inteira com ordem estável. Não existe “continuação” falsa:
  * a projeção só é chamada reconstruída depois de a fonte e o destino terminarem.
@@ -72,6 +108,7 @@ export async function rebuildRanking(
     const transactionId = tx.transactionId;
     if (!transactionId) throw new Error('rebuild_transaction_missing');
     const totals = new Map<string, Map<string, { points: number; last: string; campaignId: string | null }>>();
+    await syncRankingProfiles(ctx, transactionId);
     const ledger = await allRows(ctx, 'point_transactions', transactionId);
     const submissions = await allRows(ctx, 'challenge_submissions', transactionId);
     const submissionCampaigns = new Map<string, string>();

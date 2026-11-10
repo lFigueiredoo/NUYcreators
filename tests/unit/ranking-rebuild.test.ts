@@ -181,6 +181,9 @@ describe('rebuild completo do ranking', () => {
       challenges: [
         { $id: 'challenge-legacy', campaignId },
       ],
+      profiles: [
+        { $id: userId, userId, name: 'Creator Legacy', onboardingCompletedAt: '2026-10-01T12:00:00.000Z' },
+      ],
       ranking_entries: [],
     });
 
@@ -191,6 +194,10 @@ describe('rebuild completo do ranking', () => {
       campaignId,
       userId,
       earnedPoints: 25,
+    });
+    expect(db.row('public_creator_profiles', userId)).toMatchObject({
+      userId,
+      displayName: 'Creator Legacy',
     });
   });
 });

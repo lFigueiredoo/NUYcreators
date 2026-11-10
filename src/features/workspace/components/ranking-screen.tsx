@@ -56,6 +56,7 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
 
       {ranking.campaigns.length > 0 ? (
         <nav aria-label="Campanhas do ranking" className={styles.enter}>
+          <p className={styles.footNote}>Selecione uma campanha para ver a classificação.</p>
           {ranking.campaigns.map((campaign) => (
             <Link
               key={campaign.id}
@@ -64,7 +65,7 @@ export function RankingScreen({ ranking }: { ranking: RankingView }) {
                 campaign.id === ranking.campaignId ? styles.buttonPrimary : styles.buttonGhost
               }`}
             >
-              {campaign.name}
+              Campanha: {campaign.name}
             </Link>
           ))}
         </nav>
