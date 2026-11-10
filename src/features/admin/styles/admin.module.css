@@ -436,6 +436,57 @@ a.kpi:hover {
   text-decoration-color: var(--app-navy);
 }
 
+.tableActions {
+  min-width: 7rem;
+  vertical-align: top;
+}
+
+.tableActions > a {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+}
+
+.compactArchive {
+  align-items: flex-start;
+  gap: 0;
+}
+
+.compactArchive .dangerButton {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #a92f39;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.compactArchive .dangerButton:hover:not(:disabled) {
+  background: transparent;
+  color: #7f2029;
+}
+
+.campaignGrid {
+  grid-template-columns: minmax(0, 1.5fr) minmax(11rem, 0.75fr);
+  gap: 1.15rem;
+}
+
+.editorIntro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: -0.35rem 0 1.35rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.editorIntro strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+
 /* Números grandes (pontos, estoque) alinhados na coluna. */
 .admin .money {
   font-variant-numeric: tabular-nums;
@@ -1021,11 +1072,7 @@ a.kpi:hover {
   color: #fff;
 }
 
-.campaignArchive {
-  margin-top: 1.5rem;
-  border-top: 1px solid var(--border);
-  padding-top: 1.5rem;
-}
+
 .required {
   font-weight: 600;
   color: var(--app-mauve-ink);
@@ -1286,6 +1333,9 @@ a.kpi:hover {
     font-size: 1.3rem;
   }
   .dailyCreateLayout {
+    grid-template-columns: 1fr;
+  }
+  .campaignGrid {
     grid-template-columns: 1fr;
     gap: 20px;
   }

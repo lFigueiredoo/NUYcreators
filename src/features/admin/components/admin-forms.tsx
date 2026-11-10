@@ -872,10 +872,12 @@ export function CatalogArchiveForm({
   kind,
   id,
   version,
+  compact = false,
 }: {
   kind: 'challenge' | 'campaign';
   id: string;
   version?: number;
+  compact?: boolean;
 }) {
   const [state, action, pending] = useActionState(
     kind === 'challenge' ? challengeArchiveAction : campaignArchiveAction,
@@ -886,7 +888,7 @@ export function CatalogArchiveForm({
   return (
     <form
       action={action}
-      className={appStyles.form}
+      className={`${appStyles.form} ${compact ? styles.compactArchive : ''}`}
       onSubmit={(event) => {
         if (
           !window.confirm(
@@ -900,9 +902,11 @@ export function CatalogArchiveForm({
       {version !== undefined ? (
         <input type="hidden" name="expectedVersion" value={version} />
       ) : null}
-      <p className={styles.formHint}>
-        Remove do catálogo sem apagar participações, envios ou pontos já registrados.
-      </p>
+      {!compact ? (
+        <p className={styles.formHint}>
+          Remove do catálogo sem apagar participações, envios ou pontos já registrados.
+        </p>
+      ) : null}
       <button
         type="submit"
         className={`${appStyles.button} ${styles.dangerButton}`}
@@ -910,7 +914,7 @@ export function CatalogArchiveForm({
       >
         Excluir {noun}
       </button>
-      <ActionMessage state={state} pending={pending} />
+      {!compact ? <ActionMessage state={state} pending={pending} /> : null}
     </form>
   );
 }
@@ -1236,7 +1240,7 @@ export function CampaignForm({ values: initial }: { values?: CampaignFormValues 
       {values.campaignId ? (
         <input type="hidden" name="campaignId" value={values.campaignId} />
       ) : null}
-      <div className={appStyles.formGrid}>
+      <div className={`${appStyles.formGrid} ${styles.campaignGrid}`}>
         <Field label="Nome da campanha">
           {(id) => (
             <input

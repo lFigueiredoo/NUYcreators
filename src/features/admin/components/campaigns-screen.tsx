@@ -80,13 +80,18 @@ export function CampaignsScreen({
                     <span className={styles.tableMuted}>até {stampIn(campaign.endsAt)}</span>
                   </td>
                   <td className={styles.tableNum}>{campaign.challenges}</td>
-                  <td className={styles.tableNowrap}>
+                  <td className={styles.tableActions}>
                     <Link
                       href={`/admin/campanhas?editar=${campaign.campaignId}`}
                       className={styles.tableLink}
                     >
                       Editar
                     </Link>
+                    <CatalogArchiveForm
+                      kind="campaign"
+                      id={campaign.campaignId}
+                      compact
+                    />
                   </td>
                 </tr>
               ))}
@@ -145,13 +150,21 @@ function CampaignEditor({
     : undefined;
 
   return (
-    <Block title={current ? `Editar ${current.name}` : 'Nova campanha'}>
-      <CampaignForm values={values} />
+    <Block title={current ? 'Editar campanha' : 'Nova campanha'}>
       {current ? (
-        <div className={styles.campaignArchive}>
-          <CatalogArchiveForm kind="campaign" id={current.campaignId} />
+        <div className={styles.editorIntro}>
+          <strong>{current.name}</strong>
+          <span>
+            Atualize os dados da campanha. Os desafios e o histórico de pontos permanecem
+            vinculados a ela.
+          </span>
         </div>
-      ) : null}
+      ) : (
+        <p className={styles.editorIntro}>
+          Crie um agrupamento claro para organizar desafios, períodos e resultados da equipe.
+        </p>
+      )}
+      <CampaignForm values={values} />
       {current ? (
         <Link href="/admin/campanhas" className={styles.tableLink}>
           Cancelar edição
