@@ -9,6 +9,7 @@ import appStyles from '@/features/workspace/styles/app.module.css';
 import styles from '../styles/admin.module.css';
 import {
   CatalogTransitionForm,
+  CatalogArchiveForm,
   ChallengeForm,
   type CatalogChoices,
   type ChallengeFormValues,
@@ -259,6 +260,13 @@ function ChallengeDetail({
               kind="challenge"
               id={challenge.challengeId}
               status={challenge.status}
+              version={challenge.version}
+            />
+          </Block>
+          <Block title="Excluir do catálogo">
+            <CatalogArchiveForm
+              kind="challenge"
+              id={challenge.challengeId}
               version={challenge.version}
             />
           </Block>

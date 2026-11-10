@@ -6,7 +6,7 @@ import type { CatalogCampaign } from '@/features/workspace/core';
 import type { AdminOutcome } from '../services/console';
 import appStyles from '@/features/workspace/styles/app.module.css';
 import styles from '../styles/admin.module.css';
-import { CampaignForm, type CampaignFormValues } from './admin-forms';
+import { CampaignForm, CatalogArchiveForm, type CampaignFormValues } from './admin-forms';
 import { stampIn } from './format';
 import { Outcome, StatusPill, Table } from './shared';
 
@@ -147,6 +147,11 @@ function CampaignEditor({
   return (
     <Block title={current ? `Editar ${current.name}` : 'Nova campanha'}>
       <CampaignForm values={values} />
+      {current ? (
+        <div className={styles.campaignArchive}>
+          <CatalogArchiveForm kind="campaign" id={current.campaignId} />
+        </div>
+      ) : null}
       {current ? (
         <Link href="/admin/campanhas" className={styles.tableLink}>
           Cancelar edição

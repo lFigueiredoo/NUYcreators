@@ -813,6 +813,45 @@ export async function saveCampaign(
   );
 }
 
+export async function archiveCampaign(
+  ctx: CoreContext,
+  input: { campaignId: string },
+): Promise<CoreResult<CampaignResult>> {
+  const blocked = requiresStaff<CampaignResult>(ctx, 'manage-catalog');
+  if (blocked) return blocked;
+  const campaignId = input.campaignId.trim();
+  if (!campaignId) return failure('invalid');
+  return inTransaction<CampaignResult>(
+    ctx,
+    async (tx) => {
+      const existing = await read(ctx, 'campaigns', campaignId, tx.transactionId);
+      if (!existing) return failure('not_found');
+      if (text(existing.status) === 'archived') return failure('conflict');
+      await updateTableRow(ctx.tables, {
+        databaseId: ctx.databaseId,
+        tableId: 'campaigns',
+        rowId: campaignId,
+        data: { status: 'archived' },
+        permissions: [],
+        transactionId: tx.transactionId,
+      });
+      await recordAudit(ctx, tx, {
+        action: 'campaign.archived',
+        entityType: 'campaigns',
+        entityId: campaignId,
+        before: { status: text(existing.status) },
+        after: { status: 'archived' },
+      });
+      return done({
+        campaignId,
+        status: 'archived',
+        created: false,
+      });
+    },
+    { conflict: 'conflict' },
+  );
+}
+
 async function read(
   ctx: CoreContext,
   tableId: string,

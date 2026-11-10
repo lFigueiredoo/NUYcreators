@@ -14,6 +14,8 @@ import {
 } from '@/features/workspace/domain/catalog';
 import {
   commandChallengeStatus,
+  commandArchiveChallenge,
+  commandArchiveCampaign,
   commandRewardStatus,
   commandRewardStock,
   commandSaveCampaign,
@@ -230,6 +232,23 @@ export async function challengeStatusAction(
   return { message: outcome.message, success: true };
 }
 
+export async function challengeArchiveAction(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
+  const challengeId = field(data, 'challengeId');
+  if (!challengeId) return { message: 'Desafio não identificado. Recarregue a página.' };
+  const outcome = await commandArchiveChallenge(challengeId, numberField(data, 'expectedVersion'));
+  if (!outcome.ok) return { message: outcome.message };
+  revalidatePath('/admin/desafios');
+  revalidatePath(`/admin/desafios/${challengeId}`);
+  revalidatePath('/app/desafios');
+  revalidatePath('/app/ranking');
+  return { message: outcome.message, success: true };
+}
+
 export async function rewardSaveAction(_previous: FormState, data: FormData): Promise<FormState> {
   if (!(await allowedRequest())) return { message: DENIED };
   await requireStaff('manage-catalog');
@@ -332,5 +351,21 @@ export async function campaignSaveAction(_previous: FormState, data: FormData): 
   });
   if (!outcome.ok) return { message: outcome.message };
   revalidatePath('/admin/campanhas');
+  return { message: outcome.message, success: true };
+}
+
+export async function campaignArchiveAction(
+  _previous: FormState,
+  data: FormData,
+): Promise<FormState> {
+  if (!(await allowedRequest())) return { message: DENIED };
+  await requireStaff('manage-catalog');
+  const campaignId = field(data, 'campaignId');
+  if (!campaignId) return { message: 'Campanha não identificada. Recarregue a página.' };
+  const outcome = await commandArchiveCampaign(campaignId);
+  if (!outcome.ok) return { message: outcome.message };
+  revalidatePath('/admin/campanhas');
+  revalidatePath('/app/desafios');
+  revalidatePath('/app/ranking');
   return { message: outcome.message, success: true };
 }

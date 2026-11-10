@@ -1008,6 +1008,24 @@ a.kpi:hover {
   font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   font-size: 0.78rem;
 }
+
+.dangerButton {
+  border-color: color-mix(in srgb, #c2414b 45%, var(--border));
+  background: color-mix(in srgb, #c2414b 10%, var(--surface));
+  color: #a92f39;
+}
+
+.dangerButton:hover:not(:disabled) {
+  border-color: #c2414b;
+  background: #c2414b;
+  color: #fff;
+}
+
+.campaignArchive {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+}
 .required {
   font-weight: 600;
   color: var(--app-mauve-ink);

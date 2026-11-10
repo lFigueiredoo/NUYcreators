@@ -13,6 +13,7 @@ import {
   adminRewards,
   adminSubmission,
   adminSubmissions,
+  archiveCampaign,
   archiveChallenge,
   closeChallenge,
   closeReward,
@@ -271,6 +272,12 @@ export default async function main(event: FunctionEvent) {
           campaignId: text(body.campaignId) || null,
           draft: campaignDraft(body.draft),
           timeZone: timeZone(body.timeZone),
+        }),
+      );
+    case 'campaign.archive':
+      return write(
+        archiveCampaign(ctx, {
+          campaignId: text(body.campaignId),
         }),
       );
 

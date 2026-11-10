@@ -23,7 +23,9 @@ import appStyles from '@/features/workspace/styles/app.module.css';
 import { adjustPointsAction } from '@/features/workspace/services/actions';
 import {
   campaignSaveAction,
+  campaignArchiveAction,
   challengeSaveAction,
+  challengeArchiveAction,
   challengeStatusAction,
   rewardSaveAction,
   rewardStatusAction,
@@ -861,6 +863,53 @@ export function CatalogTransitionForm({
           Publicar {noun}
         </button>
       )}
+      <ActionMessage state={state} pending={pending} />
+    </form>
+  );
+}
+
+export function CatalogArchiveForm({
+  kind,
+  id,
+  version,
+}: {
+  kind: 'challenge' | 'campaign';
+  id: string;
+  version?: number;
+}) {
+  const [state, action, pending] = useActionState(
+    kind === 'challenge' ? challengeArchiveAction : campaignArchiveAction,
+    EMPTY,
+  );
+  const idField = kind === 'challenge' ? 'challengeId' : 'campaignId';
+  const noun = kind === 'challenge' ? 'desafio' : 'campanha';
+  return (
+    <form
+      action={action}
+      className={appStyles.form}
+      onSubmit={(event) => {
+        if (
+          !window.confirm(
+            `Excluir este ${noun} do catálogo? Ele deixará de aparecer, mas o histórico será preservado.`,
+          )
+        )
+          event.preventDefault();
+      }}
+    >
+      <input type="hidden" name={idField} value={id} />
+      {version !== undefined ? (
+        <input type="hidden" name="expectedVersion" value={version} />
+      ) : null}
+      <p className={styles.formHint}>
+        Remove do catálogo sem apagar participações, envios ou pontos já registrados.
+      </p>
+      <button
+        type="submit"
+        className={`${appStyles.button} ${styles.dangerButton}`}
+        disabled={pending}
+      >
+        Excluir {noun}
+      </button>
       <ActionMessage state={state} pending={pending} />
     </form>
   );

@@ -187,6 +187,22 @@ export async function commandChallengeStatus(
   };
 }
 
+export async function commandArchiveChallenge(
+  challengeId: string,
+  expectedVersion: number | null,
+): Promise<AdminCommand<{ status: string; version: number }>> {
+  const reply = await call<{ status: string; version: number }>('challenge.archive', {
+    challengeId,
+    expectedVersion,
+  });
+  if (!reply.ok) return reply;
+  return {
+    ok: true,
+    value: reply.value,
+    message: 'Desafio excluído do catálogo. O histórico foi preservado.',
+  };
+}
+
 export async function commandSaveReward(
   input: Record<string, unknown>,
   publish: boolean,
@@ -259,5 +275,20 @@ export async function commandSaveCampaign(
     ok: true,
     value: reply.value,
     message: reply.value.created ? 'Campanha criada.' : 'Campanha atualizada.',
+  };
+}
+
+export async function commandArchiveCampaign(
+  campaignId: string,
+): Promise<AdminCommand<{ campaignId: string; status: string; created: boolean }>> {
+  const reply = await call<{ campaignId: string; status: string; created: boolean }>(
+    'campaign.archive',
+    { campaignId },
+  );
+  if (!reply.ok) return reply;
+  return {
+    ok: true,
+    value: reply.value,
+    message: 'Campanha excluída do catálogo. O histórico e os desafios foram preservados.',
   };
 }

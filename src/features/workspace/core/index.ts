@@ -40,6 +40,7 @@ export {
   closeReward,
   setRewardStock,
   saveCampaign,
+  archiveCampaign,
   type ChallengeResult,
   type RewardResult,
   type CampaignResult,
