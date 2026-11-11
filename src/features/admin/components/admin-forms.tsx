@@ -437,6 +437,39 @@ function requirementValueHint(type: string): string {
   }
 }
 
+const REQUIREMENT_PRESETS = [
+  {
+    type: 'min_duration_seconds',
+    label: 'Duração mínima da live',
+    value: '1800',
+  },
+  {
+    type: 'link',
+    label: 'Enviar o link da live ou publicação',
+    value: '',
+  },
+  {
+    type: 'format',
+    label: 'Formato do conteúdo',
+    value: 'Live no TikTok ou Shopee',
+  },
+  {
+    type: 'hashtag',
+    label: 'Usar uma hashtag',
+    value: '#nuy',
+  },
+  {
+    type: 'mention',
+    label: 'Marcar um perfil',
+    value: '@nuyoficial',
+  },
+  {
+    type: 'caption',
+    label: 'Incluir uma frase na legenda',
+    value: '',
+  },
+] as const;
+
 export function ChallengeForm({
   values: initial,
   choices,
@@ -458,6 +491,8 @@ export function ChallengeForm({
       ),
   );
   const [state, action, pending] = useActionState(challengeSaveAction, EMPTY);
+  const [newRequirementType, setNewRequirementType] =
+    useState<(typeof REQUIREMENT_PRESETS)[number]['type']>('link');
 
   function set<K extends keyof ChallengeFormValues>(field: K, value: ChallengeFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -477,6 +512,19 @@ export function ChallengeForm({
 
   function setRequirementValue(index: number, value: string) {
     setRequirement(index, { configJson: requirementConfig(value) });
+  }
+
+  function addRequirement() {
+    const preset =
+      REQUIREMENT_PRESETS.find((item) => item.type === newRequirementType) ??
+      REQUIREMENT_PRESETS[0];
+    setValues((current) => ({
+      ...current,
+      requirements: [
+        ...current.requirements,
+        { type: preset.type, required: true, configJson: requirementConfig(preset.value) },
+      ],
+    }));
   }
 
   const levels = withCurrent(
@@ -695,7 +743,8 @@ export function ChallengeForm({
 
           <Section title="Requisitos">
             <p className={styles.formHint}>
-              Adicione uma regra, escolha se é obrigatória e informe apenas o valor. Não é necessário escrever código.
+              Escolha uma regra pronta, marque se ela é obrigatória e preencha apenas o valor.
+              Não é necessário escrever JSON ou código.
             </p>
             <div className={styles.requirementRows}>
               {values.requirements.map((requirement, index) => (
@@ -706,7 +755,7 @@ export function ChallengeForm({
                     value={requirement.type}
                     onChange={(value) => setRequirement(index, { type: value, configJson: '' })}
                     options={[
-                      { value: '', label: 'Escolha a regra' },
+                      { value: '', label: 'Escolha o que será exigido' },
                       ...requirementTypes.map((type) => ({
                         value: type,
                         label: requirementLabel(type),
@@ -760,19 +809,27 @@ export function ChallengeForm({
                 type="button"
                 className={`${appStyles.button} ${appStyles.buttonQuiet}`}
                 disabled={values.requirements.length >= 20}
-                onClick={() =>
-                  setValues((current) => ({
-                    ...current,
-                    requirements: [
-                      ...current.requirements,
-                      { type: '', required: true, configJson: '' },
-                    ],
-                  }))
-                }
+                onClick={addRequirement}
               >
                 <Plus size={15} aria-hidden="true" />
-                Adicionar requisito
+                Adicionar regra
               </button>
+              <select
+                className={`${appStyles.input} ${styles.requirementPreset}`}
+                aria-label="Tipo da nova regra"
+                value={newRequirementType}
+                onChange={(event) =>
+                  setNewRequirementType(
+                    event.target.value as (typeof REQUIREMENT_PRESETS)[number]['type'],
+                  )
+                }
+              >
+                {REQUIREMENT_PRESETS.map((preset) => (
+                  <option key={preset.type} value={preset.type}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
               <p className={styles.counter}>{values.requirements.length} de 20</p>
             </div>
           </Section>

@@ -1114,6 +1114,10 @@ a.kpi:hover {
   gap: 4px;
   min-width: 0;
 }
+
+.requirementPreset {
+  max-width: 25rem;
+}
 .requirementRows {
   display: flex;
   flex-direction: column;
