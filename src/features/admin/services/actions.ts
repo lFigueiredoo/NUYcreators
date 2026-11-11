@@ -68,6 +68,19 @@ function integerField(data: FormData, key: string): number {
   return Number.isInteger(parsed) ? parsed : Number.NaN;
 }
 
+function requirementConfigField(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return JSON.stringify(parsed);
+  } catch {
+    // The admin form accepts a human-readable value; normalize it below.
+  }
+  return JSON.stringify({ value: trimmed });
+}
+
 /** Mensagem de validação: o que impede a gravação, sem esconder nada atrás de "inválido". */
 function problems(issues: string[]): FormState | null {
   if (!issues.length) return null;
@@ -97,7 +110,7 @@ function challengeDraft(data: FormData): ChallengeDraft {
       .map((type, index) => ({
         type,
         required: required[index] === 'true',
-        configJson: configs[index] ?? '',
+        configJson: requirementConfigField(configs[index] ?? ''),
       }))
       .filter((requirement) => requirement.type !== '' || requirement.configJson !== ''),
   };
